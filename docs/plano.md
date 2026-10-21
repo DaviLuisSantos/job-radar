@@ -16,11 +16,17 @@
 | 5 | Termos do texto completo: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ✅ 2026-10-21 |
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
-| 8 | **Raio-X**: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | 🔨 próxima |
-| 9 | **Importação do histórico** do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏳ |
+| 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
+| 9 | **Importação do histórico** do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 próxima |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
 
 Pendências conhecidas, com a etapa onde entram:
+- **Etapa 9:** o banco local do protótipo (`job-tracker/data/jobs.db`) **não tem nenhum retrato do Raio-X**
+  (`market_runs` vazio): o recurso chegou no último pull e nunca rodou nesta máquina. Se existe histórico
+  real, ele está em outro banco/máquina; é preciso saber onde antes de importar.
+- **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
+  Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
+  substitui o padrão).
 - **Etapa 10:** o site de triagem não tem login; hoje só escuta em `localhost:5380`. Antes de publicar em
   qualquer servidor, entra autenticação (ao menos um usuário, cookie). Porta 5380 porque a 5080 é de outro
   serviço do autor nesta máquina (Servidor de Câmeras).
@@ -46,6 +52,21 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 8 ✅
+Raio-X como contexto à parte. Capacidade opcional `IMarketSource` (Seek: `SeekMarketSource`, por
+subclassificação oficial; contagem = `totalCount` da 1ª página, que só é comparável com `pageSize=100` e
+por isso recusa outro tamanho). Domínio puro: `SalaryParser` (hora × 2.080, dia × 260, faixas plausíveis),
+`SnapshotQuality` (falha/listagem cortada → partial; zerou ou variou > 50% sobre base ≥ 20 → suspect) e
+`MonthlyReport` (média diária só de retratos ok, variação contra o mês anterior, menções, repetidos,
+publicados no mês, mediana e quartis de salário com interpolação linear). `RaioXMarkdown` escreve em
+português e nunca cita vaga individual. Tabelas `market_snapshots`, `market_counts`, `market_listings`.
+Pipeline com 4ª etapa (retrato do dia no fuso de Perth); comandos `market` e `market-report [YYYY-MM] [arquivo]`.
+Categorias, cidades e termos = os do protótipo, como padrão no código. 262 testes.
+Prova real: retrato de 22/10 (Perth) `ok`, 30/30 contagens, 443 vagas listadas, ~1 min. Relatório gerado:
+ex. Elétrica Perth 313 abertas, 11,5% citam "working rights", mediana anual $132k (37% informam salário).
+Conferido na API: "6287,6290" em Perth = 32 + 37 = 69, a lista de subclassificações soma.
+Corrigido: ordem das cidades no relatório vinha da ordem do banco; agora segue a configuração.
 
 ### 2026-10-21 — Etapa 7 ✅
 `JobRadar.Web` (Blazor Web App, renderização no servidor): lista de triagem por perfil (filtros: texto,

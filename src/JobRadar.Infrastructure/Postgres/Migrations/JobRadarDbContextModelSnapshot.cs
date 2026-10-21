@@ -229,6 +229,164 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.ToTable("listing_search_hits", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Market.MarketCountEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateOnly>("SnapshotDate")
+                        .HasColumnType("date")
+                        .HasColumnName("snapshot_date");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Term")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("term");
+
+                    b.Property<int>("Total")
+                        .HasColumnType("integer")
+                        .HasColumnName("total");
+
+                    b.HasKey("Source", "SnapshotDate", "Category", "City", "Term");
+
+                    b.ToTable("market_counts", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Market.MarketListingEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Company")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("company");
+
+                    b.Property<DateOnly>("FirstSeen")
+                        .HasColumnType("date")
+                        .HasColumnName("first_seen");
+
+                    b.Property<DateOnly>("LastSeen")
+                        .HasColumnType("date")
+                        .HasColumnName("last_seen");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("location");
+
+                    b.Property<DateTimeOffset?>("PostedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("posted_at");
+
+                    b.Property<int?>("SalaryAnnualMax")
+                        .HasColumnType("integer")
+                        .HasColumnName("salary_annual_max");
+
+                    b.Property<int?>("SalaryAnnualMin")
+                        .HasColumnType("integer")
+                        .HasColumnName("salary_annual_min");
+
+                    b.Property<string>("SalaryPeriod")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("salary_period");
+
+                    b.Property<string>("SalaryText")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("salary_text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("WorkType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("work_type");
+
+                    b.HasKey("Source", "SourceId", "Category", "City");
+
+                    b.HasIndex("Source", "FirstSeen", "LastSeen")
+                        .HasDatabaseName("ix_market_listings_seen");
+
+                    b.ToTable("market_listings", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Market.MarketSnapshotEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateOnly>("SnapshotDate")
+                        .HasColumnType("date")
+                        .HasColumnName("snapshot_date");
+
+                    b.Property<int>("Expected")
+                        .HasColumnType("integer")
+                        .HasColumnName("expected");
+
+                    b.Property<string>("Issues")
+                        .HasColumnType("text")
+                        .HasColumnName("issues");
+
+                    b.Property<int>("Listings")
+                        .HasColumnType("integer")
+                        .HasColumnName("listings");
+
+                    b.Property<int>("Saved")
+                        .HasColumnType("integer")
+                        .HasColumnName("saved");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("TakenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("taken_at");
+
+                    b.HasKey("Source", "SnapshotDate");
+
+                    b.ToTable("market_snapshots", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Matching.ListingScoreEntity", b =>
                 {
                     b.Property<string>("Source")
@@ -426,6 +584,15 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.HasOne("JobRadar.Infrastructure.Postgres.Listings.ListingEntity", null)
                         .WithMany()
                         .HasForeignKey("Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Market.MarketCountEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Postgres.Market.MarketSnapshotEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Source", "SnapshotDate")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -62,6 +62,8 @@ internal sealed class SeekSearchClient(HttpClient http, IOptions<SeekOptions> op
         };
         if (search.PostedWithinDays is { } days)
             query.Add(new("dateRange", days.ToString(CultureInfo.InvariantCulture)));
+        if (search.SourceCategory is { } subclassification)
+            query.Add(new("subclassification", subclassification));
 
         return SearchPath + "?" + string.Join("&",
             query.Select(kv => $"{kv.Key}={Uri.EscapeDataString(kv.Value)}"));

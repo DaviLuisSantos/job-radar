@@ -1,4 +1,5 @@
 using JobRadar.Application.Collection;
+using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tracking;
 using JobRadar.Application.Triage;
@@ -33,6 +34,11 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<TrackingService>();
         services.AddScoped<CalibrationService>();
         services.AddScoped<TriageService>();
+
+        services.AddOptions<MarketOptions>().Bind(configuration.GetSection(MarketOptions.Section));
+        services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<MarketOptions>, MarketDefaults>();
+        services.AddScoped<MarketSnapshotService>();
+        services.AddScoped<MarketReportService>();
         return services;
     }
 }

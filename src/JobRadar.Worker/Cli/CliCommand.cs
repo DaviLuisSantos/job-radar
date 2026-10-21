@@ -12,6 +12,8 @@ public abstract record CliCommand
           notes     <id> <text...>
           label     <id> good|bad|clear [note...]
           calibrate
+          market                          take the market snapshot (Raio-X) now
+          market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
         <id> is source:id, e.g. seek:81234567
         """;
 
@@ -19,9 +21,11 @@ public abstract record CliCommand
     public sealed record SetNotes(ListingId Id, string? Notes) : CliCommand;
     public sealed record SetLabel(ListingId Id, Verdict? Verdict, string? Note) : CliCommand;
     public sealed record Calibrate : CliCommand;
+    public sealed record TakeMarketSnapshot : CliCommand;
+    public sealed record MarketReport(string? Month, string? OutputFile) : CliCommand;
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
-    public static readonly string[] Names = ["status", "notes", "label", "calibrate"];
+    public static readonly string[] Names = ["status", "notes", "label", "calibrate", "market", "market-report"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -39,6 +43,9 @@ public abstract record CliCommand
                 "notes" when args.Length >= 2 => new SetNotes(ParseId(args[1]), Rest(args, 2)),
                 "label" when args.Length >= 3 => new SetLabel(ParseId(args[1]), ParseLabel(args[2]), Rest(args, 3)),
                 "calibrate" when args.Length == 1 => new Calibrate(),
+                "market" when args.Length == 1 => new TakeMarketSnapshot(),
+                "market-report" when args.Length <= 3 => new MarketReport(
+                    args.Length > 1 ? ParseMonth(args[1]) : null, args.Length > 2 ? args[2] : null),
                 _ => Fail($"Wrong arguments for '{name}'.", out error),
             };
         }
@@ -69,6 +76,12 @@ public abstract record CliCommand
         "clear" => null,
         _ => throw new FormatException($"Label must be good, bad or clear, not '{value}'."),
     };
+
+    private static string ParseMonth(string value) =>
+        DateOnly.TryParseExact(value + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out _)
+            ? value
+            : throw new FormatException($"Month must be YYYY-MM, not '{value}'.");
 
     private static string? Rest(string[] args, int from) =>
         args.Length > from ? string.Join(' ', args[from..]) : null;

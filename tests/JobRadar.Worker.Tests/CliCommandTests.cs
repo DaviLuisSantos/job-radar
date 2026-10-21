@@ -35,7 +35,18 @@ public class CliCommandTests
         Assert.IsType<CliCommand.Calibrate>(Parse("calibrate"));
     }
 
+    [Fact]
+    public void Market_commands()
+    {
+        Assert.IsType<CliCommand.TakeMarketSnapshot>(Parse("market"));
+        Assert.Equal(new CliCommand.MarketReport(null, null), Parse("market-report"));
+        Assert.Equal(new CliCommand.MarketReport("2026-10", "raio-x.md"), Parse("market-report", "2026-10", "raio-x.md"));
+    }
+
     [Theory]
+    [InlineData("market-report", "outubro")]
+    [InlineData("market-report", "2026-13")]
+    [InlineData("market", "now")]
     [InlineData("status", "seek:1", "hired")]
     [InlineData("status", "seek_123", "applied")]
     [InlineData("label", "seek:1", "maybe")]

@@ -88,8 +88,8 @@ src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRad
 
 ## Fluxo principal
 
-`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda três etapas isoladas
-(uma falha não impede a seguinte): coleta → termos do texto completo → score.
+`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda quatro etapas isoladas
+(uma falha não impede a seguinte): coleta → termos do texto completo → score → retrato do Raio-X.
 
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
 1. para cada fonte e busca, calcula a janela incremental pelo último sucesso;
@@ -108,12 +108,17 @@ execução em `collection_runs` com chave `term: <frase>`. Janela: 31 dias na pr
 vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma linha por vaga × perfil,
 com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score.
 
+**Raio-X** — `MarketSnapshotService.TakeAsync(dia)`: por categoria (`Market:Categories`, código de cada fonte) e
+cidade, conta as vagas abertas e as que citam cada termo; nas `FullCities` lista todas. Contagem que falha tem
+uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatório mensal só usa `ok`**
+(`MarketReportService` + `RaioXMarkdown`). Só números agregados: nada de título, empresa ou link no texto.
+
 Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**fora do git**; modelo em
 `appsettings.Local.example.json`). Cada palavra-chave é buscada em cada local; as buscas da coleta são a
 união dos perfis.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
-`label <id> good|bad|clear [nota]`, `calibrate`. `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
+`label <id> good|bad|clear [nota]`, `calibrate`, `market`, `market-report [YYYY-MM] [arquivo]`. `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
 1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` antes e depois.
 
 Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
@@ -155,6 +160,10 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   `ESCAPE ''` (`PostgresListingScoreRepository.ListForTriageAsync`).
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
   todas as cópias (`TriageRow.AllIds`).
+- Contagem do Raio-X só com `Seek:PageSize = 100`: o `totalCount` inclui os promovidos repetidos em cada página
+  (`SeekMarketSource.CountAsync` recusa outro valor).
+- `Market` na configuração: cada lista presente **substitui** o padrão do código (`MarketDefaults`), não soma.
+- Parâmetro chamado `from` dentro de consulta LINQ precisa de `@from` (`PostgresMarketRepository`).
 - Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
   antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
 - `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no

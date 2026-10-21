@@ -12,8 +12,9 @@ Two products share one core:
   It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
 
 > **Status:** v1 in progress. Daily collection from Seek, full-text clause detection, scoring per
-> profile, application tracking and a triage UI work end to end; the scorer matches the Python
-> prototype on 5,388 real listings. The market snapshot is next.
+> profile, application tracking, a triage UI and the monthly market snapshot work end to end; the
+> scorer matches the Python prototype on 5,388 real listings. Next: importing the prototype history
+> and going to production.
 > Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
 
 ## Architecture
@@ -74,6 +75,19 @@ dotnet run --project src/JobRadar.Worker -- calibrate
 
 `calibrate` reports, per profile, how often a listing you liked outscores one you did not, and
 lists where the score disagrees with you, with the rules that weighed most.
+
+### Market snapshot (Raio-X)
+
+Every day the worker also counts open listings per official Seek category and city, and how many
+mention terms such as "sponsorship" or "working rights" anywhere in the ad. Each daily snapshot is
+checked (failed counts, cut listings, implausible swings) and only good ones feed the monthly
+report, written in Portuguese for the newsletter:
+
+```bash
+dotnet run --project src/JobRadar.Worker -- market-report 2026-10 raio-x_2026-10.md
+```
+
+The report holds aggregates only: counts, shares, salary medians. Never an individual listing.
 
 ## Tests
 

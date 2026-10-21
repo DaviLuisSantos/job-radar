@@ -1,4 +1,6 @@
 using System.Globalization;
+using JobRadar.Application.Collection;
+using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tracking;
 using JobRadar.Domain.Matching;
@@ -39,6 +41,33 @@ public static class CliRunner
                 case CliCommand.Calibrate:
                     WriteCalibration(await sp.GetRequiredService<CalibrationService>().MeasureAsync(ct), output);
                     break;
+                case CliCommand.TakeMarketSnapshot:
+                    foreach (var s in await sp.GetRequiredService<MarketSnapshotService>().TakeAsync(LocalToday(sp), ct))
+                    {
+                        await output.WriteLineAsync($"{s.Source} {s.Date:yyyy-MM-dd}: {s.Status}, {s.Saved}/{s.Expected} counts, {s.Listings} listings");
+                        foreach (var issue in s.Issues)
+                            await output.WriteLineAsync($"  - {issue}");
+                    }
+                    break;
+                case CliCommand.MarketReport c:
+                    var month = c.Month ?? LocalToday(sp).ToString("yyyy-MM", CultureInfo.InvariantCulture);
+                    var report = await sp.GetRequiredService<MarketReportService>().BuildAsync("seek", month, ct);
+                    if (report is null)
+                    {
+                        await output.WriteLineAsync($"No good market snapshot in {month}. Take one with: market");
+                        return 1;
+                    }
+                    var markdown = RaioXMarkdown.Render(report);
+                    if (c.OutputFile is { } file)
+                    {
+                        await File.WriteAllTextAsync(file, markdown, ct);
+                        await output.WriteLineAsync($"Raio-X {month} written to {Path.GetFullPath(file)}");
+                    }
+                    else
+                    {
+                        await output.WriteAsync(markdown);
+                    }
+                    break;
             }
             return 0;
         }
@@ -47,6 +76,12 @@ public static class CliRunner
             await output.WriteLineAsync(ex.Message);
             return 1;
         }
+    }
+
+    private static DateOnly LocalToday(IServiceProvider sp)
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CollectionOptions>>().Value.TimeZone);
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(sp.GetRequiredService<TimeProvider>().GetUtcNow(), zone).DateTime);
     }
 
     internal static void WriteCalibration(IReadOnlyList<ProfileCalibration> results, TextWriter o)

@@ -4,10 +4,13 @@ namespace JobRadar.Domain.Listings;
 /// <param name="Keywords">Free text; empty means "everything in this location".</param>
 /// <param name="Location">Place as a person would type it, e.g. "Perth" or "All Australia".</param>
 /// <param name="PostedWithinDays">Only listings posted in the last N days; null for no limit.</param>
-public sealed record ListingSearch(string Keywords, string Location, int? PostedWithinDays = null)
+/// <param name="SourceCategory">A category code of the source being searched (opaque to the core).</param>
+public sealed record ListingSearch(string Keywords, string Location, int? PostedWithinDays = null, string? SourceCategory = null)
 {
     /// <summary>Stable identity of the search, ignoring the date window: "keywords @ location".</summary>
-    public string Key => $"{Keywords.Trim().ToLowerInvariant()} @ {Location.Trim().ToLowerInvariant()}";
+    public string Key => SourceCategory is null
+        ? $"{Keywords.Trim().ToLowerInvariant()} @ {Location.Trim().ToLowerInvariant()}"
+        : $"{Keywords.Trim().ToLowerInvariant()} @ {Location.Trim().ToLowerInvariant()} [{SourceCategory}]";
 }
 
 /// <summary>
