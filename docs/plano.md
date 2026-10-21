@@ -96,6 +96,20 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-22 — Calibragem de construction e trades (`RulesVersion` 5)
+Rótulos: construction 15 boas / 21 ruins (62%), trades 7 / 10 (60%). As ruins com score alto eram trades
+qualificados que o título entrega (glazier, floor layer, tiler, polywelder, tradesperson, splicer).
+Duas correções de domínio: (1) uma frase de requisito achada com **qualquer** palavra de contexto conta
+para todo perfil que a tem ("HC licence + FIFO" é carteira HC no anúncio, também para construction: era o
+caso das "Operator Assistant" da Halliburton); (2) "leading hand(s)" deixou de ser título de entrada: o
+"hands?" (kitchen/farm hand) tirava "FIFO Shift Electricians / Leading Hands" do teto. Paridade mantida.
+Configuração local: títulos acima nos dois perfis, "assembler" e "leading hand" no trades, "concreter"
+saiu do construction (a "FIFO Concreters" rotulada boa ia a 35). Simulação: construction 62% → **79%**,
+trades 60% → **97%**, fifo 82% → 81% (efeito da correção 1).
+Testado e descartado: "experienced"/"experience preferred" como sinal negativo (76%: derruba "Entry Level
+and Experienced Offsiders", boa). O que o resumo não explica (Driller's Offsider de Swick, Ozijobs) está no
+corpo do anúncio: é o caso da captura da descrição completa (v1.x).
+
 ### 2026-10-21 — "Remote" é lugar, e diploma também é requisito (`RulesVersion` 4)
 Passada com requisitos: fifo 42% → **80%** de acerto de pares (5/8 boas ≥ 75, 8/33 ruins ≥ 50; 107 vagas
 com 70+, eram 554); construction 57% → 67%; 95 buscas de requisito completas, 4.804 marcas.

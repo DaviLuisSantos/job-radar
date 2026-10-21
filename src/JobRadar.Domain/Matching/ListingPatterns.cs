@@ -102,10 +102,13 @@ internal static class ListingPatterns
     /// <summary>Training role: "Certificate III" in the text is the course offered, not a requirement.</summary>
     public static readonly Regex TrainingTitle = R(@"\b(?:apprentice\w*|pre-apprentice\w*|trainee\w*|cadet\w*)\b");
 
-    /// <summary>Entry title: lifts the qualified-title cap ("Drillers Offsider" is not a driller).</summary>
+    /// <summary>
+    /// Entry title: lifts the qualified-title cap ("Drillers Offsider" is not a driller). "Hand" is
+    /// kitchen or farm hand, never "leading hand", which supervises qualified trades.
+    /// </summary>
     public static readonly Regex EntryTitle = R(
         @"\b(?:apprentice\w*|pre-apprentice\w*|trainee\w*|cadet\w*|assistant|offsiders?"
-        + @"|labourers?|helpers?|hands?|graduate|junior|entry)\b|\bTA\b|\btrades?\s+assist");
+        + @"|labourers?|helpers?|(?<!leading\s)hands?|graduate|junior|entry)\b|\bTA\b|\btrades?\s+assist");
 
     /// <summary>Negative signals about qualifications, skipped for training titles.</summary>
     public static readonly string[] QualificationWords = ["cert", "qualif"];

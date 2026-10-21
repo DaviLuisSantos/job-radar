@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 4;
+    public const int RulesVersion = 5;
 
     private const int ExclusionPoints = -50;
 
@@ -167,10 +167,11 @@ public static class FitScorer
 
         // Requirements of the profile found in the full ad: once per kind. A truck licence already
         // counted (local text or the policy's licence group) is not counted again; a training title
-        // is where the trade certificate is earned.
-        var found = job.FullTextTerms.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // is where the trade certificate is earned. The context word only narrows the search: a phrase
+        // found with any context ("HC licence + FIFO", searched for another profile) is in the ad.
+        var found = job.FullTextTerms.Select(t => new FullTextTerm(t).Phrases[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var truckCounted = groups.ContainsKey(FullTextGroup.Licence) || TruckLicence.IsMatch(full);
-        foreach (var requirement in profile.Requirements.Terms().Where(r => found.Contains(r.Term)).DistinctBy(r => r.Kind))
+        foreach (var requirement in profile.Requirements.Terms().Where(r => found.Contains(r.Phrase)).DistinctBy(r => r.Kind))
         {
             if (requirement.Kind == RequirementKind.Licence && truckCounted)
                 continue;

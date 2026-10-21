@@ -316,11 +316,23 @@ public class FitScorerTests
     }
 
     [Fact]
-    public void A_requirement_needs_the_profile_context_word()
+    public void A_requirement_found_with_another_profile_context_word_still_counts()
     {
-        var score = Score(Job("Labourer", fullText: ["years experience", "years experience + offsider"]), FifoWithRequirements);
+        var other = Score(Job("Operator Assistant", fullText: ["HRWL + labourer"]), FifoWithRequirements);
+        var notOurs = Score(Job("Labourer", fullText: ["HC licence + FIFO"]), FifoWithRequirements);
 
-        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextExperience);
+        Assert.Equal("HRWL", Item(other, ScoreRule.FullTextLicence).Detail);
+        Assert.DoesNotContain(notOurs.Items, i => i.Rule == ScoreRule.FullTextLicence);
+    }
+
+    [Fact]
+    public void A_leading_hand_is_not_an_entry_title()
+    {
+        var leading = Score(Job("FIFO Shift Electricians / Leading Hands"), Trades);
+        var kitchen = Score(Job("Kitchen Hand Electrician Camp"), Trades);
+
+        Assert.Equal(ScoreRule.QualificationRequired, leading.Items[^1].Rule);
+        Assert.DoesNotContain(kitchen.Items, i => i.Rule == ScoreRule.QualificationRequired);
     }
 
     [Fact]
