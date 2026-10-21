@@ -18,6 +18,13 @@ public interface IListingRepository
 
     Task<ListingRecord?> FindAsync(ListingId id, CancellationToken ct = default);
 
+    /// <summary>
+    /// Brings listings in with their own history. New ones are stored as given. Known ones keep their
+    /// current details and last-seen time; only the first-seen time moves back if the import saw it earlier.
+    /// Payloads and hit keys are added when new.
+    /// </summary>
+    Task<ObservationResult> ImportAsync(IReadOnlyCollection<ImportedListing> listings, CancellationToken ct = default);
+
     /// <summary>Every listing that any of these searches ever found.</summary>
     Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default);
 

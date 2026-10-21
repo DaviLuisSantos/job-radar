@@ -12,7 +12,13 @@ public sealed record ProfileDefinition(MatchingProfile Profile, IReadOnlyList<Li
 {
     public string Name => Profile.Name;
 
-    public IReadOnlyCollection<string> SearchKeys { get; } = Searches.Select(s => s.Key).ToHashSet(StringComparer.Ordinal);
+    /// <summary>
+    /// Keys whose listings this profile scores: its searches, plus <see cref="ProfileCatalog.DirectKey"/> for
+    /// listings attached to the profile without a search (imported from the prototype).
+    /// </summary>
+    public IReadOnlyCollection<string> SearchKeys { get; } = Searches.Select(s => s.Key)
+        .Append(ProfileCatalog.DirectKey(Profile.Name))
+        .ToHashSet(StringComparer.Ordinal);
 }
 
 /// <summary>The configured profiles, built once. Singleton: options are read at startup.</summary>
@@ -29,6 +35,9 @@ public sealed class ProfileCatalog
     }
 
     public ScoringPolicy Policy { get; }
+
+    /// <summary>Hit key for a listing attached to a profile directly, not found by one of its searches.</summary>
+    public static string DirectKey(string profile) => $"profile: {profile.Trim().ToLowerInvariant()}";
 
     public IReadOnlyList<ProfileDefinition> Profiles { get; }
 

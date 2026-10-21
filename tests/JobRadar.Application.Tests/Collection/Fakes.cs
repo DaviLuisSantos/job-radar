@@ -47,7 +47,23 @@ internal sealed class InMemoryListings : IListingRepository
     }
 
     public Task<ListingRecord?> FindAsync(ListingId id, CancellationToken ct = default) =>
-        throw new NotSupportedException();
+        Task.FromResult(_known.TryGetValue(id, out var k) ? new ListingRecord(k.Listing, k.FirstSeen, k.FirstSeen) : null);
+
+    public List<ImportedListing> Imported { get; } = [];
+
+    public Task<ObservationResult> ImportAsync(IReadOnlyCollection<ImportedListing> listings, CancellationToken ct = default)
+    {
+        Imported.AddRange(listings);
+        var added = 0;
+        foreach (var l in listings)
+        {
+            if (_known.TryAdd(l.Listing.Listing.Id, (l.Listing.Listing, l.FirstSeenAt)))
+                added++;
+            foreach (var key in l.HitKeys)
+                _hits.Add((l.Listing.Listing.Id, key));
+        }
+        return Task.FromResult(new ObservationResult(added, listings.Count - added));
+    }
 
     public Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Listing>>(

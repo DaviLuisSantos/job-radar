@@ -13,6 +13,9 @@ public sealed record MarketCount(string Category, string City, string? Term, int
 /// <summary>A listing seen in a category and city on a snapshot day; aggregated, never published.</summary>
 public sealed record MarketListing(string Category, string City, Listing Listing);
 
+/// <summary>A market listing from another store, with the days it was first and last seen open there.</summary>
+public sealed record ImportedMarketListing(MarketListing Listing, DateOnly FirstSeen, DateOnly LastSeen);
+
 public enum SnapshotStatus
 {
     /// <summary>Complete and plausible: used by the monthly report.</summary>

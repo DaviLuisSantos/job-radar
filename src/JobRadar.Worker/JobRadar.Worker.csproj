@@ -8,6 +8,7 @@
     <ProjectReference Include="..\JobRadar.Application\JobRadar.Application.csproj" />
     <ProjectReference Include="..\JobRadar.Infrastructure\JobRadar.Infrastructure.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Seek\JobRadar.Integrations.Seek.csproj" />
+    <ProjectReference Include="..\JobRadar.Integrations.Prototype\JobRadar.Integrations.Prototype.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -50,6 +50,7 @@ public class TrackingServiceTests
                 : null);
 
         public Task<ObservationResult> RecordObservationsAsync(IReadOnlyCollection<SourcedListing> listings, string searchKey, DateTimeOffset observedAt, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<ObservationResult> ImportAsync(IReadOnlyCollection<ImportedListing> listings, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<DateTimeOffset?> GetOldestPostedAmongFirstSeenSinceAsync(string source, DateTimeOffset since, CancellationToken ct = default) => throw new NotSupportedException();
     }

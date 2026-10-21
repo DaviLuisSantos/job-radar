@@ -17,15 +17,13 @@
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
-| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏸ adiada (ver pendências) |
+| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 comando pronto 2026-10-21; falta rodar com o `jobs.db` da outra máquina |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 instalado 2026-10-21; falta acompanhar a 1ª passada completa |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 9 (adiada, 2026-10-21):** o `jobs.db` desta máquina só tem 5.388 vagas de 1–2/jun, sem rótulos,
-  candidaturas ou Raio-X. O histórico real está em outra máquina do autor, que vai fazer a importação lá.
-  Falta construir o **comando de importação** (`import-prototype <jobs.db>`): vagas, `job_labels` → rótulos,
-  `status`/`notes` → candidaturas (o "rejected" do protótipo precisa de decisão: Dismissed ou Declined),
-  `market_runs`/`market_counts`/`market_listings` → Raio-X. Sem ele, o histórico fica de fora.
+- **Etapa 9 (para fechar):** trazer o `jobs.db` da outra máquina e rodar `import-prototype` aqui (o banco de
+  produção está neste PC). Passo a passo em `docs/producao.md`. O `jobs.db` desta máquina só tem 5.388 vagas
+  de 1–2/jun, sem rótulos, candidaturas ou Raio-X: não foi importado no banco de produção.
 - **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
@@ -58,6 +56,19 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 9: comando de importação
+`JobRadar.Integrations.Prototype` lê o `jobs.db` (SQLite, só leitura) e tolera versões antigas (tabela ou
+coluna que falta = vazio). Usa o leitor de rótulos do Seek (exceção documentada: o protótipo guardava os rótulos
+do Seek). `PrototypeImportService`: vagas com a 1ª data do protótipo (já existente: detalhes atuais ficam, só a
+1ª data recua), payload = a linha do protótipo, perfis por chave direta `profile: <nome>` (o perfil pontua),
+termos, rótulos, status (`rejected` + candidatura → Declined; sem → Dismissed, o sentido que a calibragem do
+protótipo dava), notas, retratos e histórico de vagas do Raio-X. O que já está aqui vence; repetir é seguro.
+Comando `import-prototype <jobs.db> [--dry-run]`. 297 testes (SQLite fictício com esquema atual e antigo).
+O teste de composição do site pegou o serviço registrado sem o leitor (que só existe no Worker): registro movido
+para a composição do Worker.
+Prova real num banco descartável: 5.388 vagas em 8,7 s; 2ª execução 0 novas, payloads continuam 5.388; ligação
+aos perfis fifo 1.800, trades 1.677, tech 1.626, construction 1.102. Banco descartável apagado.
 
 ### 2026-10-21 — Etapa 10: instalado
 `deploy.ps1` rodado pelo autor. A 1ª tentativa falhou no Windows PowerShell 5.1 (`"$profiles:"` lido como

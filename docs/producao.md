@@ -91,6 +91,26 @@ Em VM Linux o empacotamento muda: imagens Docker do Worker e do site + `docker c
 site) + Tailscale, no lugar dos serviços do Windows. Domínio, testes e configuração não mudam. Leve o banco
 com `deploy/backup.ps1` → `pg_restore`.
 
+## Importar o histórico do protótipo (etapa 9)
+
+O banco de produção está **neste PC**: traga o `jobs.db` da outra máquina para cá e importe aqui.
+
+1. Na outra máquina, **desative a tarefa agendada** do protótipo (para o histórico não continuar crescendo lá)
+   e copie `job-tracker\data\jobs.db` para este PC (ex.: `C:\Users\davil\Downloads\jobs.db`).
+2. Veja o que há no arquivo, sem gravar nada:
+   ```powershell
+   cd D:\Desenvolvimento\job-radar-au
+   dotnet run --project src\JobRadar.Worker -- import-prototype C:\Users\davil\Downloads\jobs.db --dry-run
+   ```
+3. Faça o backup antes (`.\deploy\backup.ps1`) e importe (mesmo comando, sem `--dry-run`). O `dotnet run` usa
+   as configurações de desenvolvimento, que apontam para o mesmo banco local.
+4. Os scores das vagas importadas saem na próxima passada diária.
+
+Pode repetir: o que já está aqui vence (candidatura, rótulo, dia do Raio-X) e as vagas só juntam datas.
+O que vira o quê: vagas (com a data em que o protótipo as viu primeiro e o payload = a linha do protótipo),
+perfis (`profiles` → chave `profile: <nome>`, pontuada pelo perfil), termos, rótulos, status (`rejected` com
+candidatura → `Declined`, sem → `Dismissed`), notas, retratos do Raio-X com contagens e o histórico de vagas.
+
 ## Desligar o protótipo Python
 
 Neste PC não há tarefa agendada do protótipo. Ele rodava em **outra máquina do autor** (Agendador de

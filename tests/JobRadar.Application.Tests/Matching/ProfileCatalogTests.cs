@@ -57,6 +57,17 @@ public class ProfileCatalogTests
     }
 
     [Fact]
+    public void A_profile_also_scores_listings_attached_to_it_directly()
+    {
+        var profile = Assert.Single(Catalog(("Tech", Dotnet())).Profiles);
+
+        Assert.Contains("profile: tech", profile.SearchKeys);
+        Assert.Equal("profile: tech", ProfileCatalog.DirectKey(" TECH "));
+        // Not a search: nothing is collected for it.
+        Assert.DoesNotContain(profile.Searches, s => s.Key.StartsWith("profile:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void No_profiles_means_nothing_to_collect()
     {
         var catalog = Catalog();

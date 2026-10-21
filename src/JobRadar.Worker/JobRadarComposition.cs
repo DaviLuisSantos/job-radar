@@ -1,5 +1,6 @@
 using JobRadar.Application;
 using JobRadar.Infrastructure.Postgres;
+using JobRadar.Integrations.Prototype;
 using JobRadar.Integrations.Seek;
 
 namespace JobRadar.Worker;
@@ -15,6 +16,9 @@ public static class JobRadarComposition
         services.AddApplication(configuration);
         services.AddPostgresInfrastructure(configuration);
         services.AddSeekIntegration(configuration);
+        // One-off import command: the archive reader and the service that uses it live only in the worker.
+        services.AddPrototypeImport();
+        services.AddScoped<JobRadar.Application.Import.PrototypeImportService>();
         services.AddHostedService<DailyPipelineJob>();
         return services;
     }

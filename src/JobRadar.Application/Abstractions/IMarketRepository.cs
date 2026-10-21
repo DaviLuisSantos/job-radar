@@ -15,6 +15,15 @@ public interface IMarketRepository
     Task SaveSnapshotAsync(MarketSnapshot snapshot, IReadOnlyCollection<MarketCount> counts,
         IReadOnlyCollection<MarketListing> listings, CancellationToken ct = default);
 
+    /// <summary>
+    /// Stores a snapshot taken elsewhere (the prototype) unless that day already exists: the day this
+    /// system took wins. Returns whether it was stored.
+    /// </summary>
+    Task<bool> ImportSnapshotAsync(MarketSnapshot snapshot, IReadOnlyCollection<MarketCount> counts, CancellationToken ct = default);
+
+    /// <summary>Merges listings seen elsewhere: first seen takes the earlier date, last seen the later.</summary>
+    Task<int> ImportListingHistoryAsync(string source, IReadOnlyCollection<ImportedMarketListing> listings, CancellationToken ct = default);
+
     /// <summary>Totals (no term) of the last good snapshot before <paramref name="before"/>, by (category, city).</summary>
     Task<IReadOnlyDictionary<(string Category, string City), int>> GetLastGoodTotalsAsync(
         string source, DateOnly before, CancellationToken ct = default);

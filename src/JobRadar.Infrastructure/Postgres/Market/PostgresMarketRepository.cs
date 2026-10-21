@@ -47,6 +47,66 @@ internal sealed class PostgresMarketRepository(JobRadarDbContext db) : IMarketRe
         }
     }
 
+    public async Task<bool> ImportSnapshotAsync(MarketSnapshot snapshot, IReadOnlyCollection<MarketCount> counts, CancellationToken ct = default)
+    {
+        var (source, day) = (snapshot.Source, snapshot.Date);
+        if (await db.MarketSnapshots.AnyAsync(s => s.Source == source && s.SnapshotDate == day, ct))
+            return false;
+        await SaveSnapshotAsync(snapshot, counts, [], ct);
+        return true;
+    }
+
+    public async Task<int> ImportListingHistoryAsync(string source, IReadOnlyCollection<ImportedMarketListing> listings, CancellationToken ct = default)
+    {
+        var merged = 0;
+        var batch = listings.GroupBy(l => (l.Listing.Listing.Id.SourceId, l.Listing.Category, l.Listing.City))
+            .Select(g => g.First() with { FirstSeen = g.Min(x => x.FirstSeen), LastSeen = g.Max(x => x.LastSeen) })
+            .ToList();
+        foreach (var chunk in batch.Chunk(1000))
+        {
+            var ids = chunk.Select(l => l.Listing.Listing.Id.SourceId).Distinct().ToList();
+            var known = await db.MarketListings.AsTracking()
+                .Where(m => m.Source == source && ids.Contains(m.SourceId))
+                .ToDictionaryAsync(m => (m.SourceId, m.Category, m.City), ct);
+
+            foreach (var imported in chunk)
+            {
+                var l = imported.Listing;
+                var key = (l.Listing.Id.SourceId, l.Category, l.City);
+                if (known.TryGetValue(key, out var row))
+                {
+                    if (imported.FirstSeen < row.FirstSeen) row.FirstSeen = imported.FirstSeen;
+                    if (imported.LastSeen > row.LastSeen) row.LastSeen = imported.LastSeen;
+                }
+                else
+                {
+                    var salary = SalaryParser.Parse(l.Listing.SalaryText);
+                    db.MarketListings.Add(new MarketListingEntity
+                    {
+                        Source = source, SourceId = key.SourceId, Category = l.Category, City = l.City,
+                        Title = l.Listing.Title, Company = l.Listing.Company,
+                        Location = ScoringInput.FormatLocation(l.Listing.Location),
+                        WorkType = ListingMapper.ToColumn(l.Listing.WorkType),
+                        SalaryText = l.Listing.SalaryText, SalaryPeriod = salary?.Period.ToString().ToLowerInvariant(),
+                        SalaryAnnualMin = salary?.AnnualMin, SalaryAnnualMax = salary?.AnnualMax,
+                        PostedAt = l.Listing.PostedAt?.ToUniversalTime(),
+                        FirstSeen = imported.FirstSeen, LastSeen = imported.LastSeen,
+                    });
+                }
+                merged++;
+            }
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            finally
+            {
+                db.ChangeTracker.Clear();
+            }
+        }
+        return merged;
+    }
+
     /// <summary>New listing: first and last seen today. Known: last seen moves to today, details refresh.</summary>
     private async Task UpsertListingsAsync(string source, DateOnly day, IReadOnlyCollection<MarketListing> listings, CancellationToken ct)
     {

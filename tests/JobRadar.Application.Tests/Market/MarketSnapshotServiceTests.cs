@@ -46,6 +46,8 @@ public class MarketSnapshotServiceTests
         public Task<IReadOnlyDictionary<(string Category, string City), int>> GetLastGoodTotalsAsync(string source, DateOnly before, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyDictionary<(string Category, string City), int>>(LastGood);
 
+        public Task<bool> ImportSnapshotAsync(MarketSnapshot snapshot, IReadOnlyCollection<MarketCount> counts, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<int> ImportListingHistoryAsync(string source, IReadOnlyCollection<ImportedMarketListing> listings, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<DailyCount>> GetGoodCountsAsync(string source, DateOnly from, DateOnly to, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<SeenListing>> GetListingsSeenAsync(string source, DateOnly from, DateOnly to, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<MarketSnapshot>> GetSnapshotsAsync(string source, DateOnly from, DateOnly to, CancellationToken ct = default) => throw new NotSupportedException();

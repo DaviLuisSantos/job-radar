@@ -4,13 +4,17 @@ using JobRadar.Integrations.Seek.Api;
 namespace JobRadar.Integrations.Seek;
 
 /// <summary>Seek's ad → neutral <see cref="Listing"/>. Every Seek quirk is absorbed here.</summary>
-internal static class SeekListingTranslator
+/// <remarks>
+/// <see cref="ParseLocation"/> and <see cref="ParseWorkType"/> are public on purpose: the prototype stored
+/// Seek labels verbatim and its importer (Integrations.Prototype) reads them the same way.
+/// </remarks>
+public static class SeekListingTranslator
 {
     public const string SourceName = "seek";
 
     private static readonly Uri JobBase = new("https://www.seek.com.au/job/");
 
-    public static Listing ToListing(SeekJob job) => new(
+    internal static Listing ToListing(SeekJob job) => new(
         Id: new ListingId(SourceName, job.Id),
         Title: job.Title?.Trim() ?? "",
         // ~9% of ads have no companyName (private advertisers, some agencies).
@@ -39,7 +43,7 @@ internal static class SeekListingTranslator
     /// themselves ("Austinmer, Wollongong, Illawarra &amp; South Coast NSW"): split on the first
     /// comma only.
     /// </summary>
-    internal static ListingLocation ParseLocation(string? label)
+    public static ListingLocation ParseLocation(string? label)
     {
         if (string.IsNullOrWhiteSpace(label))
             return ListingLocation.Unknown;
@@ -60,7 +64,7 @@ internal static class SeekListingTranslator
             : new ListingLocation(Blank(text[..comma]), Blank(text[(comma + 2)..]), state, null);
     }
 
-    internal static WorkType ParseWorkType(string? seekWorkType) => seekWorkType?.Trim() switch
+    public static WorkType ParseWorkType(string? seekWorkType) => seekWorkType?.Trim() switch
     {
         "Full time" => WorkType.FullTime,
         "Part time" => WorkType.PartTime,

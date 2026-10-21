@@ -1,5 +1,6 @@
 using System.Globalization;
 using JobRadar.Application.Collection;
+using JobRadar.Application.Import;
 using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tracking;
@@ -49,6 +50,9 @@ public static class CliRunner
                             await output.WriteLineAsync($"  - {issue}");
                     }
                     break;
+                case CliCommand.ImportPrototype c:
+                    WriteImport(await sp.GetRequiredService<PrototypeImportService>().ImportAsync(c.Path, c.DryRun, ct), c.DryRun, output);
+                    break;
                 case CliCommand.MarketReport c:
                     var month = c.Month ?? LocalToday(sp).ToString("yyyy-MM", CultureInfo.InvariantCulture);
                     var report = await sp.GetRequiredService<MarketReportService>().BuildAsync("seek", month, ct);
@@ -76,12 +80,32 @@ public static class CliRunner
             await output.WriteLineAsync(ex.Message);
             return 1;
         }
+        catch (FileNotFoundException ex)
+        {
+            await output.WriteLineAsync(ex.Message);
+            return 1;
+        }
     }
 
     private static DateOnly LocalToday(IServiceProvider sp)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CollectionOptions>>().Value.TimeZone);
         return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(sp.GetRequiredService<TimeProvider>().GetUtcNow(), zone).DateTime);
+    }
+
+    internal static void WriteImport(ImportReport r, bool dryRun, TextWriter o)
+    {
+        o.WriteLine(dryRun ? "Dry run: nothing written. In the file:" : "Imported:");
+        o.WriteLine(dryRun ? $"  jobs            {r.JobsInFile:N0}" : $"  listings        {r.ListingsNew:N0} new, {r.ListingsKnown:N0} already here (of {r.JobsInFile:N0})");
+        o.WriteLine(dryRun ? $"  terms           {r.TermsInFile:N0}" : $"  terms           {r.TermsNew:N0} new (of {r.TermsInFile:N0})");
+        o.WriteLine(dryRun ? $"  labels          {r.LabelsInFile:N0}" : $"  labels          {r.LabelsAdded:N0} added, {r.LabelsSkipped:N0} kept as they were (of {r.LabelsInFile:N0})");
+        o.WriteLine(dryRun ? $"  applications    {r.ApplicationsInFile:N0}" : $"  applications    {r.ApplicationsAdded:N0} added, {r.ApplicationsSkipped:N0} kept as they were (of {r.ApplicationsInFile:N0})");
+        if (r.ApplicationsByStatus.Count > 0)
+            o.WriteLine("                  as " + string.Join(", ", r.ApplicationsByStatus.OrderBy(s => s.Key).Select(s => $"{s.Key} {s.Value:N0}")));
+        o.WriteLine(dryRun ? $"  market days     {r.SnapshotsInFile:N0}" : $"  market days     {r.SnapshotsAdded:N0} added, {r.SnapshotsSkipped:N0} already here (of {r.SnapshotsInFile:N0})");
+        o.WriteLine(dryRun ? $"  market listings {r.MarketListingsInFile:N0}" : $"  market listings {r.MarketListingsMerged:N0} merged");
+        if (!dryRun)
+            o.WriteLine("Scores of the imported listings are computed in the next daily pass.");
     }
 
     internal static void WriteCalibration(IReadOnlyList<ProfileCalibration> results, TextWriter o)

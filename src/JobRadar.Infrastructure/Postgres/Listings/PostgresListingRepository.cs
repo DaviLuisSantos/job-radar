@@ -88,6 +88,67 @@ internal sealed class PostgresListingRepository(JobRadarDbContext db) : IListing
         return new ObservationResult(added, batch.Count - added);
     }
 
+    public async Task<ObservationResult> ImportAsync(IReadOnlyCollection<ImportedListing> listings, CancellationToken ct = default)
+    {
+        if (listings.Count == 0)
+            return new ObservationResult(0, 0);
+
+        var batch = listings.GroupBy(l => l.Listing.Listing.Id).Select(g => g.MinBy(l => l.FirstSeenAt)!).ToList();
+        var known = new Dictionary<(string, string), ListingEntity>();
+        var knownPayloads = new HashSet<(string, string, string)>();
+        var knownHits = new HashSet<(string, string, string)>();
+        foreach (var bySource in batch.GroupBy(l => l.Listing.Listing.Id.Source))
+        {
+            var source = bySource.Key;
+            var ids = bySource.Select(l => l.Listing.Listing.Id.SourceId).ToList();
+            foreach (var row in await db.Listings.AsTracking().Where(e => e.Source == source && ids.Contains(e.SourceId)).ToListAsync(ct))
+                known[(row.Source, row.SourceId)] = row;
+            foreach (var p in await db.ListingPayloads.Where(e => e.Source == source && ids.Contains(e.SourceId))
+                         .Select(e => new { e.SourceId, e.PayloadHash }).ToListAsync(ct))
+                knownPayloads.Add((source, p.SourceId, p.PayloadHash));
+            foreach (var h in await db.ListingSearchHits.Where(e => e.Source == source && ids.Contains(e.SourceId))
+                         .Select(e => new { e.SourceId, e.SearchKey }).ToListAsync(ct))
+                knownHits.Add((source, h.SourceId, h.SearchKey));
+        }
+
+        var added = 0;
+        foreach (var imported in batch)
+        {
+            var (listing, raw) = imported.Listing;
+            var key = (listing.Id.Source, listing.Id.SourceId);
+            var first = imported.FirstSeenAt.ToUniversalTime();
+            if (known.TryGetValue(key, out var row))
+            {
+                // This system's details are newer; only an earlier sighting moves first-seen back.
+                if (first < row.FirstSeenAt)
+                    row.FirstSeenAt = first;
+            }
+            else
+            {
+                var entity = ListingMapper.ToNewEntity(listing, imported.LastSeenAt);
+                entity.FirstSeenAt = first;
+                db.Listings.Add(entity);
+                added++;
+            }
+
+            var hash = ListingPayloadEntity.Hash(raw);
+            if (knownPayloads.Add((key.Source, key.SourceId, hash)))
+                db.ListingPayloads.Add(new ListingPayloadEntity { Source = key.Source, SourceId = key.SourceId, PayloadHash = hash, Payload = raw, FirstSeenAt = first });
+            foreach (var hit in imported.HitKeys.Where(h => knownHits.Add((key.Source, key.SourceId, h))))
+                db.ListingSearchHits.Add(new ListingSearchHitEntity { Source = key.Source, SourceId = key.SourceId, SearchKey = hit, FirstSeenAt = first });
+        }
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        finally
+        {
+            db.ChangeTracker.Clear();
+        }
+        return new ObservationResult(added, batch.Count - added);
+    }
+
     public async Task<ListingRecord?> FindAsync(ListingId id, CancellationToken ct = default)
     {
         var (source, sourceId) = (id.Source, id.SourceId);

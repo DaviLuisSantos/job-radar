@@ -73,6 +73,7 @@ src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/, Tra
 src/JobRadar.Application     serviços (Collection/, Matching/, Tracking/) + portas em Abstractions/
 src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
+src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
 src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
 ```
@@ -120,7 +121,8 @@ Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**f
 união dos perfis.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
-`label <id> good|bad|clear [nota]`, `calibrate`, `market`, `market-report [YYYY-MM] [arquivo]`. `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
+`label <id> good|bad|clear [nota]`, `calibrate`, `market`, `market-report [YYYY-MM] [arquivo]`,
+`import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
 1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` antes e depois.
 
 Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
