@@ -1,0 +1,83 @@
+using System.Globalization;
+using JobRadar.Application.Matching;
+using JobRadar.Application.Tracking;
+using JobRadar.Domain.Matching;
+
+namespace JobRadar.Worker.Cli;
+
+/// <summary>Runs a <see cref="CliCommand"/> against the same services the worker uses. Returns the exit code.</summary>
+public static class CliRunner
+{
+    public static async Task<int> RunAsync(string[] args, IServiceProvider services, TextWriter output, CancellationToken ct = default)
+    {
+        var command = CliCommand.Parse(args, out var error);
+        if (command is null)
+        {
+            await output.WriteLineAsync(error);
+            await output.WriteLineAsync(CliCommand.Usage);
+            return 2;
+        }
+
+        await using var scope = services.CreateAsyncScope();
+        var sp = scope.ServiceProvider;
+        try
+        {
+            switch (command)
+            {
+                case CliCommand.SetStatus c:
+                    var app = await sp.GetRequiredService<TrackingService>().SetStatusAsync(c.Id, c.Status, ct);
+                    await output.WriteLineAsync($"{c.Id}: {app.Status} ({app.History.Count} changes)");
+                    break;
+                case CliCommand.SetNotes c:
+                    await sp.GetRequiredService<TrackingService>().SetNotesAsync(c.Id, c.Notes, ct);
+                    await output.WriteLineAsync($"{c.Id}: notes saved");
+                    break;
+                case CliCommand.SetLabel c:
+                    await sp.GetRequiredService<TrackingService>().LabelAsync(c.Id, c.Verdict, c.Note, ct);
+                    await output.WriteLineAsync($"{c.Id}: {(c.Verdict?.ToString() ?? "label cleared")}");
+                    break;
+                case CliCommand.Calibrate:
+                    WriteCalibration(await sp.GetRequiredService<CalibrationService>().MeasureAsync(ct), output);
+                    break;
+            }
+            return 0;
+        }
+        catch (ListingNotFoundException ex)
+        {
+            await output.WriteLineAsync(ex.Message);
+            return 1;
+        }
+    }
+
+    internal static void WriteCalibration(IReadOnlyList<ProfileCalibration> results, TextWriter o)
+    {
+        if (results.Count == 0)
+        {
+            o.WriteLine("No judged listings yet. Label some (label <id> good|bad) or set application statuses.");
+            return;
+        }
+
+        o.WriteLine($"{"Profile",-14} {"Good",5} {"Bad",5} {"Pairs",7} {$"Good≥{Calibration.AlertThreshold}",9} {$"Bad≥{Calibration.VisibleThreshold}",8}");
+        foreach (var r in results)
+        {
+            var pairs = r.PairAccuracy is { } p ? p.ToString("P0", CultureInfo.InvariantCulture) : "—";
+            o.WriteLine($"{r.Profile,-14} {r.Good,5} {r.Bad,5} {pairs,7} {$"{r.GoodAtAlert}/{r.Good}",9} {$"{r.BadVisible}/{r.Bad}",8}");
+        }
+
+        var misses = results.SelectMany(r => r.Disagreements).ToList();
+        if (misses.Count == 0)
+        {
+            o.WriteLine($"No disagreements: good listings at {Calibration.AlertThreshold}+, bad ones under {Calibration.VisibleThreshold}.");
+            return;
+        }
+
+        o.WriteLine();
+        o.WriteLine("Where the score disagrees with you (top 3 reasons each):");
+        foreach (var m in misses)
+        {
+            var why = string.Join(", ", m.Score.Items.OrderByDescending(i => Math.Abs(i.Points)).Take(3)
+                .Select(i => $"{i.Rule}:{i.Detail} {i.Points:+#;-#;0}"));
+            o.WriteLine($"  {m.Verdict,-4} {m.Score.Final,3}  [{m.Profile}] {m.Title} ({m.Id})  {why}");
+        }
+    }
+}

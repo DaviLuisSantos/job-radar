@@ -14,8 +14,8 @@
 | 4a | Score: regras do protótipo portadas como domínio puro (`FitScorer`) com explicação tipada; `Listing.Summary`; paridade com o Python | ✅ 2026-10-21 |
 | 4b | Score em uso: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil, recalculado todo dia | ✅ 2026-10-21 |
 | 5 | Termos do texto completo: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ✅ 2026-10-21 |
-| 6 | **Candidaturas e rótulos**: status, datas, notas; rótulos bom/ruim e calibragem do score | 🔨 próxima |
-| 7 | **Triagem**: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ⏳ |
+| 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
+| 7 | **Triagem**: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | 🔨 próxima |
 | 8 | **Raio-X**: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ⏳ |
 | 9 | **Importação do histórico** do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏳ |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
@@ -28,10 +28,10 @@ Pendências conhecidas, com a etapa onde entram:
   vagas que o sistema coleta). `collection_runs` com `term:%` e `complete = false` mostra quais.
 - **Etapa 10:** com páginas completas, as 311 buscas dos 5 perfis fazem até ~1.500 requisições na
   1ª passada (a prova usou 1 página: 311). Depois, a janela incremental reduz muito.
-- **Etapa 6 (calibragem):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
+- **Calibragem (depois de ter rótulos reais):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
   "No experience required" anula a frase de entrada seguinte, se ela estiver a menos de 80
   caracteres (teste `Known_quirk_the_no_of_no_experience_negates_the_next_entry_phrase`).
-- **Etapa 6 (calibragem):** nos 5.388 casos reais o score máximo foi 69. A compressão acima de 80
+- **Calibragem (depois de ter rótulos reais):** nos 5.388 casos reais o score máximo foi 69. A compressão acima de 80
   nunca atuou com dados reais; vale rever pesos com os rótulos.
 - **Etapa 8:** com a janela incremental, `last_seen_at` só se atualiza para vagas publicadas na
   janela; o sistema não percebe quando uma vaga antiga sai do ar. O Raio-X conta pela busca
@@ -41,6 +41,18 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 6 ✅
+`Domain.Tracking`: `JobApplication` (status, data da candidatura, notas, histórico só de acréscimo) e
+`ListingLabel`. O "rejected" do protótipo virou dois status: `Dismissed` (o candidato descartou → conta
+como ruim) e `Declined` (o empregador recusou depois da candidatura → conta como boa, porque o candidato
+quis a vaga). Rótulo efetivo: o explícito vence; sem ele, o status decide (`Judgement.Effective`).
+`Calibration.Measure` (puro): por perfil, acerto de pares, boas ≥ 75, ruins ≥ 50 e as discordâncias com
+os 3 itens que mais pesaram. Tabelas `applications`, `application_events`, `listing_labels`. Comandos no
+Worker (`status`, `notes`, `label`, `calibrate`); sem comando, roda o pipeline. 200 testes.
+Prova real no banco local: candidatura + notas + descarte + rótulo; ID no formato do protótipo
+(`seek_123`) recusado com código 2, vaga nunca coletada com código 1; a calibragem apontou um "IT Support
+Technician" descartado com 60 pontos (+10 Perth, +5 híbrido). Julgamentos de teste apagados depois.
 
 ### 2026-10-21 — Etapa 5 ✅
 Capacidade opcional `IFullTextSearch` (fontes.md, regra 2); o Seek implementa em `SeekFullTextSearch`

@@ -2,6 +2,7 @@ using JobRadar.Application.Abstractions;
 using JobRadar.Infrastructure.Postgres.Collection;
 using JobRadar.Infrastructure.Postgres.Listings;
 using JobRadar.Infrastructure.Postgres.Matching;
+using JobRadar.Infrastructure.Postgres.Tracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,7 @@ public static class PostgresServiceCollectionExtensions
         services.AddScoped<ICollectionRunRepository, PostgresCollectionRunRepository>();
         services.AddScoped<IListingScoreRepository, PostgresListingScoreRepository>();
         services.AddScoped<IListingTermRepository, PostgresListingTermRepository>();
+        services.AddScoped<ITrackingRepository, PostgresTrackingRepository>();
         return services;
     }
 }

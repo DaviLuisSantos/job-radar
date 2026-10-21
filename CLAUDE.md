@@ -63,11 +63,11 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 ## Camadas
 
 ```
-src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/) — sem EF, HTTP ou integração
-src/JobRadar.Application     serviços (Collection/) + portas em Abstractions/
+src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/, Tracking/) — sem EF, HTTP ou integração
+src/JobRadar.Application     serviços (Collection/, Matching/, Tracking/) + portas em Abstractions/
 src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
-src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar) e jobs
+src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
 ```
 
 - Um `.csproj` por camada: Application não referencia Infrastructure, o compilador garante.
@@ -107,6 +107,10 @@ Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**f
 `appsettings.Local.example.json`). Cada palavra-chave é buscada em cada local; as buscas da coleta são a
 união dos perfis.
 
+**Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
+`label <id> good|bad|clear [nota]`, `calibrate`. `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
+1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` antes e depois.
+
 Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
 e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma prova leve).
 
@@ -135,6 +139,10 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Termos: a busca do Seek não dá o contexto da frase ("no sponsorship" também contém "sponsorship"). Por isso os
   pesos dos grupos são moderados e só o grupo `exclude` elimina. A divisão por estado quando passa de 500 é
   peculiaridade do Seek e fica em `SeekFullTextSearch`, não no serviço.
+- `Dismissed` (o candidato descartou) e `Declined` (o empregador recusou) não são a mesma coisa: na calibragem
+  o primeiro conta como ruim e o segundo como **boa**. Não junte os dois de novo.
+- Os argumentos de um comando não entram na configuração do host (`Program.cs`): o texto livre de `notes`
+  poderia ser lido como chave=valor.
 - Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
   antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
 - `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no

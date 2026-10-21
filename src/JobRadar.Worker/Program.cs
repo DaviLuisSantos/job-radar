@@ -1,16 +1,25 @@
 using JobRadar.Worker;
+using JobRadar.Worker.Cli;
+
+// "status seek:123 applied" and friends run once and exit; no arguments runs the daily worker.
+var isCommand = CliCommand.IsCommand(args);
+var hostArgs = isCommand ? [] : args;   // free text (notes) must not be read as configuration
 
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
-    Args = args,
+    Args = hostArgs,
     // Config files next to the binary, not in the current directory (System32 under a Windows service).
     ContentRootPath = AppContext.BaseDirectory,
 });
 // Real profiles describe a person's plans and stay out of git (see appsettings.Local.example.json).
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 // Environment and command line keep the last word, as in the default host.
-builder.Configuration.AddEnvironmentVariables().AddCommandLine(args);
+builder.Configuration.AddEnvironmentVariables().AddCommandLine(hostArgs);
 builder.Services.AddJobRadar(builder.Configuration);
 
 var host = builder.Build();
-host.Run();
+if (isCommand)
+    return await CliRunner.RunAsync(args, host.Services, Console.Out);
+
+await host.RunAsync();
+return 0;

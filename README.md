@@ -11,9 +11,9 @@ Two products share one core:
   the share that accepts working holiday makers, and the share that requires citizenship or PR.
   It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
 
-> **Status:** early. Daily collection from Seek and scoring per profile work end to end; the
-> scorer matches the Python prototype on 5,388 real listings. Triage, applications and the market
-> snapshot are next.
+> **Status:** early. Daily collection from Seek, full-text clause detection, scoring per profile
+> and application tracking work end to end; the scorer matches the Python prototype on 5,388 real
+> listings. Triage UI and the market snapshot are next.
 > Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
 
 ## Architecture
@@ -51,6 +51,17 @@ Describe your profiles first: copy `src/JobRadar.Worker/appsettings.Local.exampl
 `appsettings.Local.json` (git-ignored). Every day at 06:00 Perth time the worker searches each
 profile's keywords in its locations, then scores what each profile found. Set
 `Collection__RunOnStartup=true` to run a pass immediately.
+
+Track applications and check the score against your judgement with the same executable:
+
+```bash
+dotnet run --project src/JobRadar.Worker -- status seek:81234567 applied
+dotnet run --project src/JobRadar.Worker -- label seek:81234567 good "exactly my stack"
+dotnet run --project src/JobRadar.Worker -- calibrate
+```
+
+`calibrate` reports, per profile, how often a listing you liked outscores one you did not, and
+lists where the score disagrees with you, with the rules that weighed most.
 
 ## Tests
 

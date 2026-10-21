@@ -1,7 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using JobRadar.Application.Abstractions;
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
+using JobRadar.Domain.Tracking;
+using JobRadar.Infrastructure.Postgres.Tracking;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Postgres.Matching;
@@ -51,5 +54,32 @@ internal sealed class PostgresListingScoreRepository(JobRadarDbContext db) : ILi
                 db.ChangeTracker.Clear();
             }
         }
+    }
+
+    public async Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default)
+    {
+        var rows = await (
+                from s in db.ListingScores
+                join l in db.Listings on new { s.Source, s.SourceId } equals new { l.Source, l.SourceId }
+                join lab in db.ListingLabels on new { s.Source, s.SourceId } equals new { lab.Source, lab.SourceId } into labels
+                from lab in labels.DefaultIfEmpty()
+                join app in db.Applications on new { s.Source, s.SourceId } equals new { app.Source, app.SourceId } into apps
+                from app in apps.DefaultIfEmpty()
+                where lab != null || app != null
+                select new { s.Source, s.SourceId, s.Profile, s.Score, s.Explanation, l.Title, Verdict = lab.Verdict, Status = app.Status })
+            .ToListAsync(ct);
+
+        var judged = new List<JudgedScore>();
+        foreach (var r in rows)
+        {
+            var verdict = Judgement.Effective(
+                r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict),
+                r.Status is null ? null : TrackingMapper.ToStatus(r.Status));
+            if (verdict is not { } v)
+                continue;   // reviewed only: no verdict yet
+            var items = JsonSerializer.Deserialize<List<ScoreItem>>(r.Explanation, Json) ?? [];
+            judged.Add(new JudgedScore(new ListingId(r.Source, r.SourceId), r.Title, r.Profile, new FitScore(r.Score, items), v));
+        }
+        return judged;
     }
 }

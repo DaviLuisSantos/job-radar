@@ -1,5 +1,6 @@
 using JobRadar.Application.Collection;
 using JobRadar.Application.Matching;
+using JobRadar.Application.Tracking;
 using JobRadar.Domain.Matching;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<ProfileCatalog>();
         services.AddScoped<ListingScoringService>();
         services.AddScoped<FullTextTermService>();
+        services.AddScoped<TrackingService>();
+        services.AddScoped<CalibrationService>();
         return services;
     }
 }

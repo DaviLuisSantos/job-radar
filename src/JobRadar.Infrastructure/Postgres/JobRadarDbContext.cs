@@ -1,6 +1,7 @@
 using JobRadar.Infrastructure.Postgres.Collection;
 using JobRadar.Infrastructure.Postgres.Listings;
 using JobRadar.Infrastructure.Postgres.Matching;
+using JobRadar.Infrastructure.Postgres.Tracking;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Postgres;
@@ -17,6 +18,9 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<CollectionRunEntity> CollectionRuns => Set<CollectionRunEntity>();
     public DbSet<ListingScoreEntity> ListingScores => Set<ListingScoreEntity>();
     public DbSet<ListingTermEntity> ListingTerms => Set<ListingTermEntity>();
+    public DbSet<ApplicationEntity> Applications => Set<ApplicationEntity>();
+    public DbSet<ApplicationEventEntity> ApplicationEvents => Set<ApplicationEventEntity>();
+    public DbSet<ListingLabelEntity> ListingLabels => Set<ListingLabelEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(JobRadarDbContext).Assembly);

@@ -22,6 +22,9 @@ public class ListingScoringServiceTests
             Saved.AddRange(scores);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 
     // 23:00 UTC on the 20th is 07:00 on the 21st in Perth.
