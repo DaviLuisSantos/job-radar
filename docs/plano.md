@@ -18,7 +18,7 @@
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
 | 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏸ adiada (ver pendências) |
-| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 implantação pronta; falta instalar (autor, como admin) e acompanhar a 1ª passada |
+| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 instalado 2026-10-21; falta acompanhar a 1ª passada completa |
 
 Pendências conhecidas, com a etapa onde entram:
 - **Etapa 9 (adiada, 2026-10-21):** o `jobs.db` desta máquina só tem 5.388 vagas de 1–2/jun, sem rótulos,
@@ -29,7 +29,7 @@ Pendências conhecidas, com a etapa onde entram:
 - **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
-- **Etapa 10 (para fechar):** rodar `deploy\deploy.ps1` como administrador; acompanhar a 1ª passada completa
+- **Etapa 10 (para fechar):** acompanhar a 1ª passada completa
   pela página de status (buscas incompletas = dividir na configuração; termos incompletos na carga de 31
   dias, ver abaixo); decidir se o backup entra no Agendador de Tarefas; desligar o protótipo na outra máquina.
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
@@ -58,6 +58,13 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 10: instalado
+`deploy.ps1` rodado pelo autor. A 1ª tentativa falhou no Windows PowerShell 5.1 (`"$profiles:"` lido como
+unidade; `AutomaticDelayedStart` só existe no PowerShell 6+): corrigido em `be716df`, conferido com o
+analisador do 5.1 e do 7. Verificado depois: `JobRadarWorker` e `JobRadarWeb` rodando (automático, início
+atrasado); `/status` responde em `localhost:5380` e no IP da Tailscale; `Host` desconhecido recusado (400).
+1ª passada completa agendada para 22/10 06:00 Perth (21/10 19:00 Brasília).
 
 ### 2026-10-21 — Etapa 10 (implantação pronta)
 Decisões: produção **no PC do autor** (Windows); site **só local + Tailscale**, sem login no app.

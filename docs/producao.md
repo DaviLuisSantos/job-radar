@@ -46,6 +46,8 @@ firewall para a Tailscale e inicia tudo. Rodar de novo = implantar a versão atu
 - **Página de status:** `http://localhost:5380/status` (ou pelo IP da Tailscale). Passadas por dia, falhas,
   buscas incompletas e os retratos do Raio-X com o status de qualidade.
 - **Logs:** Visualizador de Eventos → Logs do Windows → Aplicativo, fontes `JobRadarWorker` e `JobRadarWeb`.
+  Só **avisos e erros** vão para lá (padrão do log de eventos); um log com apenas "Service started" é normal.
+  O andamento de cada passada está na página de status e em `collection_runs`.
 - **Serviços:** `Get-Service JobRadar*`.
 
 ## Backup
