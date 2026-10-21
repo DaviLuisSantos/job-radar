@@ -104,7 +104,8 @@ O banco de produção está **neste PC**: traga o `jobs.db` da outra máquina pa
    ```
 3. Faça o backup antes (`.\deploy\backup.ps1`) e importe (mesmo comando, sem `--dry-run`). O `dotnet run` usa
    as configurações de desenvolvimento, que apontam para o mesmo banco local.
-4. Os scores das vagas importadas saem na próxima passada diária, **desde que os serviços estejam na versão com o`n   importador** (commit `e735126` ou depois): se instalou antes, rode `.\deploy\deploy.ps1` de novo.
+4. Os scores das vagas importadas saem na próxima passada diária, **desde que os serviços estejam na versão com o
+   importador** (commit `e735126` ou depois): se instalou antes, rode `.\deploy\deploy.ps1` de novo.
 
 Pode repetir: o que já está aqui vence (candidatura, rótulo, dia do Raio-X) e as vagas só juntam datas.
 O que vira o quê: vagas (com a data em que o protótipo as viu primeiro e o payload = a linha do protótipo),
