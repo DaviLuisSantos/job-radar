@@ -7,6 +7,7 @@
     <Project Path="src/JobRadar.Worker/JobRadar.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/JobRadar.Application.Tests/JobRadar.Application.Tests.csproj" />
     <Project Path="tests/JobRadar.Domain.Tests/JobRadar.Domain.Tests.csproj" />
     <Project Path="tests/JobRadar.Infrastructure.Tests/JobRadar.Infrastructure.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Seek.Tests/JobRadar.Integrations.Seek.Tests.csproj" />

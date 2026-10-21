@@ -39,9 +39,7 @@ public class LiveSeekTests
         await host.StartAsync(TestContext.Current.CancellationToken);
 
         var source = host.Services.GetRequiredService<IJobSource>();
-        var listings = new List<SourcedListing>();
-        await foreach (var l in source.SearchAsync(new ListingSearch("developer", "Perth"), TestContext.Current.CancellationToken))
-            listings.Add(l);
+        var listings = (await source.SearchAsync(new ListingSearch("developer", "Perth"), TestContext.Current.CancellationToken)).Listings;
 
         Assert.NotEmpty(listings);
         Assert.All(listings, l =>

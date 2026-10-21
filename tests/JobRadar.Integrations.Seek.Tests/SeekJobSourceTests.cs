@@ -9,23 +9,19 @@ public class SeekJobSourceTests
     private static readonly ListingSearch Search = new(".net developer", "Perth");
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static async Task<List<SourcedListing>> CollectAsync(SeekJobSource source, ListingSearch? search = null)
-    {
-        var result = new List<SourcedListing>();
-        await foreach (var l in source.SearchAsync(search ?? Search, Ct))
-            result.Add(l);
-        return result;
-    }
+    private static async Task<IReadOnlyList<SourcedListing>> CollectAsync(SeekJobSource source, ListingSearch? search = null) =>
+        (await source.SearchAsync(search ?? Search, Ct)).Listings;
 
     [Fact]
     public async Task Pages_until_the_total_is_reached_and_returns_each_ad_once()
     {
         var api = new FakeSeekApi().Page(1, "search-page1.json").Page(2, "search-page2.json");
 
-        var listings = await CollectAsync(api.Source());
+        var result = await api.Source().SearchAsync(Search, Ct);
 
         // 5 items over two pages, the promoted ad repeated on page 2.
-        Assert.Equal(["90000001", "90000002", "90000003", "90000004"], listings.Select(l => l.Listing.Id.SourceId));
+        Assert.Equal(["90000001", "90000002", "90000003", "90000004"], result.Listings.Select(l => l.Listing.Id.SourceId));
+        Assert.True(result.Complete);
         Assert.Equal(2, api.Requests.Count);
     }
 
@@ -41,12 +37,14 @@ public class SeekJobSourceTests
     }
 
     [Fact]
-    public async Task Stops_at_the_page_cap()
+    public async Task Stops_at_the_page_cap_and_reports_the_result_as_incomplete()
     {
         var api = new FakeSeekApi().Page(1, "search-page1.json").Page(2, "search-page1.json");
 
-        await CollectAsync(api.Source(maxPages: 1));
+        var result = await api.Source(maxPages: 1).SearchAsync(Search, Ct);
 
+        Assert.False(result.Complete);
+        Assert.Equal(3, result.Listings.Count);
         Assert.Single(api.Requests);
     }
 
@@ -59,8 +57,25 @@ public class SeekJobSourceTests
 
         using var raw = JsonDocument.Parse(first.RawPayload);
         Assert.Equal("90000001", raw.RootElement.GetProperty("id").GetString());
-        // Fields the translator ignores are still there for later reprocessing.
+        // Fields the translator ignores are still there for later reprocessing...
         Assert.Equal("Hybrid", raw.RootElement.GetProperty("workArrangements").GetProperty("displayText").GetString());
+        // ...but not the per-request ones.
+        Assert.False(raw.RootElement.TryGetProperty("tracking", out _));
+        Assert.False(raw.RootElement.TryGetProperty("solMetadata", out _));
+        Assert.False(raw.RootElement.TryGetProperty("listingDateDisplay", out _));
+    }
+
+    [Fact]
+    public void The_same_ad_from_two_requests_has_the_same_payload()
+    {
+        // Real shape: each request stamps its own tokens; "2d ago" changes daily.
+        const string first = """{"id":"1","title":"Chef","tracking":"ZXdv1","listingDateDisplay":"2d ago","solMetadata":{"token":"0~aaa","sectionRank":8}}""";
+        const string second = """{"id":"1","title":"Chef","tracking":"ZXdv2","listingDateDisplay":"3d ago","solMetadata":{"token":"0~bbb","sectionRank":10}}""";
+
+        static string Stable(string json) => Api.SeekSearchClient.StableRaw(JsonDocument.Parse(json).RootElement);
+
+        Assert.Equal(Stable(first), Stable(second));
+        Assert.Equal("""{"id":"1","title":"Chef"}""", Stable(first));
     }
 
     [Fact]

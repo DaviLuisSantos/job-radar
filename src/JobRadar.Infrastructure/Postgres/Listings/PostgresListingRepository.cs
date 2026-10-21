@@ -7,30 +7,38 @@ namespace JobRadar.Infrastructure.Postgres.Listings;
 internal sealed class PostgresListingRepository(JobRadarDbContext db) : IListingRepository
 {
     public async Task<ObservationResult> RecordObservationsAsync(
-        IReadOnlyCollection<Listing> listings, DateTimeOffset observedAt, CancellationToken ct = default)
+        IReadOnlyCollection<SourcedListing> listings, DateTimeOffset observedAt, CancellationToken ct = default)
     {
         if (listings.Count == 0)
             return new ObservationResult(0, 0);
 
-        // A source can repeat an ad within one run (promoted ads); the last copy wins.
-        var batch = listings.GroupBy(l => l.Id).Select(g => g.Last()).ToList();
+        // A source can repeat an ad within one batch; the last copy wins.
+        var batch = listings.GroupBy(l => l.Listing.Id).Select(g => g.Last()).ToList();
 
         var known = new Dictionary<(string, string), ListingEntity>();
-        foreach (var bySource in batch.GroupBy(l => l.Id.Source))
+        var knownPayloads = new HashSet<(string, string, string)>();
+        foreach (var bySource in batch.GroupBy(l => l.Listing.Id.Source))
         {
             var source = bySource.Key;
-            var ids = bySource.Select(l => l.Id.SourceId).ToList();
-            var rows = await db.Listings.AsTracking()
-                .Where(e => e.Source == source && ids.Contains(e.SourceId))
-                .ToListAsync(ct);
-            foreach (var row in rows)
+            var ids = bySource.Select(l => l.Listing.Id.SourceId).ToList();
+
+            foreach (var row in await db.Listings.AsTracking()
+                         .Where(e => e.Source == source && ids.Contains(e.SourceId))
+                         .ToListAsync(ct))
                 known[(row.Source, row.SourceId)] = row;
+
+            foreach (var p in await db.ListingPayloads
+                         .Where(e => e.Source == source && ids.Contains(e.SourceId))
+                         .Select(e => new { e.SourceId, e.PayloadHash })
+                         .ToListAsync(ct))
+                knownPayloads.Add((source, p.SourceId, p.PayloadHash));
         }
 
         var added = 0;
-        foreach (var listing in batch)
+        foreach (var (listing, raw) in batch)
         {
-            if (known.TryGetValue((listing.Id.Source, listing.Id.SourceId), out var row))
+            var key = (listing.Id.Source, listing.Id.SourceId);
+            if (known.TryGetValue(key, out var row))
             {
                 ListingMapper.Refresh(row, listing, observedAt);
             }
@@ -39,9 +47,32 @@ internal sealed class PostgresListingRepository(JobRadarDbContext db) : IListing
                 db.Listings.Add(ListingMapper.ToNewEntity(listing, observedAt));
                 added++;
             }
+
+            var hash = ListingPayloadEntity.Hash(raw);
+            if (knownPayloads.Add((key.Source, key.SourceId, hash)))
+            {
+                db.ListingPayloads.Add(new ListingPayloadEntity
+                {
+                    Source = key.Source,
+                    SourceId = key.SourceId,
+                    PayloadHash = hash,
+                    Payload = raw,
+                    FirstSeenAt = observedAt.ToUniversalTime(),
+                });
+            }
         }
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            // The context is scoped: left dirty, the next save in this scope (the run log)
+            // would retry these rows and fail the same way.
+            db.ChangeTracker.Clear();
+            throw;
+        }
         return new ObservationResult(added, batch.Count - added);
     }
 

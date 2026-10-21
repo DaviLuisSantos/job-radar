@@ -8,11 +8,9 @@ public class SeekListingTranslatorTests
 
     private static async Task<Dictionary<string, Listing>> Page1Async()
     {
-        var listings = new Dictionary<string, Listing>();
-        await foreach (var l in new FakeSeekApi().Page(1, "search-page1.json").Source(maxPages: 1)
-                           .SearchAsync(new ListingSearch("", "All Australia"), Ct))
-            listings[l.Listing.Id.SourceId] = l.Listing;
-        return listings;
+        var result = await new FakeSeekApi().Page(1, "search-page1.json").Source(maxPages: 1)
+            .SearchAsync(new ListingSearch("", "All Australia"), Ct);
+        return result.Listings.ToDictionary(l => l.Listing.Id.SourceId, l => l.Listing);
     }
 
     [Fact]

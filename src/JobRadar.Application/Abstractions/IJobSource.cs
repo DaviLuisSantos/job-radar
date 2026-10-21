@@ -12,7 +12,8 @@ public interface IJobSource
     string Name { get; }
 
     /// <summary>
-    /// Every listing matching the search, each once, paging and source quirks handled inside.
+    /// Every listing matching the search, each once, with paging and source quirks handled
+    /// inside. Sources cap results (Seek: 500), so the result says whether it is complete.
     /// </summary>
-    IAsyncEnumerable<SourcedListing> SearchAsync(ListingSearch search, CancellationToken ct = default);
+    Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default);
 }

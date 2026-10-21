@@ -12,9 +12,10 @@ public static class JobRadarComposition
 {
     public static IServiceCollection AddJobRadar(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddApplication();
+        services.AddApplication(configuration);
         services.AddPostgresInfrastructure(configuration);
         services.AddSeekIntegration(configuration);
+        services.AddHostedService<DailyCollectionJob>();
         return services;
     }
 }

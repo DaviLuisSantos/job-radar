@@ -1,3 +1,4 @@
+using JobRadar.Infrastructure.Postgres.Collection;
 using JobRadar.Infrastructure.Postgres.Listings;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,8 @@ namespace JobRadar.Infrastructure.Postgres;
 public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : DbContext(options)
 {
     public DbSet<ListingEntity> Listings => Set<ListingEntity>();
+    public DbSet<ListingPayloadEntity> ListingPayloads => Set<ListingPayloadEntity>();
+    public DbSet<CollectionRunEntity> CollectionRuns => Set<CollectionRunEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(JobRadarDbContext).Assembly);

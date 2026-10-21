@@ -1,14 +1,22 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Infrastructure.Postgres.Listings;
+using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
-public class ListingRepositoryContractTests(PostgresFixture db) : IClassFixture<PostgresFixture>
+[Collection(PostgresCollection.Name)]
+public class ListingRepositoryContractTests(PostgresFixture db)
 {
     private static readonly DateTimeOffset Monday = new(2026, 10, 19, 9, 0, 0, TimeSpan.FromHours(8));
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private async Task<ObservationResult> RecordAsync(DateTimeOffset at, params Listing[] listings)
+    private static SourcedListing Sourced(Listing listing, string? raw = null) =>
+        new(listing, raw ?? $$"""{"id":"{{listing.Id.SourceId}}","title":"{{listing.Title}}"}""");
+
+    private Task<ObservationResult> RecordAsync(DateTimeOffset at, params Listing[] listings) =>
+        RecordAsync(at, listings.Select(l => Sourced(l)).ToArray());
+
+    private async Task<ObservationResult> RecordAsync(DateTimeOffset at, params SourcedListing[] listings)
     {
         await using var ctx = db.NewContext();
         return await new PostgresListingRepository(ctx).RecordObservationsAsync(listings, at, Ct);
@@ -18,6 +26,12 @@ public class ListingRepositoryContractTests(PostgresFixture db) : IClassFixture<
     {
         await using var ctx = db.NewContext();
         return await new PostgresListingRepository(ctx).FindAsync(id, Ct);
+    }
+
+    private async Task<List<ListingPayloadEntity>> PayloadsAsync()
+    {
+        await using var ctx = db.NewContext();
+        return await ctx.ListingPayloads.OrderBy(p => p.FirstSeenAt).ToListAsync(Ct);
     }
 
     [DatabaseFact]
@@ -81,5 +95,51 @@ public class ListingRepositoryContractTests(PostgresFixture db) : IClassFixture<
         await db.ResetAsync();
 
         Assert.Null(await FindAsync(new ListingId("seek", "404")));
+    }
+
+    [DatabaseFact]
+    public async Task An_unchanged_payload_is_stored_once_however_often_it_is_seen()
+    {
+        await db.ResetAsync();
+        var listing = Sourced(ListingMapperTests.Sample(), """{"id":"1","teaser":"same"}""");
+
+        await RecordAsync(Monday, listing);
+        await RecordAsync(Monday.AddDays(1), listing);
+        await RecordAsync(Monday.AddDays(2), listing);
+
+        var payload = Assert.Single(await PayloadsAsync());
+        Assert.Equal(Monday, payload.FirstSeenAt);
+        Assert.Equal(ListingPayloadEntity.Hash("""{"id":"1","teaser":"same"}"""), payload.PayloadHash);
+    }
+
+    [DatabaseFact]
+    public async Task An_edited_ad_adds_a_payload_version_and_keeps_the_old_one()
+    {
+        await db.ResetAsync();
+        var listing = ListingMapperTests.Sample();
+
+        await RecordAsync(Monday, Sourced(listing, """{"id":"1","teaser":"v1"}"""));
+        await RecordAsync(Monday.AddDays(1), Sourced(listing, """{"id":"1","teaser":"v2"}"""));
+
+        var payloads = await PayloadsAsync();
+        Assert.Equal(2, payloads.Count);
+        Assert.Contains("v1", payloads[0].Payload);
+        Assert.Contains("v2", payloads[1].Payload);
+    }
+
+    [DatabaseFact]
+    public async Task A_failed_save_leaves_the_context_usable()
+    {
+        await db.ResetAsync();
+        await using var ctx = db.NewContext();
+        var repo = new PostgresListingRepository(ctx);
+        // Not valid JSON: Postgres rejects it for the jsonb column.
+        var broken = Sourced(ListingMapperTests.Sample(), "not json");
+
+        await Assert.ThrowsAnyAsync<DbUpdateException>(() => repo.RecordObservationsAsync([broken], Monday, Ct));
+        var result = await repo.RecordObservationsAsync([Sourced(ListingMapperTests.Sample("2"))], Monday, Ct);
+
+        Assert.Equal(1, result.New);
+        Assert.Null(await FindAsync(new ListingId("seek", "1")));
     }
 }

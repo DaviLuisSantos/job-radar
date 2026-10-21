@@ -23,6 +23,16 @@ public sealed class DatabaseFactAttribute : FactAttribute
 }
 
 /// <summary>
+/// One container for every contract test class. Classes in a collection run one at a time,
+/// so a test never sees tables another class is truncating.
+/// </summary>
+[CollectionDefinition(Name)]
+public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
+{
+    public const string Name = "Postgres";
+}
+
+/// <summary>
 /// Real Postgres, same major version as docker-compose.yml, schema built by the real migrations.
 /// </summary>
 public sealed class PostgresFixture : IAsyncLifetime
@@ -55,7 +65,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async Task ResetAsync()
     {
         await using var db = NewContext();
-        await db.Database.ExecuteSqlRawAsync("TRUNCATE listings");
+        await db.Database.ExecuteSqlRawAsync("TRUNCATE listing_payloads, listings, collection_runs");
     }
 
     public async ValueTask DisposeAsync()

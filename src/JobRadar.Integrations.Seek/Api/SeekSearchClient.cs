@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using JobRadar.Domain.Listings;
 using Microsoft.Extensions.Options;
 
@@ -25,9 +26,24 @@ internal sealed class SeekSearchClient(HttpClient http, IOptions<SeekOptions> op
             ?? throw new InvalidOperationException("Seek returned an empty body.");
 
         var jobs = (body.Data ?? [])
-            .Select(e => (Job: e.Deserialize<SeekJob>(Json)!, Raw: e.GetRawText()))
+            .Select(e => (Job: e.Deserialize<SeekJob>(Json)!, Raw: StableRaw(e)))
             .ToList();
         return new SeekSearchPage(body.TotalCount, jobs);
+    }
+
+    /// <summary>
+    /// Fields that change on every request (search tokens) or every day ("2d ago") without the ad
+    /// changing. Kept, they would make each sighting a new payload version.
+    /// </summary>
+    internal static readonly string[] VolatileFields = ["tracking", "solMetadata", "listingDateDisplay"];
+
+    internal static string StableRaw(JsonElement job)
+    {
+        if (JsonNode.Parse(job.GetRawText()) is not JsonObject node)
+            return job.GetRawText();
+        foreach (var field in VolatileFields)
+            node.Remove(field);
+        return node.ToJsonString();
     }
 
     internal static string BuildUri(ListingSearch search, int page, int pageSize)

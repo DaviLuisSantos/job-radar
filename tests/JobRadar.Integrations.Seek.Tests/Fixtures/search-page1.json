@@ -16,7 +16,10 @@
       "teaser": "Fictional ad used as a test fixture.",
       "bulletPoints": [ "Fictional bullet" ],
       "displayType": "promoted",
-      "isFeatured": true
+      "isFeatured": true,
+      "listingDateDisplay": "13d ago",
+      "tracking": "ZmljdGlvbmFsLXRva2VuLTE=",
+      "solMetadata": { "jobId": "90000001", "token": "0~fictional-1", "sectionRank": 1, "searchRequestToken": "fictional-1" }
     },
     {
       "id": "90000002",

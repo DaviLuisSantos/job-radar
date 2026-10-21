@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Listings;
 using JobRadar.Integrations.Seek.Api;
@@ -15,12 +14,12 @@ internal sealed class SeekJobSource(
 {
     public string Name => SeekListingTranslator.SourceName;
 
-    public async IAsyncEnumerable<SourcedListing> SearchAsync(
-        ListingSearch search, [EnumeratorCancellation] CancellationToken ct = default)
+    public async Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default)
     {
         var o = options.Value;
         // Promoted ads repeat on every page; each listing is returned once per search.
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var listings = new List<SourcedListing>();
         var received = 0;
 
         for (var page = 1; page <= o.MaxPages; page++)
@@ -32,17 +31,18 @@ internal sealed class SeekJobSource(
             foreach (var (job, raw) in result.Jobs)
             {
                 if (seen.Add(job.Id))
-                    yield return new SourcedListing(SeekListingTranslator.ToListing(job), raw);
+                    listings.Add(new SourcedListing(SeekListingTranslator.ToListing(job), raw));
             }
 
             received += result.Jobs.Count;
             if (result.Jobs.Count < o.PageSize || received >= result.TotalCount)
-                yield break;
+                return new SearchResult(listings, Complete: true);
         }
 
         log.LogWarning(
-            "Seek search {Keywords} in {Location} stopped at the {MaxPages}-page cap; more listings exist",
-            search.Keywords, search.Location, o.MaxPages);
+            "Seek search {SearchKey} stopped at the {MaxPages}-page cap; more listings exist",
+            search.Key, o.MaxPages);
+        return new SearchResult(listings, Complete: false);
     }
 
     private static TimeSpan Jitter(TimeSpan delay) =>

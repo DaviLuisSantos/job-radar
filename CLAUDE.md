@@ -56,8 +56,8 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 ## Camadas
 
 ```
-src/JobRadar.Domain          modelo puro (Listings/) — sem EF, HTTP ou integração
-src/JobRadar.Application     serviços + portas em Abstractions/
+src/JobRadar.Domain          modelo puro (Listings/, Collection/) — sem EF, HTTP ou integração
+src/JobRadar.Application     serviços (Collection/) + portas em Abstractions/
 src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar) e jobs
@@ -74,6 +74,19 @@ src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar)
 - Integração de site nova: projeto `JobRadar.Integrations.<Site>` com `Add<Site>Integration()`,
   traduzindo para `Listing`. O núcleo não conhece site nenhum.
 
+## Fluxo principal
+
+`ListingCollector.CollectAsync` (disparado por `DailyCollectionJob`, às `Collection:DailyAt` no fuso
+`Collection:TimeZone`):
+1. para cada fonte e busca de `Collection:Searches`, calcula a janela incremental pelo último sucesso;
+2. `IJobSource.SearchAsync`, que devolve as vagas únicas e diz se a busca veio completa;
+3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas e guarda o
+   payload só quando o conteúdo mudou;
+4. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
+
+Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
+e o Worker com `Collection__RunOnStartup=true`.
+
 ## Armadilhas
 
 - Npgsql só grava `timestamptz` com offset 0: o mapper converte com `ToUniversalTime()`
@@ -87,6 +100,16 @@ src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar)
 - Padrões de opções ficam na classe (`SeekOptions`), não no `appsettings.json`.
 - Migration gerada pelo EF pode escolher a renomeação errada. Leia antes de commitar
   (`SplitLocationIntoSuburbAndRegion` foi corrigida à mão: `city` → `region`).
+- Campo novo e volátil no payload do Seek duplica `listing_payloads` a cada coleta. Sintoma: payloads >
+  vagas depois de duas passadas. Inclua o campo em `SeekSearchClient.VolatileFields`.
+- `listing_payloads.payload` é jsonb, que normaliza espaços e ordem das chaves: o hash é do texto recebido
+  (já sem os campos voláteis), não do que o banco devolve.
+- Falha no `SaveChanges` deixaria o `DbContext` do escopo sujo e derrubaria o registro da execução:
+  `PostgresListingRepository` limpa o `ChangeTracker` antes de relançar.
+- `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no
+  diretório corrente.
+- Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer
+  que uma vaga saiu do ar.
 
 ## Convenções
 
