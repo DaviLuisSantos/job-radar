@@ -91,6 +91,18 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — Carga completa forçada (`collect --full`)
+Achado antes: a prova da 4b (1 página) deixou 137 buscas cortadas, mas a janela avançou e as vagas além da
+1ª página nunca vieram. Correção (`6faa5da`): só execução **completa** avança a janela (buscas e termos);
+comando `collect [--full]` roda a passada na hora (mesmo `DailyPipeline` do agendamento).
+Rodada no banco de produção, código do repositório: **204 s no total** (coleta 145 s, termos 43 s, score
+5,6 s, Raio-X 8,6 s), 0 falhas. 53.187 achados, **9.412 vagas novas** (total 15.575), 1.119 marcas de termo.
+Melhores do tech: 162 com 70+.
+Ainda cortadas no teto de 500: **62 buscas** (All Australia 33, Perth 17, Sydney 5, Brisbane 5, Melbourne 2).
+Pela regra nova, elas buscam o histórico inteiro todo dia (+~310 requisições, ~60 s) e mesmo assim perdem o
+que passa de 500. Decisão pendente do autor: tirar "All Australia" dos perfis que já buscam cidades, ou
+dividir essas buscas por estado / subclassificação.
+
 ### 2026-10-21 — Desempenho: paralelismo com orçamento
 O gargalo é rede e educação com o Seek, não CPU. `SeekPacingHandler` (dentro da resiliência, então retentativas
 também passam) dá um orçamento único ao processo: **4 requisições simultâneas e 5/s**, sem rajada
