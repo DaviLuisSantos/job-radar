@@ -167,6 +167,11 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   `ESCAPE ''` (`PostgresListingScoreRepository.ListForTriageAsync`).
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
   todas as cópias (`TriageRow.AllIds`).
+- Paralelismo: chamadas ao Seek podem rodar em paralelo à vontade, o `SeekPacingHandler` segura o total
+  (4 simultâneas, 5/s). **Não** reintroduza pausas fixas nem aumente o orçamento sem motivo: rajada é o que
+  dispara anti-bot. Acesso ao banco dentro de um serviço paralelo passa pelo `SemaphoreSlim` (um `DbContext`
+  por escopo não aceita duas operações). O tempo de uma tentativa inclui a espera na fila do orçamento
+  (`AttemptTimeout` 60 s).
 - Contagem do Raio-X só com `Seek:PageSize = 100`: o `totalCount` inclui os promovidos repetidos em cada página
   (`SeekMarketSource.CountAsync` recusa outro valor).
 - `Market` na configuração: cada lista presente **substitui** o padrão do código (`MarketDefaults`), não soma.

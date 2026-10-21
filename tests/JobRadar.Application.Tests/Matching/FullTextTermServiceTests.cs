@@ -1,7 +1,9 @@
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tests.Collection;
 using JobRadar.Domain.Matching;
+using JobRadar.Application.Collection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace JobRadar.Application.Tests.Matching;
@@ -25,7 +27,8 @@ public class FullTextTermServiceTests
     private readonly InMemoryRuns _runs = new();
 
     private FullTextTermService Service(FakeFullTextSearch search, ScoringPolicy? policy = null) =>
-        new([search], policy ?? TwoTerms, _listings, _terms, _runs, _time, NullLogger<FullTextTermService>.Instance);
+        new([search], policy ?? TwoTerms, _listings, _terms, _runs,
+            Options.Create(new CollectionOptions { MaxParallelSearches = 1 }), _time, NullLogger<FullTextTermService>.Instance);
 
     [Fact]
     public async Task Every_policy_term_is_searched_once_and_logged_as_a_run()

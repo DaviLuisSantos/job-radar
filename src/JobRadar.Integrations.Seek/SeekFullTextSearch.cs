@@ -15,7 +15,6 @@ namespace JobRadar.Integrations.Seek;
 internal sealed class SeekFullTextSearch(
     SeekSearchClient client,
     IOptions<SeekOptions> options,
-    TimeProvider time,
     ILogger<SeekFullTextSearch> log) : IFullTextSearch
 {
     internal const string Everywhere = "All Australia";
@@ -35,14 +34,11 @@ internal sealed class SeekFullTextSearch(
         if (complete)
             return new FullTextResult(ids, Complete: true);
 
-        var allStates = true;
-        foreach (var state in States)
-        {
-            await PauseAsync(ct);
-            var (stateIds, stateComplete) = await IdsAsync(query, state, postedWithinDays, ct);
+        // The eight states at once; the pacing budget keeps the request rate.
+        var perState = await Task.WhenAll(States.Select(state => IdsAsync(query, state, postedWithinDays, ct)));
+        foreach (var (stateIds, _) in perState)
             ids.UnionWith(stateIds);
-            allStates &= stateComplete;
-        }
+        var allStates = perState.All(s => s.Complete);
         if (!allStates)
             log.LogWarning("Full-text term {Term} is capped even per state; some listings are not marked", term.Text);
         return new FullTextResult(ids, allStates);
@@ -59,8 +55,6 @@ internal sealed class SeekFullTextSearch(
         var search = new ListingSearch(query, where, days);
         for (var page = 1; page <= o.MaxPages; page++)
         {
-            if (page > 1)
-                await PauseAsync(ct);
             var result = await client.SearchAsync(search, page, ct);
             ids.UnionWith(result.Jobs.Select(j => j.Job.Id));
             if (result.Jobs.Count < o.PageSize || ids.Count >= result.TotalCount)
@@ -69,11 +63,4 @@ internal sealed class SeekFullTextSearch(
         return (ids, false);
     }
 
-    private Task PauseAsync(CancellationToken ct)
-    {
-        var delay = options.Value.DelayBetweenPages;
-        return delay <= TimeSpan.Zero
-            ? Task.CompletedTask
-            : Task.Delay(delay * (0.7 + Random.Shared.NextDouble() * 0.6), time, ct);
-    }
 }

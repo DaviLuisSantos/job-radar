@@ -1,6 +1,7 @@
 using JobRadar.Application.Collection;
 using JobRadar.Domain.Listings;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace JobRadar.Application.Tests.Collection;
@@ -15,8 +16,12 @@ public class ListingCollectorTests
     private readonly InMemoryListings _listings = new();
     private readonly InMemoryRuns _runs = new();
 
-    private ListingCollector Collector(params FakeSource[] sources) =>
-        new(sources, _listings, _runs, _time, NullLogger<ListingCollector>.Instance);
+    // One search at a time unless a test is about parallelism: order is then deterministic.
+    private ListingCollector Collector(params FakeSource[] sources) => Collector(1, sources);
+
+    private ListingCollector Collector(int parallel, params FakeSource[] sources) =>
+        new(sources, _listings, _runs, Options.Create(new CollectionOptions { MaxParallelSearches = parallel }), _time,
+            NullLogger<ListingCollector>.Instance);
 
     [Fact]
     public async Task Every_search_runs_on_every_source_and_each_run_is_recorded()
@@ -138,5 +143,37 @@ public class ListingCollectorTests
         var now = new DateTimeOffset(2026, 10, 21, 22, 0, 0, TimeSpan.Zero);
 
         Assert.Equal(expected, ListingCollector.IncrementalWindow(now.AddHours(-hoursAgo), now));
+    }
+
+    [Fact]
+    public async Task Searches_run_in_parallel_and_every_run_is_still_recorded()
+    {
+        var inFlight = 0;
+        var peak = 0;
+        var seek = new FakeSource("seek")
+        {
+            RespondAsync = async s =>
+            {
+                var now = Interlocked.Increment(ref inFlight);
+                InterlockedMax(ref peak, now);
+                await Task.Delay(50);
+                Interlocked.Decrement(ref inFlight);
+                return new SearchResult([Listings.Of("seek", s.Keywords)], Complete: true);
+            },
+        };
+        var searches = Enumerable.Range(1, 12).Select(i => new ListingSearch($"k{i}", "Perth")).ToList();
+
+        var summary = await Collector(4, seek).CollectAsync(searches, Ct);
+
+        Assert.Equal((12, 12), (summary.Runs, summary.New));
+        Assert.Equal(12, _runs.Runs.Count);
+        Assert.InRange(peak, 2, 4);
+    }
+
+    private static void InterlockedMax(ref int target, int value)
+    {
+        for (var current = target; value > current; current = target)
+            if (Interlocked.CompareExchange(ref target, value, current) == current)
+                return;
     }
 }

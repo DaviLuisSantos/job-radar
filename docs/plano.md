@@ -91,6 +91,18 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — Desempenho: paralelismo com orçamento
+O gargalo é rede e educação com o Seek, não CPU. `SeekPacingHandler` (dentro da resiliência, então retentativas
+também passam) dá um orçamento único ao processo: **4 requisições simultâneas e 5/s**, sem rajada
+(`Seek:MaxConcurrentRequests`, `Seek:RequestsPerSecond`); as pausas fixas entre páginas saíram. Em cima dele:
+buscas e termos em paralelo (`Collection:MaxParallelSearches` = 6), estados de um termo ao mesmo tempo,
+contagens do Raio-X todas de uma vez. O banco segue uma operação por vez (`SemaphoreSlim` no coletor e nos
+termos): o `DbContext` do escopo não aceita duas. Score com PLINQ e regex compilada. Tempo de cada etapa no log.
+Medido no banco local, mesma passada incremental, contra o Seek: coleta 126 s → **64 s** (agora preso no
+orçamento: 311 req a 5/s ≈ 62 s), termos 6 s (janela de 2 dias), score 2,7 s, Raio-X ~61 s → **9,4 s**. Zero
+falhas, zero 429. Primeira carga completa: ~30 min → ~5 min estimados. 301 testes (limitador: pico de
+concorrência e taxa; coletor em paralelo).
+
 ### 2026-10-21 — Etapa 9: comando de importação
 `JobRadar.Integrations.Prototype` lê o `jobs.db` (SQLite, só leitura) e tolera versões antigas (tabela ou
 coluna que falta = vazio). Usa o leitor de rótulos do Seek (exceção documentada: o protótipo guardava os rótulos

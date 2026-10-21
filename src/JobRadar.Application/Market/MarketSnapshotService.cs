@@ -29,51 +29,53 @@ public sealed class MarketSnapshotService(
     private async Task<MarketSnapshot> TakeAsync(IMarketSource source, DateOnly day, CancellationToken ct)
     {
         var o = options.Value;
-        var counts = new List<MarketCount>();
-        var listings = new List<MarketListing>();
-        var incomplete = new List<(string, string)>();
+        var cells = o.Categories
+            .Where(c => c.Codes.ContainsKey(source.Source))
+            .SelectMany(c => o.AllCities.Select(city => (Category: c, Code: c.Codes[source.Source], City: city)))
+            .ToList();
 
-        foreach (var category in o.Categories)
-        {
-            if (!category.Codes.TryGetValue(source.Source, out var code))
-                continue;
-            foreach (var city in o.AllCities)
+        // Every count and every listing at once: the source paces its own requests. Results keep the
+        // configured order (category, city, total then terms) because they are collected per cell.
+        var countTasks = cells
+            .SelectMany(cell => o.Terms.Select(t => (MarketTermOptions?)t).Prepend(null).Select(term => (cell, term)))
+            .Select(async x => new MarketCount(x.cell.Category.Name, x.cell.City, x.term?.Name,
+                await TryCountAsync(source, x.cell.Code, x.cell.City, x.term, ct)))
+            .ToList();
+        var listingTasks = cells
+            .Where(cell => o.FullCities.Contains(cell.City))
+            .Select(async cell =>
             {
-                counts.Add(new MarketCount(category.Name, city, null, await TryCountAsync(source, code, city, null, ct)));
-                foreach (var term in o.Terms)
-                    counts.Add(new MarketCount(category.Name, city, term.Name, await TryCountAsync(source, code, city, term, ct)));
-
-                if (o.FullCities.Contains(city))
+                try
                 {
-                    try
-                    {
-                        var result = await source.ListAsync(code, city, ct);
-                        listings.AddRange(result.Listings.Select(l => new MarketListing(category.Name, city, l.Listing)));
-                        if (!result.Complete)
-                            incomplete.Add((category.Name, city));
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-                    {
-                        log.LogWarning(ex, "Market listing {Category} / {City} failed", category.Name, city);
-                        incomplete.Add((category.Name, city));
-                    }
+                    var result = await source.ListAsync(cell.Code, cell.City, ct);
+                    return (cell.Category.Name, cell.City, Listings: result.Listings.Select(l => new MarketListing(cell.Category.Name, cell.City, l.Listing)).ToList(), result.Complete);
                 }
-            }
-        }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    log.LogWarning(ex, "Market listing {Category} / {City} failed", cell.Category.Name, cell.City);
+                    return (cell.Category.Name, cell.City, Listings: new List<MarketListing>(), Complete: false);
+                }
+            })
+            .ToList();
+
+        var counts = (await Task.WhenAll(countTasks)).ToList();
+        var listed = await Task.WhenAll(listingTasks);
+        var listings = listed.SelectMany(l => l.Listings).ToList();
+        var incomplete = listed.Where(l => !l.Complete).Select(l => (l.Name, l.City)).ToList();
 
         // One more chance for counts that failed: usually a passing rate limit.
         if (counts.Any(c => c.Total is null))
         {
             await Task.Delay(o.RetryPause, time, ct);
-            for (var i = 0; i < counts.Count; i++)
+            var retried = await Task.WhenAll(counts.Select(async c =>
             {
-                if (counts[i].Total is not null)
-                    continue;
-                var c = counts[i];
+                if (c.Total is not null)
+                    return c;
                 var code = o.Categories.First(cat => cat.Name == c.Category).Codes[source.Source];
                 var term = c.Term is null ? null : o.Terms.First(t => t.Name == c.Term);
-                counts[i] = c with { Total = await TryCountAsync(source, code, c.City, term, ct) };
-            }
+                return c with { Total = await TryCountAsync(source, code, c.City, term, ct) };
+            }));
+            counts = [.. retried];
         }
 
         var previous = await market.GetLastGoodTotalsAsync(source.Source, day, ct);

@@ -28,6 +28,14 @@ public sealed class SeekOptions
     [Range(1, 5)]
     public int MaxPages { get; set; } = 5;
 
-    /// <summary>Pause between pages of one search, with ±30% jitter, to stay polite.</summary>
-    public TimeSpan DelayBetweenPages { get; set; } = TimeSpan.FromSeconds(1);
+    /// <summary>
+    /// Requests in flight at once, across every stage (collection, terms, market). Searches run in
+    /// parallel; this is what keeps the total polite.
+    /// </summary>
+    [Range(1, 16)]
+    public int MaxConcurrentRequests { get; set; } = 4;
+
+    /// <summary>Requests started per second, across every stage, evenly spread (no bursts).</summary>
+    [Range(0.1, 20)]
+    public double RequestsPerSecond { get; set; } = 5;
 }

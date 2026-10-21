@@ -14,8 +14,7 @@ namespace JobRadar.Integrations.Seek;
 internal sealed class SeekMarketSource(
     SeekSearchClient client,
     SeekJobSource listings,
-    IOptions<SeekOptions> options,
-    TimeProvider time) : IMarketSource
+    IOptions<SeekOptions> options) : IMarketSource
 {
     public string Source => SeekListingTranslator.SourceName;
 
@@ -24,7 +23,6 @@ internal sealed class SeekMarketSource(
         if (options.Value.PageSize != 100)
             throw new InvalidOperationException("Market counts need Seek:PageSize = 100; totalCount depends on the page size.");
 
-        await PauseAsync(ct);
         var keywords = term is null ? "" : SeekFullTextSearch.Query(term);
         var page = await client.SearchAsync(new ListingSearch(keywords, city, SourceCategory: categoryCode), 1, ct);
         return page.TotalCount;
@@ -32,15 +30,7 @@ internal sealed class SeekMarketSource(
 
     public async Task<SearchResult> ListAsync(string categoryCode, string city, CancellationToken ct = default)
     {
-        await PauseAsync(ct);
         return await listings.SearchAsync(new ListingSearch("", city, SourceCategory: categoryCode), ct);
     }
 
-    private Task PauseAsync(CancellationToken ct)
-    {
-        var delay = options.Value.DelayBetweenPages;
-        return delay <= TimeSpan.Zero
-            ? Task.CompletedTask
-            : Task.Delay(delay * (0.7 + Random.Shared.NextDouble() * 0.6), time, ct);
-    }
 }

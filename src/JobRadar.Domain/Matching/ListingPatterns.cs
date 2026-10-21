@@ -9,7 +9,8 @@ namespace JobRadar.Domain.Matching;
 /// </summary>
 internal static class ListingPatterns
 {
-    private const RegexOptions Options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+    // Compiled: each pattern runs against every listing of every profile, every day.
+    private const RegexOptions Options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled;
 
     private static Regex R(string pattern) => new(pattern, Options);
 

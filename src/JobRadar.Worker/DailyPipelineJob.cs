@@ -89,10 +89,12 @@ internal sealed class DailyPipelineJob(
 
     private async Task StageAsync(string stage, Func<IServiceProvider, Task> work, CancellationToken ct)
     {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             await using var scope = scopes.CreateAsyncScope();
             await work(scope.ServiceProvider);
+            log.LogInformation("{Stage} took {Seconds:N1} s", stage, watch.Elapsed.TotalSeconds);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {

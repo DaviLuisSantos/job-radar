@@ -17,6 +17,13 @@ public sealed class CollectionOptions
     [Required]
     public string TimeZone { get; set; } = "Australia/Perth";
 
+    /// <summary>
+    /// Searches (and full-text terms) in flight at once. The source paces its own requests, so this
+    /// only decides how many are queued for its budget.
+    /// </summary>
+    [Range(1, 32)]
+    public int MaxParallelSearches { get; set; } = 6;
+
     /// <summary>Run once as soon as the worker starts, then follow the schedule. For development.</summary>
     public bool RunOnStartup { get; set; }
 }

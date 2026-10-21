@@ -1,7 +1,9 @@
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Collection;
 using JobRadar.Domain.Collection;
 using JobRadar.Domain.Matching;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace JobRadar.Application.Matching;
 
@@ -17,9 +19,12 @@ public sealed class FullTextTermService(
     IListingRepository listings,
     IListingTermRepository terms,
     ICollectionRunRepository runs,
+    IOptions<CollectionOptions> options,
     TimeProvider time,
     ILogger<FullTextTermService> log)
 {
+    private readonly SemaphoreSlim _storage = new(1, 1);
+
     /// <summary>Ads stay up about 30 days; older ones are gone, there is nothing to mark.</summary>
     internal const int MaxWindowDays = 31;
 
@@ -29,15 +34,16 @@ public sealed class FullTextTermService(
     public async Task TagAsync(CancellationToken ct)
     {
         var all = FullTextTerm.AllOf(policy);
+        var parallel = new ParallelOptions { MaxDegreeOfParallelism = options.Value.MaxParallelSearches, CancellationToken = ct };
         foreach (var search in searches)
         {
             var marked = 0;
-            foreach (var term in all)
+            await Parallel.ForEachAsync(all, parallel, async (term, token) =>
             {
-                var run = await RunOneAsync(search, term, ct);
-                await runs.RecordAsync(run, ct);
-                marked += run.New;
-            }
+                var run = await RunOneAsync(search, term, token);
+                await StoredAsync(async () => { await runs.RecordAsync(run, token); return 0; }, token);
+                Interlocked.Add(ref marked, run.New);
+            });
             log.LogInformation("Full-text terms on {Source}: {Terms} terms, {Marked} new marks", search.Source, all.Count, marked);
         }
     }
@@ -45,14 +51,16 @@ public sealed class FullTextTermService(
     private async Task<CollectionRun> RunOneAsync(IFullTextSearch search, FullTextTerm term, CancellationToken ct)
     {
         var started = time.GetUtcNow();
-        var last = await runs.GetLastSuccessfulStartAsync(search.Source, term.RunKey, ct);
-        var oldest = last is { } since ? await listings.GetOldestPostedAmongFirstSeenSinceAsync(search.Source, since, ct) : null;
+        var last = await StoredAsync(() => runs.GetLastSuccessfulStartAsync(search.Source, term.RunKey, ct), ct);
+        var oldest = last is { } since
+            ? await StoredAsync(() => listings.GetOldestPostedAmongFirstSeenSinceAsync(search.Source, since, ct), ct)
+            : null;
         var window = Window(last, oldest, started);
 
         try
         {
             var result = await search.FindAsync(term, window, ct);
-            var added = await terms.RecordAsync(search.Source, term.Text, result.SourceIds.ToList(), started, ct);
+            var added = await StoredAsync(() => terms.RecordAsync(search.Source, term.Text, result.SourceIds.ToList(), started, ct), ct);
             return new CollectionRun(search.Source, term.RunKey, window, started, time.GetUtcNow(),
                 result.SourceIds.Count, added, result.Complete, Error: null);
         }
@@ -61,6 +69,20 @@ public sealed class FullTextTermService(
             log.LogError(ex, "Full-text term {Term} on {Source} failed", term.Text, search.Source);
             return new CollectionRun(search.Source, term.RunKey, window, started, time.GetUtcNow(),
                 Found: 0, New: 0, Complete: false, Error: $"{ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>One storage call at a time: the network runs in parallel, the database context cannot.</summary>
+    private async Task<T> StoredAsync<T>(Func<Task<T>> call, CancellationToken ct)
+    {
+        await _storage.WaitAsync(ct);
+        try
+        {
+            return await call();
+        }
+        finally
+        {
+            _storage.Release();
         }
     }
 

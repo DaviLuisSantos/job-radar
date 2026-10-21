@@ -25,7 +25,9 @@ public sealed class ListingScoringService(
         {
             var found = await listings.ListFoundByAsync(profile.SearchKeys, ct);
             var termsById = await terms.GetTermsAsync(found.Select(l => l.Id).ToList(), ct);
+            // Pure and thread-safe: score on every core.
             var scored = found
+                .AsParallel()
                 .Select(l => new ListingScore(
                     l.Id, profile.Name,
                     FitScorer.Score(ScoringInput.From(l, termsById.GetValueOrDefault(l.Id)), profile.Profile, catalog.Policy, today),

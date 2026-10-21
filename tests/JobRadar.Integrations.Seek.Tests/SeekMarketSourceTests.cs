@@ -11,10 +11,10 @@ public class SeekMarketSourceTests
 
     private static SeekMarketSource Market(FakeSeekApi api, int pageSize = 100)
     {
-        var options = Options.Create(new SeekOptions { PageSize = pageSize, DelayBetweenPages = TimeSpan.Zero });
+        var options = Options.Create(new SeekOptions { PageSize = pageSize });
         var client = new SeekSearchClient(new HttpClient(api) { BaseAddress = options.Value.BaseAddress }, options);
-        var listings = new SeekJobSource(client, options, TimeProvider.System, NullLogger<SeekJobSource>.Instance);
-        return new SeekMarketSource(client, listings, options, TimeProvider.System);
+        var listings = new SeekJobSource(client, options, NullLogger<SeekJobSource>.Instance);
+        return new SeekMarketSource(client, listings, options);
     }
 
     [Fact]

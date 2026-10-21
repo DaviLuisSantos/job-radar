@@ -13,17 +13,21 @@ internal static class Listings
         $$"""{"id":"{{id}}"}""");
 }
 
-/// <summary>Answers each search from a script; records what it was asked.</summary>
+/// <summary>Answers each search from a script; records what it was asked. Safe to call in parallel.</summary>
 internal sealed class FakeSource(string name) : IJobSource
 {
+    private readonly List<ListingSearch> _received = [];
+
     public string Name => name;
-    public List<ListingSearch> Received { get; } = [];
+    public List<ListingSearch> Received { get { lock (_received) return [.. _received]; } }
     public Func<ListingSearch, SearchResult> Respond { get; set; } = _ => new SearchResult([], Complete: true);
+    public Func<ListingSearch, Task<SearchResult>>? RespondAsync { get; set; }
 
     public Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default)
     {
-        Received.Add(search);
-        return Task.FromResult(Respond(search));
+        lock (_received)
+            _received.Add(search);
+        return RespondAsync?.Invoke(search) ?? Task.FromResult(Respond(search));
     }
 }
 
@@ -116,12 +120,14 @@ internal sealed class InMemoryTerms : IListingTermRepository
 internal sealed class FakeFullTextSearch(string source) : IFullTextSearch
 {
     public string Source => source;
-    public List<(string Term, int Days)> Received { get; } = [];
+    private readonly List<(string Term, int Days)> _received = [];
+    public List<(string Term, int Days)> Received { get { lock (_received) return [.. _received]; } }
     public Func<FullTextTerm, FullTextResult> Respond { get; set; } = _ => new FullTextResult(new HashSet<string>(), true);
 
     public Task<FullTextResult> FindAsync(FullTextTerm term, int postedWithinDays, CancellationToken ct = default)
     {
-        Received.Add((term.Text, postedWithinDays));
+        lock (_received)
+            _received.Add((term.Text, postedWithinDays));
         return Task.FromResult(Respond(term));
     }
 }

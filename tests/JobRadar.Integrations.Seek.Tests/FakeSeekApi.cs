@@ -13,7 +13,10 @@ internal sealed class FakeSeekApi : HttpMessageHandler
 {
     private readonly Dictionary<int, string> _pages = [];
 
-    public List<Uri> Requests { get; } = [];
+    private readonly List<Uri> _requests = [];
+
+    /// <summary>Requests received, in arrival order (thread-safe: parallel callers record here too).</summary>
+    public List<Uri> Requests { get { lock (_requests) return [.. _requests]; } }
 
     public List<NameValueCollection> Queries => Requests.Select(r => HttpUtility.ParseQueryString(r.Query)).ToList();
 
@@ -32,7 +35,8 @@ internal sealed class FakeSeekApi : HttpMessageHandler
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
-        Requests.Add(request.RequestUri!);
+        lock (_requests)
+            _requests.Add(request.RequestUri!);
         var query = HttpUtility.ParseQueryString(request.RequestUri!.Query);
         var body = Respond?.Invoke(query)
             ?? (_pages.TryGetValue(int.Parse(query["page"]!), out var json) ? json : """{ "totalCount": 0, "data": [] }""");
@@ -48,7 +52,6 @@ internal sealed class FakeSeekApi : HttpMessageHandler
         {
             PageSize = pageSize,
             MaxPages = maxPages,
-            DelayBetweenPages = TimeSpan.Zero,
         });
         var http = new HttpClient(this) { BaseAddress = options.Value.BaseAddress };
         return (options, new SeekSearchClient(http, options));
@@ -57,12 +60,12 @@ internal sealed class FakeSeekApi : HttpMessageHandler
     public SeekJobSource Source(int pageSize = 3, int maxPages = 5)
     {
         var (options, client) = Client(pageSize, maxPages);
-        return new SeekJobSource(client, options, TimeProvider.System, NullLogger<SeekJobSource>.Instance);
+        return new SeekJobSource(client, options, NullLogger<SeekJobSource>.Instance);
     }
 
     public SeekFullTextSearch FullText(int pageSize = 3, int maxPages = 5)
     {
         var (options, client) = Client(pageSize, maxPages);
-        return new SeekFullTextSearch(client, options, TimeProvider.System, NullLogger<SeekFullTextSearch>.Instance);
+        return new SeekFullTextSearch(client, options, NullLogger<SeekFullTextSearch>.Instance);
     }
 }

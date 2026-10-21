@@ -9,7 +9,6 @@ namespace JobRadar.Integrations.Seek;
 internal sealed class SeekJobSource(
     SeekSearchClient client,
     IOptions<SeekOptions> options,
-    TimeProvider time,
     ILogger<SeekJobSource> log) : IJobSource
 {
     public string Name => SeekListingTranslator.SourceName;
@@ -24,9 +23,6 @@ internal sealed class SeekJobSource(
 
         for (var page = 1; page <= o.MaxPages; page++)
         {
-            if (page > 1)
-                await Task.Delay(Jitter(o.DelayBetweenPages), time, ct);
-
             var result = await client.SearchAsync(search, page, ct);
             foreach (var (job, raw) in result.Jobs)
             {
@@ -45,6 +41,4 @@ internal sealed class SeekJobSource(
         return new SearchResult(listings, Complete: false);
     }
 
-    private static TimeSpan Jitter(TimeSpan delay) =>
-        delay <= TimeSpan.Zero ? TimeSpan.Zero : delay * (0.7 + Random.Shared.NextDouble() * 0.6);
 }
