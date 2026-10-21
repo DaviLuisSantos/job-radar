@@ -56,9 +56,15 @@ firewall para a Tailscale e inicia tudo. Rodar de novo = implantar a versão atu
 .\deploy\backup.ps1
 ```
 
-Gera `%USERPROFILE%\Backups\JobRadar\jobradar_<data>.dump` e mantém os 30 mais recentes. O histórico
-do Raio-X não se recoleta: rode com frequência (o Agendador de Tarefas pode chamar o script; decisão do
-autor). Restaurar: `docker compose exec -T postgres pg_restore -U jobradar -d jobradar --clean < <arquivo>`.
+Gera `%USERPROFILE%\Backups\JobRadar\jobradar_<data_hora>.dump`, mantém os 30 mais recentes e registra
+cada execução (ok ou FAILED, com o erro) em `backup.log` na mesma pasta. O histórico do Raio-X não se
+recoleta.
+
+**Agendado** (2026-10-21): tarefa `JobRadar Backup` no Agendador, **todo dia às 23:00**, com o usuário do autor
+e só com ele logado (o banco vive no Docker Desktop, na sessão dele); se o PC estiver desligado, roda assim
+que puder. Recriar ou mudar o horário: `.\deploy\schedule-backup.ps1 -At 23:00`. Leva ~20 s.
+
+Restaurar: `docker compose exec -T postgres pg_restore -U jobradar -d jobradar --clean < <arquivo>`.
 
 ## Parar ou remover
 
