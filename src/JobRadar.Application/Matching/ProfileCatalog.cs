@@ -48,7 +48,11 @@ public sealed class ProfileCatalog
     {
         var profile = new MatchingProfile(
             name, o.PositiveSignals, o.NegativeSignals, o.DisqualifySignals, o.QualifiedTitles,
-            o.EntryLevelBoost, o.AllowSenior, o.PreferredLocations);
+            o.EntryLevelBoost, o.AllowSenior, o.PreferredLocations)
+        {
+            Requirements = new ProfileRequirements(
+                o.Requirements.Contexts, o.Requirements.Experience, o.Requirements.TradeCertificate, o.Requirements.Licence),
+        };
         var searches = o.Keywords
             .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l)))
             .DistinctBy(s => s.Key)

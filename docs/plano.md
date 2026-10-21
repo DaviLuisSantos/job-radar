@@ -96,6 +96,22 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — Calibragem do fifo e requisitos no texto completo (`RulesVersion` 3)
+Primeira calibragem com rótulos reais: **fifo 8 boas, 33 ruins, acerto de pares 42%** (pior que sorteio),
+30 das 33 ruins com 50+. Causa 1: o perfil premiava sinais que toda vaga FIFO tem (FIFO, roster, 2:1, 8:6,
+mining, Pilbara...), então tudo ia para 86–100. Causa 2, dita pelo autor: as ruins pedem anos de
+experiência, certificado de trade, carteira HR ou experiência com máquina específica, e isso está no corpo
+do anúncio. Simulação nos rótulos (fora do repo, `FitScorer` puro): tirar os sinais de contexto 42% → 70%;
+mais títulos qualificados (operator, driver, planner, coordinator, advisor, trainer...) → 80%. Aplicado no
+perfil local do fifo.
+Código novo: `ProfileRequirements` por perfil (experiência, certificado de trade, licença), buscado no texto
+completo como "frase + palavra de contexto" ("years experience + FIFO"): sozinhas essas frases passam de 500
+por estado (ex.: "years experience" 14.951), com o contexto ficam em dezenas a centenas. −20 por tipo
+encontrado, uma vez; licença de caminhão já contada e certificado em título de formação não pesam de novo.
+Contextos locais: fifo "FIFO"; construction "labourer", "offsider"; trades "trade assistant", "trades
+assistant", "offsider" ("assistant" sozinho pega dental/admin). 19 frases por perfil.
+Fica para os rótulos dizerem: o −20 é moderado porque a busca não vê "cert III an advantage".
+
 ### 2026-10-21 — Scores órfãos
 A 1ª passada com a regra WHV (106 s, 256 buscas, 0 cortadas) mostrou o efeito colateral de tirar "All
 Australia": **6.305 scores congelados** (vagas que só aquelas buscas achavam), com a regra antiga e sem

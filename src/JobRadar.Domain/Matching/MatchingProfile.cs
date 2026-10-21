@@ -19,7 +19,11 @@ public sealed record MatchingProfile(
     IReadOnlyList<string> QualifiedTitles,
     bool EntryLevelBoost,
     bool AllowSenior,
-    IReadOnlyList<string> PreferredLocations);
+    IReadOnlyList<string> PreferredLocations)
+{
+    /// <summary>−20 per kind found in the full ad (see <see cref="ProfileRequirements"/>).</summary>
+    public ProfileRequirements Requirements { get; init; } = ProfileRequirements.None;
+}
 
 /// <summary>
 /// Weights shared by every profile. Defaults are the values calibrated in the prototype for a

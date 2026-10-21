@@ -27,4 +27,17 @@ public sealed class ProfileOptions
     public bool EntryLevelBoost { get; set; }
     public bool AllowSenior { get; set; }
     public List<string> PreferredLocations { get; set; } = [];
+
+    /// <summary>Requirements looked for in the full ad (see <c>ProfileRequirements</c>).</summary>
+    public RequirementOptions Requirements { get; set; } = new();
+}
+
+public sealed class RequirementOptions
+{
+    /// <summary>Each phrase is searched together with each of these words ("FIFO").</summary>
+    public List<string> Contexts { get; set; } = [];
+
+    public List<string> Experience { get; set; } = [];
+    public List<string> TradeCertificate { get; set; } = [];
+    public List<string> Licence { get; set; } = [];
 }

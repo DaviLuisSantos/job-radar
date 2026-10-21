@@ -12,9 +12,10 @@ public sealed record FullTextTerm(string Text)
     /// <summary>Stable identity of the term search, used as its run key.</summary>
     public string RunKey => $"term: {Text.Trim().ToLowerInvariant()}";
 
-    /// <summary>Every distinct term of the policy's groups, in a stable order.</summary>
-    public static IReadOnlyList<FullTextTerm> AllOf(ScoringPolicy policy) => policy.FullTextGroups.Values
+    /// <summary>Every distinct term of the policy's groups and of the profiles' requirements, in a stable order.</summary>
+    public static IReadOnlyList<FullTextTerm> AllOf(ScoringPolicy policy, IEnumerable<MatchingProfile>? profiles = null) => policy.FullTextGroups.Values
         .SelectMany(t => t)
+        .Concat((profiles ?? []).SelectMany(p => p.Requirements.Terms().Select(r => r.Term)))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .Order(StringComparer.Ordinal)
         .Select(t => new FullTextTerm(t))

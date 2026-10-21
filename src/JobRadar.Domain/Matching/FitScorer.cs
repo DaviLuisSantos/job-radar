@@ -20,9 +20,15 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 2;
+    public const int RulesVersion = 3;
 
     private const int ExclusionPoints = -50;
+
+    /// <summary>
+    /// Per requirement kind found in the full ad. Moderate: the search gives no context, and
+    /// "cert III an advantage" matches as well as "cert III essential".
+    /// </summary>
+    private const int RequirementPenalty = 20;
 
     public static FitScore Score(ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today)
     {
@@ -157,6 +163,26 @@ public static class FitScorer
             if (group == FullTextGroup.WhvWithResidency && groups.ContainsKey(FullTextGroup.Citizen))
                 continue;
             Add(rule, hits[0], ScoreWhere.FullText, points);
+        }
+
+        // Requirements of the profile found in the full ad: once per kind. A truck licence already
+        // counted (local text or the policy's licence group) is not counted again; a training title
+        // is where the trade certificate is earned.
+        var found = job.FullTextTerms.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var truckCounted = groups.ContainsKey(FullTextGroup.Licence) || TruckLicence.IsMatch(full);
+        foreach (var requirement in profile.Requirements.Terms().Where(r => found.Contains(r.Term)).DistinctBy(r => r.Kind))
+        {
+            if (requirement.Kind == RequirementKind.Licence && truckCounted)
+                continue;
+            if (requirement.Kind == RequirementKind.TradeCertificate && trainingTitle)
+                continue;
+            var rule = requirement.Kind switch
+            {
+                RequirementKind.Experience => ScoreRule.FullTextExperience,
+                RequirementKind.TradeCertificate => ScoreRule.FullTextTradeCertificate,
+                _ => ScoreRule.FullTextLicence,
+            };
+            Add(rule, requirement.Phrase, ScoreWhere.FullText, -RequirementPenalty);
         }
 
         if (policy.ApprenticeshipPenalty > 0 && trainingTitle)

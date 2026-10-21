@@ -26,9 +26,26 @@ public class FullTextTermServiceTests
     private readonly InMemoryTerms _terms = new();
     private readonly InMemoryRuns _runs = new();
 
-    private FullTextTermService Service(FakeFullTextSearch search, ScoringPolicy? policy = null) =>
-        new([search], policy ?? TwoTerms, _listings, _terms, _runs,
+    private FullTextTermService Service(FakeFullTextSearch search, ScoringPolicy? policy = null, params (string, ProfileOptions)[] profiles) =>
+        new([search], new ProfileCatalog(Options.Create(new MatchingOptions { Profiles = profiles.ToDictionary(p => p.Item1, p => p.Item2) }), policy ?? TwoTerms),
+            _listings, _terms, _runs,
             Options.Create(new CollectionOptions { MaxParallelSearches = 1 }), _time, NullLogger<FullTextTermService>.Instance);
+
+    [Fact]
+    public async Task Profile_requirements_are_searched_with_each_context_word_once()
+    {
+        var seek = new FakeFullTextSearch("seek");
+        var requirements = new RequirementOptions { Contexts = ["FIFO", "offsider"], Experience = ["years experience"], Licence = ["HRWL"] };
+        var fifo = new ProfileOptions { Requirements = requirements };
+        var mining = new ProfileOptions { Requirements = new RequirementOptions { Contexts = ["FIFO"], Experience = ["Years Experience"] } };
+
+        await Service(seek, profiles: [("fifo", fifo), ("mining", mining)]).TagAsync(Ct);
+
+        // The second profile's "Years Experience + FIFO" is the same search, in another case.
+        Assert.Equal(
+            ["HRWL + FIFO", "HRWL + offsider", "australian citizen", "working holiday", "years experience + FIFO", "years experience + offsider"],
+            seek.Received.Select(r => r.Term));
+    }
 
     [Fact]
     public async Task Every_policy_term_is_searched_once_and_logged_as_a_run()

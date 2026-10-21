@@ -9,13 +9,14 @@ namespace JobRadar.Application.Matching;
 
 /// <summary>
 /// Marks listings with the full-text phrases of the scoring policy (work rights, citizenship,
-/// working holiday...). Runs after collection, so the listings it marks are already stored. Each
-/// term search is a run in <c>collection_runs</c> (key <c>term: phrase</c>): a failed one is
-/// retried with a wider window next time, and the next term still runs.
+/// working holiday...) and of the profiles' requirements (experience, certificates, licences).
+/// Runs after collection, so the listings it marks are already stored. Each term search is a run in
+/// <c>collection_runs</c> (key <c>term: phrase</c>): a failed one is retried with a wider window
+/// next time, and the next term still runs.
 /// </summary>
 public sealed class FullTextTermService(
     IEnumerable<IFullTextSearch> searches,
-    ScoringPolicy policy,
+    ProfileCatalog catalog,
     IListingRepository listings,
     IListingTermRepository terms,
     ICollectionRunRepository runs,
@@ -33,7 +34,7 @@ public sealed class FullTextTermService(
 
     public async Task TagAsync(CancellationToken ct)
     {
-        var all = FullTextTerm.AllOf(policy);
+        var all = FullTextTerm.AllOf(catalog.Policy, catalog.Profiles.Select(p => p.Profile));
         var parallel = new ParallelOptions { MaxDegreeOfParallelism = options.Value.MaxParallelSearches, CancellationToken = ct };
         foreach (var search in searches)
         {

@@ -285,6 +285,47 @@ public class FitScorerTests
         Assert.Equal(65, score.Final);
     }
 
+    private static readonly MatchingProfile FifoWithRequirements = Trades with
+    {
+        Requirements = new ProfileRequirements(
+            Contexts: ["FIFO"],
+            Experience: ["years experience", "minimum 2 years"],
+            TradeCertificate: ["cert III"],
+            Licence: ["HR licence", "HRWL"]),
+    };
+
+    [Fact]
+    public void Requirements_found_in_the_full_ad_cost_twenty_once_per_kind()
+    {
+        var score = Score(Job("Labourer", fullText: ["years experience + FIFO", "minimum 2 years + fifo", "cert III + FIFO", "HRWL + FIFO"]),
+            FifoWithRequirements);
+
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextExperience).Points);
+        Assert.Equal("years experience", Item(score, ScoreRule.FullTextExperience).Detail);
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextTradeCertificate).Points);
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextLicence).Points);
+        Assert.Equal(3, score.Items.Count(i => i.Where == ScoreWhere.FullText));   // two experience phrases, one penalty
+    }
+
+    [Fact]
+    public void A_requirement_needs_the_profile_context_word()
+    {
+        var score = Score(Job("Labourer", fullText: ["years experience", "years experience + offsider"]), FifoWithRequirements);
+
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextExperience);
+    }
+
+    [Fact]
+    public void A_truck_licence_already_counted_and_a_certificate_in_a_training_title_cost_nothing_more()
+    {
+        var truck = Score(Job("Labourer", "HR licence required", fullText: ["HR licence + FIFO"]), FifoWithRequirements);
+        var apprentice = Score(Job("Apprentice Labourer", fullText: ["cert III + FIFO"]), FifoWithRequirements);
+
+        Assert.Equal(-20, Item(truck, ScoreRule.TruckLicence).Points);
+        Assert.DoesNotContain(truck.Items, i => i.Rule == ScoreRule.FullTextLicence);
+        Assert.DoesNotContain(apprentice.Items, i => i.Rule == ScoreRule.FullTextTradeCertificate);
+    }
+
     [Fact]
     public void Commission_and_truck_licence_count_once_whether_local_or_full_text()
     {
