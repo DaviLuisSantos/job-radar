@@ -96,6 +96,17 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — Scores órfãos
+A 1ª passada com a regra WHV (106 s, 256 buscas, 0 cortadas) mostrou o efeito colateral de tirar "All
+Australia": **6.305 scores congelados** (vagas que só aquelas buscas achavam), com a regra antiga e sem
+envelhecer, ainda na triagem (no tech, 1.830 de 2.182). Agora a passada de score apaga, no fim, todo score
+que ela não gravou (`IListingScoreRepository.DeleteScoredBeforeAsync`): cobre busca que saiu do perfil e
+perfil que saiu da configuração. A vaga, os rótulos e as candidaturas ficam; ela só sai da triagem daquele
+perfil. Comparação truncada a microssegundos (o Postgres guarda µs; o .NET, 100 ns). 2 vagas rotuladas
+ficam sem score em perfil nenhum e saem da calibragem até alguma busca voltar a achá-las.
+Regra WHV na mesma passada: 29 vagas do banco com WHV + cidadania/residência; 19 pontuações (vaga × perfil)
+levaram −55, nenhuma ficou com 70+. As 3 Driller's Offsider rotuladas como ruins foram de 95/92 para 35/32.
+
 ### 2026-10-21 — WHV citado para recusar (`RulesVersion` 2)
 Na triagem, o autor viu se repetir: anúncio pede cidadania/residência e cita WHV **para recusar**. A busca
 por frase não dá contexto, e "working holiday" no texto completo dava +15 e ainda **cancelava** a penalidade de

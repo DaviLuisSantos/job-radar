@@ -23,6 +23,9 @@ public class ListingScoringServiceTests
             return Task.CompletedTask;
         }
 
+        public Task<int> DeleteScoredBeforeAsync(DateTimeOffset before, CancellationToken ct = default) =>
+            Task.FromResult(Saved.RemoveAll(s => s.ScoredAt < before));
+
         public Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<string>> ListProfilesAsync(CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<JobRadar.Domain.Triage.TriageRow>> ListForTriageAsync(JobRadar.Domain.Triage.TriageFilter filter, CancellationToken ct = default) => throw new NotSupportedException();
@@ -54,6 +57,21 @@ public class ListingScoringServiceTests
         await Service(catalog).ScoreAllAsync(Perth, Ct);
 
         Assert.Equal([("hospo", "2"), ("tech", "1")], _scores.Saved.Select(s => (s.Profile, s.Id.SourceId)).Order());
+    }
+
+    [Fact]
+    public async Task Scores_the_pass_did_not_write_are_deleted()
+    {
+        var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()));
+        await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
+        var yesterday = _time.GetUtcNow().AddDays(-1);
+        // Found yesterday by a search the profile dropped, and a profile no longer configured.
+        _scores.Saved.Add(new ListingScore(new ListingId("seek", "9"), "tech", new FitScore(90, []), "old0", yesterday));
+        _scores.Saved.Add(new ListingScore(new ListingId("seek", "1"), "removed", new FitScore(70, []), "old0", yesterday));
+
+        await Service(catalog).ScoreAllAsync(Perth, Ct);
+
+        Assert.Equal([("tech", "1")], _scores.Saved.Select(s => (s.Profile, s.Id.SourceId)));
     }
 
     [Fact]

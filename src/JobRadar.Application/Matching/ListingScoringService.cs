@@ -7,6 +7,8 @@ namespace JobRadar.Application.Matching;
 /// <summary>
 /// Scores, for each profile, every listing its searches found. Runs every day after collection:
 /// a listing's age is part of its score, so yesterday's scores are stale even if nothing else changed.
+/// Scores the pass did not write are deleted: a listing whose searches left the profile (or a profile
+/// that left the configuration) would otherwise sit in triage with a frozen score.
 /// </summary>
 public sealed class ListingScoringService(
     ProfileCatalog catalog,
@@ -39,5 +41,10 @@ public sealed class ListingScoringService(
                 "Scored {Count} listings for {Profile}: {Excluded} excluded, {Strong} at 70 or more",
                 scored.Count, profile.Name, scored.Count(s => s.Score.Excluded), scored.Count(s => s.Score.Final >= 70));
         }
+
+        // Every score this pass wrote carries `now`; anything older is an orphan.
+        var orphans = await scores.DeleteScoredBeforeAsync(now, ct);
+        if (orphans > 0)
+            log.LogInformation("Deleted {Count} scores no profile search backs any more", orphans);
     }
 }

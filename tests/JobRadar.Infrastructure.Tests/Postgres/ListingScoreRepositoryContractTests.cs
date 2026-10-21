@@ -62,6 +62,23 @@ public class ListingScoreRepositoryContractTests(PostgresFixture db)
     }
 
     [DatabaseFact]
+    public async Task Scores_saved_before_the_pass_are_deleted_and_the_pass_own_are_kept()
+    {
+        await db.ResetAsync();
+        await SeedListingsAsync("1", "2");
+        // Sub-microsecond ticks: Postgres stores microseconds, and a score of this very pass must survive.
+        var pass = Monday.AddDays(1).AddTicks(7);
+        await SaveAsync(Score("1", "tech", 66), Score("2", "removed", 40));
+        await SaveAsync(Score("2", "tech", 50) with { ScoredAt = pass });
+
+        await using var ctx = db.NewContext();
+        var deleted = await new PostgresListingScoreRepository(ctx).DeleteScoredBeforeAsync(pass, Ct);
+
+        Assert.Equal(2, deleted);
+        Assert.Equal([("2", "tech")], (await RowsAsync()).Select(r => (r.SourceId, r.Profile)));
+    }
+
+    [DatabaseFact]
     public async Task The_explanation_is_stored_as_json_with_rule_names()
     {
         await db.ResetAsync();

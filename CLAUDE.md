@@ -109,7 +109,8 @@ execução em `collection_runs` com chave `term: <frase>`. Janela: 31 dias na pr
 
 **Score** — `ListingScoringService.ScoreAllAsync`: para cada perfil, pontua com `FitScorer` todas as
 vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma linha por vaga × perfil,
-com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score.
+com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score, e no fim
+apaga os scores que a passada não gravou (vaga que as buscas do perfil não acham mais, perfil removido).
 
 **Raio-X** — `MarketSnapshotService.TakeAsync(dia)`: por categoria (`Market:Categories`, código de cada fonte) e
 cidade, conta as vagas abertas e as que citam cada termo; nas `FullCities` lista todas. Contagem que falha tem

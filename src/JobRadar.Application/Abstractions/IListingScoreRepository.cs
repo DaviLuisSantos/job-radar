@@ -11,6 +11,13 @@ public interface IListingScoreRepository
     Task SaveAsync(IReadOnlyCollection<ListingScore> scores, CancellationToken ct = default);
 
     /// <summary>
+    /// Deletes the scores last saved before <paramref name="before"/>: after a full pass, those of
+    /// listings no profile search finds any more and of profiles no longer configured.
+    /// </summary>
+    /// <returns>How many were deleted.</returns>
+    Task<int> DeleteScoredBeforeAsync(DateTimeOffset before, CancellationToken ct = default);
+
+    /// <summary>
     /// Stored scores of every listing the candidate has judged, with the verdict that counts
     /// (explicit label, else the application status; see <c>Judgement.Effective</c>).
     /// </summary>

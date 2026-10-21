@@ -58,6 +58,15 @@ internal sealed class PostgresListingScoreRepository(JobRadarDbContext db) : ILi
         }
     }
 
+    public Task<int> DeleteScoredBeforeAsync(DateTimeOffset before, CancellationToken ct = default)
+    {
+        // Postgres keeps microseconds and .NET ticks are 100 ns: a score saved at exactly `before` is
+        // stored at or after the cutoff truncated to microseconds, never before it.
+        var ticks = before.UtcTicks;
+        var cutoff = new DateTimeOffset(ticks - ticks % 10, TimeSpan.Zero);
+        return db.ListingScores.Where(s => s.ScoredAt < cutoff).ExecuteDeleteAsync(ct);
+    }
+
     public async Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default)
     {
         var rows = await (
