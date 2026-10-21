@@ -11,9 +11,9 @@ Two products share one core:
   the share that accepts working holiday makers, and the share that requires citizenship or PR.
   It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
 
-> **Status:** early. The architecture skeleton and the listing store are in place; collection,
-> scoring and the market snapshot are being ported from a Python prototype.
-> Scope and phases: [docs/visao.md](docs/visao.md) (Portuguese).
+> **Status:** early. The listing store and the Seek integration are in place; scheduled
+> collection, scoring and the market snapshot are being ported from a Python prototype.
+> Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
 
 ## Architecture
 
@@ -22,6 +22,7 @@ src/
   JobRadar.Domain           pure model: listings, locations, work types (no EF, no HTTP)
   JobRadar.Application      business services + ports (Abstractions/) they depend on
   JobRadar.Infrastructure   Postgres: entity → configuration → mapper → repository, migrations
+  JobRadar.Integrations.Seek  Seek search API: resilient HTTP client, translator to the neutral model
   JobRadar.Worker           composition root and scheduled jobs
 tests/
   *.Domain.Tests            pure unit tests
@@ -60,7 +61,8 @@ JOBRADAR_DB_TESTS=1 dotnet test
 ## Data and ethics
 
 Only aggregated numbers are published, never individual listings. The system does not bypass
-anti-bot protection and does not open protected job pages.
+anti-bot protection and does not open protected job pages. Requests identify the bot in the
+User-Agent, are paced with jitter, and back off on HTTP 429.
 
 ## License
 

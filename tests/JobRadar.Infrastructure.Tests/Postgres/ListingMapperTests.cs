@@ -11,7 +11,7 @@ public class ListingMapperTests
         Id: new ListingId("seek", sourceId),
         Title: title,
         Company: "Acme",
-        Location: new ListingLocation("Perth", AustralianState.WA, "6000"),
+        Location: new ListingLocation("Osborne Park", "Perth", AustralianState.WA, "6017"),
         WorkType: WorkType.Contract,
         SalaryText: "$90k - $110k",
         PostedAt: Perth.AddDays(-2),

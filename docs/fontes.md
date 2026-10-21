@@ -22,6 +22,16 @@
 | **Indeed** | sem API pública para busca; anti-bot forte | volume alto | alto | fora |
 | **LinkedIn** | anti-scraping agressivo, histórico de processos | vagas de tecnologia | alto | fora |
 
+## Seek — como a integração funciona (etapa 2)
+
+- Endpoint `GET /api/jobsearch/v5/search` (não documentado). Parâmetros em `SeekSearchClient.BuildUri`.
+- Até 100 por página e no máximo 500 resultados por busca. Acima disso é preciso dividir a busca,
+  por estado por exemplo.
+- `totalCount` conta os promovidos repetidos em cada página. Para contar, use sempre `pageSize=100`.
+- User-Agent identificado (`JobRadarAU/0.1 (+repo)`), pausa de ~1 s com variação entre páginas,
+  backoff em 429.
+- Não abre páginas de vaga (Cloudflare). O texto completo só entra pela busca por frase (etapa 5).
+
 ## Regras do desenho
 
 1. **Modelo neutro + dado bruto.** Cada integração grava o payload original e traduz para o

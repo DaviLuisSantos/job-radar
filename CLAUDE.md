@@ -8,6 +8,9 @@ da newsletter Raio-X WHV em português). Reescrita em .NET de um protótipo Pyth
 
 Escopo, públicos, não-objetivos e fases: [docs/visao.md](docs/visao.md). Fontes de vagas: [docs/fontes.md](docs/fontes.md).
 
+**Onde estamos e o que vem a seguir: [docs/plano.md](docs/plano.md).** Ao fechar uma etapa, atualize o
+plano (estado, Diário) e passe para a próxima na ordem.
+
 ## Comandos
 
 ```bash
@@ -23,6 +26,10 @@ JOBRADAR_DB_TESTS=1 dotnet test
 ```
 
 ```bash
+JOBRADAR_LIVE_TESTS=1 dotnet test --project tests/JobRadar.Worker.Tests
+```
+
+```bash
 docker compose up -d
 ```
 
@@ -33,6 +40,8 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 - Build: 0 erros, **0 warnings** — `TreatWarningsAsErrors` em `Directory.Build.props`.
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`) sobem Postgres 18 via Testcontainers
   e só rodam com `JOBRADAR_DB_TESTS=1`. O CI roda os dois.
+- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek pela composição completa.
+  Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou quando a coleta começar a falhar.
 - Testes usam Microsoft.Testing.Platform (opt-in em `global.json`), não VSTest.
 - Versões de pacote só em `Directory.Packages.props` (gerenciamento central, com pinning transitivo).
 
@@ -50,6 +59,7 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 src/JobRadar.Domain          modelo puro (Listings/) — sem EF, HTTP ou integração
 src/JobRadar.Application     serviços + portas em Abstractions/
 src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
+src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar) e jobs
 ```
 
@@ -70,6 +80,13 @@ src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar)
   (`ListingMapper.Refresh`).
 - `ListingId` normaliza a fonte (`Trim` + minúsculas): `"SEEK"` e `"seek"` são a mesma fonte.
 - A máquina do autor tem uma fonte NuGet extra; `nuget.config` limpa e usa só nuget.org.
+- Seek repete anúncios promovidos em toda página: `SeekJobSource` deduplica por ID dentro da busca.
+  Por isso `totalCount` não bate com o número de vagas devolvidas.
+- Local do Seek: divida no **primeiro** `", "` (`SeekListingTranslator.ParseLocation`), porque há regiões
+  com vírgula no nome.
+- Padrões de opções ficam na classe (`SeekOptions`), não no `appsettings.json`.
+- Migration gerada pelo EF pode escolher a renomeação errada. Leia antes de commitar
+  (`SplitLocationIntoSuburbAndRegion` foi corrigida à mão: `city` → `region`).
 
 ## Convenções
 

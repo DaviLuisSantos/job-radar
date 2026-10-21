@@ -7,7 +7,8 @@ public class ListingEntity
     public string SourceId { get; set; } = "";
     public string Title { get; set; } = "";
     public string? Company { get; set; }
-    public string? City { get; set; }
+    public string? Suburb { get; set; }
+    public string? Region { get; set; }
     public string? State { get; set; }
     public string? Postcode { get; set; }
     public string? WorkType { get; set; }

@@ -1,5 +1,6 @@
 using JobRadar.Application;
 using JobRadar.Infrastructure.Postgres;
+using JobRadar.Integrations.Seek;
 
 namespace JobRadar.Worker;
 
@@ -13,6 +14,7 @@ public static class JobRadarComposition
     {
         services.AddApplication();
         services.AddPostgresInfrastructure(configuration);
+        services.AddSeekIntegration(configuration);
         return services;
     }
 }

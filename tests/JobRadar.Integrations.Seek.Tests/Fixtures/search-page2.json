@@ -1,0 +1,27 @@
+{
+  "totalCount": 5,
+  "solMetadata": { "pageSize": 3, "pageNumber": 2, "totalJobCount": 5 },
+  "data": [
+    {
+      "id": "90000001",
+      "title": "Software Developer (.NET) ",
+      "companyName": "Example Consulting",
+      "locations": [ { "label": "Perth WA", "countryCode": "AU" } ],
+      "workTypes": [ "Full time" ],
+      "salaryLabel": "",
+      "listingDate": "2026-10-08T00:01:36Z",
+      "displayType": "promoted",
+      "isFeatured": true
+    },
+    {
+      "id": "90000004",
+      "title": "Barista",
+      "companyName": "Harbour Cafe",
+      "locations": [ { "label": "Hobart TAS", "countryCode": "AU" } ],
+      "workTypes": [ "Part time" ],
+      "listingDate": "2026-10-14T06:21:52Z",
+      "displayType": "standard",
+      "isFeatured": false
+    }
+  ]
+}

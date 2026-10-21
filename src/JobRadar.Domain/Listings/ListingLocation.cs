@@ -1,12 +1,16 @@
 namespace JobRadar.Domain.Listings;
 
 /// <summary>
-/// Canonical location. Sources disagree on shape (suburb, area, region); each
-/// integration maps what it has, and leaves the rest null.
+/// Canonical location. Sources disagree on shape; each integration maps what it has and
+/// leaves the rest null.
 /// </summary>
-public sealed record ListingLocation(string? City, AustralianState State, string? Postcode)
+/// <param name="Suburb">Most specific place named, e.g. "Osborne Park".</param>
+/// <param name="Region">Metro or regional area, e.g. "Perth" or "Mornington Peninsula &amp; Bass Coast".</param>
+/// <param name="State">State or territory.</param>
+/// <param name="Postcode">Four digits, when the source gives one.</param>
+public sealed record ListingLocation(string? Suburb, string? Region, AustralianState State, string? Postcode)
 {
-    public static ListingLocation Unknown { get; } = new(null, AustralianState.Unknown, null);
+    public static ListingLocation Unknown { get; } = new(null, null, AustralianState.Unknown, null);
 }
 
 public enum AustralianState

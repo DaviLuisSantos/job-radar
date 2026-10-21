@@ -14,7 +14,8 @@ public class ListingEntityConfiguration : IEntityTypeConfiguration<ListingEntity
         b.Property(e => e.SourceId).HasColumnName("source_id").HasMaxLength(64);
         b.Property(e => e.Title).HasColumnName("title").HasMaxLength(300);
         b.Property(e => e.Company).HasColumnName("company").HasMaxLength(300);
-        b.Property(e => e.City).HasColumnName("city").HasMaxLength(120);
+        b.Property(e => e.Suburb).HasColumnName("suburb").HasMaxLength(120);
+        b.Property(e => e.Region).HasColumnName("region").HasMaxLength(120);
         b.Property(e => e.State).HasColumnName("state").HasMaxLength(3);
         b.Property(e => e.Postcode).HasColumnName("postcode").HasMaxLength(4);
         b.Property(e => e.WorkType).HasColumnName("work_type").HasMaxLength(16);

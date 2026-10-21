@@ -1,0 +1,48 @@
+{
+  "totalCount": 5,
+  "solMetadata": { "pageSize": 3, "pageNumber": 1, "totalJobCount": 5 },
+  "data": [
+    {
+      "id": "90000001",
+      "title": "Software Developer (.NET) ",
+      "companyName": "Example Consulting",
+      "advertiser": { "id": "100", "description": "Example Consulting Pty Ltd" },
+      "locations": [ { "label": "Perth WA", "countryCode": "AU", "seoHierarchy": [ { "contextualName": "All Perth WA" } ] } ],
+      "workTypes": [ "Full time" ],
+      "salaryLabel": "",
+      "listingDate": "2026-10-08T00:01:36Z",
+      "classifications": [ { "classification": { "id": "6281", "description": "Information & Communication Technology" }, "subclassification": { "id": "6287", "description": "Developers/Programmers" } } ],
+      "workArrangements": { "data": [ { "id": "2", "label": { "text": "Hybrid" } } ], "displayText": "Hybrid" },
+      "teaser": "Fictional ad used as a test fixture.",
+      "bulletPoints": [ "Fictional bullet" ],
+      "displayType": "promoted",
+      "isFeatured": true
+    },
+    {
+      "id": "90000002",
+      "title": "Backend Engineer",
+      "companyName": "Sample Recruitment",
+      "advertiser": { "id": "101", "description": "Sample Recruitment" },
+      "locations": [ { "label": "Osborne Park, Perth WA", "countryCode": "AU" } ],
+      "workTypes": [ "Contract/Temp" ],
+      "salaryLabel": "$90 per hour plus super",
+      "listingDate": "2026-10-01T03:15:54Z",
+      "classifications": [ { "classification": { "id": "6281", "description": "Information & Communication Technology" }, "subclassification": { "id": "6287", "description": "Developers/Programmers" } } ],
+      "teaser": "Fictional ad used as a test fixture.",
+      "displayType": "standard",
+      "isFeatured": false
+    },
+    {
+      "id": "90000003",
+      "title": "Kitchen Hand",
+      "advertiser": { "id": "", "description": "Private Advertiser" },
+      "locations": [ { "label": "Austinmer, Wollongong, Illawarra & South Coast NSW", "countryCode": "AU" } ],
+      "workTypes": [ "Casual/Vacation" ],
+      "salaryLabel": "$30 – $32 per hour",
+      "listingDate": "2026-10-09T04:18:10Z",
+      "classifications": [ { "classification": { "id": "1220", "description": "Hospitality & Tourism" }, "subclassification": { "id": "6082", "description": "Chefs/Cooks" } } ],
+      "displayType": "standard",
+      "isFeatured": false
+    }
+  ]
+}

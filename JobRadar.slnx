@@ -3,11 +3,13 @@
     <Project Path="src/JobRadar.Application/JobRadar.Application.csproj" />
     <Project Path="src/JobRadar.Domain/JobRadar.Domain.csproj" />
     <Project Path="src/JobRadar.Infrastructure/JobRadar.Infrastructure.csproj" />
+    <Project Path="src/JobRadar.Integrations.Seek/JobRadar.Integrations.Seek.csproj" />
     <Project Path="src/JobRadar.Worker/JobRadar.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/JobRadar.Domain.Tests/JobRadar.Domain.Tests.csproj" />
     <Project Path="tests/JobRadar.Infrastructure.Tests/JobRadar.Infrastructure.Tests.csproj" />
+    <Project Path="tests/JobRadar.Integrations.Seek.Tests/JobRadar.Integrations.Seek.Tests.csproj" />
     <Project Path="tests/JobRadar.Worker.Tests/JobRadar.Worker.Tests.csproj" />
   </Folder>
 </Solution>

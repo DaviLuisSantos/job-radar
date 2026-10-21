@@ -25,7 +25,8 @@ internal static class ListingMapper
     {
         e.Title = listing.Title;
         e.Company = listing.Company;
-        e.City = listing.Location.City;
+        e.Suburb = listing.Location.Suburb;
+        e.Region = listing.Location.Region;
         e.State = ToColumn(listing.Location.State);
         e.Postcode = listing.Location.Postcode;
         e.WorkType = ToColumn(listing.WorkType);
@@ -42,7 +43,7 @@ internal static class ListingMapper
             Id: new ListingId(e.Source, e.SourceId),
             Title: e.Title,
             Company: e.Company,
-            Location: new ListingLocation(e.City, ToState(e.State), e.Postcode),
+            Location: new ListingLocation(e.Suburb, e.Region, ToState(e.State), e.Postcode),
             WorkType: ToWorkType(e.WorkType),
             SalaryText: e.SalaryText,
             PostedAt: e.PostedAt,

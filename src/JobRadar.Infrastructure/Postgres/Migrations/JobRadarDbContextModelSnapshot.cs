@@ -34,11 +34,6 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("source_id");
 
-                    b.Property<string>("City")
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("city");
-
                     b.Property<string>("Company")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -61,6 +56,11 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("posted_at");
 
+                    b.Property<string>("Region")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("region");
+
                     b.Property<string>("SalaryText")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -75,6 +75,11 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)")
                         .HasColumnName("state");
+
+                    b.Property<string>("Suburb")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("suburb");
 
                     b.Property<string>("Title")
                         .IsRequired()
