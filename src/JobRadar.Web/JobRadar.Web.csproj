@@ -17,4 +17,10 @@
     <InternalsVisibleTo Include="JobRadar.Web.Tests" />
   </ItemGroup>
 
+  <!-- Capturing a full ad rescores the listing here, so the site reads the worker's profiles (not versioned). -->
+  <ItemGroup Condition="Exists('..\JobRadar.Worker\appsettings.Local.json')">
+    <None Include="..\JobRadar.Worker\appsettings.Local.json" Link="profiles.json"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

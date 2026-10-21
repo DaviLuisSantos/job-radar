@@ -26,6 +26,7 @@ public static class PostgresServiceCollectionExtensions
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
         services.AddScoped<IListingRepository, PostgresListingRepository>();
+        services.AddScoped<IListingDescriptionRepository, PostgresListingDescriptionRepository>();
         services.AddScoped<ICollectionRunRepository, PostgresCollectionRunRepository>();
         services.AddScoped<IListingScoreRepository, PostgresListingScoreRepository>();
         services.AddScoped<IListingTermRepository, PostgresListingTermRepository>();

@@ -37,6 +37,7 @@ public class ListingScoringServiceTests
     private readonly InMemoryListings _listings = new();
     private readonly InMemoryScores _scores = new();
     private readonly InMemoryTerms _terms = new();
+    private readonly InMemoryDescriptions _descriptions = new();
 
     private static SourcedListing Ad(string id, string title, DateTimeOffset? posted = null) => new(
         new Listing(new ListingId("seek", id), title, null, ListingLocation.Unknown, WorkType.Unknown, null,
@@ -44,7 +45,26 @@ public class ListingScoringServiceTests
         "{}");
 
     private ListingScoringService Service(ProfileCatalog catalog) =>
-        new(catalog, _listings, _terms, _scores, _time, NullLogger<ListingScoringService>.Instance);
+        new(catalog, _listings, _terms, _descriptions, _scores, _time, NullLogger<ListingScoringService>.Instance);
+
+    [Fact]
+    public async Task One_listing_is_scored_for_the_profiles_that_found_it_with_its_captured_text()
+    {
+        var hospo = new ProfileOptions { Keywords = ["Barista"], Locations = ["Perth WA"] };
+        var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()), ("hospo", hospo));
+        await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
+        var id = new ListingId("seek", "1");
+        _descriptions.Saved[id] = new ListingDescription(id, "You must hold Australian citizenship to be considered for this role.",
+            DescriptionOrigin.Pasted, _time.GetUtcNow());
+
+        var scored = await Service(catalog).ScoreOneAsync(id, Perth, Ct);
+
+        var only = Assert.Single(scored);
+        Assert.Equal("tech", only.Profile);
+        Assert.Contains(only.Score.Items, i => i.Where == ScoreWhere.Description);
+        Assert.Equal(scored, _scores.Saved);
+        Assert.Empty(await Service(catalog).ScoreOneAsync(new ListingId("seek", "404"), Perth, Ct));
+    }
 
     [Fact]
     public async Task Each_profile_scores_only_what_its_own_searches_found()

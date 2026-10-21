@@ -33,6 +33,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ListingScoringService>();
         services.AddScoped<FullTextTermService>();
         services.AddScoped<TrackingService>();
+        services.AddScoped<DescriptionService>();
         services.AddScoped<CalibrationService>();
         services.AddScoped<TriageService>();
 

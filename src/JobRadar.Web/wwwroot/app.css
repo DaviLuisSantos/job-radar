@@ -211,6 +211,16 @@ details summary .score { width: 2rem; height: 2rem; font-size: .85rem; }
 .explanation .total { border-top: 1px solid var(--border); margin-top: .3rem; padding-top: .45rem; font-weight: 700; }
 .explanation .where { color: var(--muted); font-size: .8rem; }
 
+/* Full ad and capture */
+.full-ad { margin-top: 1rem; }
+.full-ad .notes, .capture .notes { margin-top: .5rem; }
+pre.ad { white-space: pre-wrap; font: inherit; font-size: .9rem; max-height: 28rem; overflow-y: auto; }
+.capture, .setup { margin-bottom: 1rem; }
+.capture h2 { margin-bottom: .25rem; }
+.capture h3 { margin-top: 1rem; }
+.steps { margin: .5rem 0; padding-left: 1.2rem; }
+.bookmarklet { cursor: grab; font-weight: 600; border-color: var(--accent); color: var(--accent); }
+
 /* Calibration */
 .grid { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .grid th, .grid td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); text-align: left; }

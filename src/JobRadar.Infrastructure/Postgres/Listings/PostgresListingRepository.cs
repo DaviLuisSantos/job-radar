@@ -170,6 +170,15 @@ internal sealed class PostgresListingRepository(JobRadarDbContext db) : IListing
         return rows.Select(r => ListingMapper.ToRecord(r).Listing).ToList();
     }
 
+    public async Task<IReadOnlyCollection<string>> GetSearchKeysAsync(ListingId id, CancellationToken ct = default)
+    {
+        var (source, sourceId) = (id.Source, id.SourceId);
+        return await db.ListingSearchHits
+            .Where(h => h.Source == source && h.SourceId == sourceId)
+            .Select(h => h.SearchKey)
+            .ToListAsync(ct);
+    }
+
     public Task<DateTimeOffset?> GetOldestPostedAmongFirstSeenSinceAsync(string source, DateTimeOffset since, CancellationToken ct = default)
     {
         var after = since.ToUniversalTime();

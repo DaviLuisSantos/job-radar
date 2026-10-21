@@ -16,6 +16,7 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<ListingEntity> Listings => Set<ListingEntity>();
     public DbSet<ListingPayloadEntity> ListingPayloads => Set<ListingPayloadEntity>();
     public DbSet<ListingSearchHitEntity> ListingSearchHits => Set<ListingSearchHitEntity>();
+    public DbSet<ListingDescriptionEntity> ListingDescriptions => Set<ListingDescriptionEntity>();
     public DbSet<CollectionRunEntity> CollectionRuns => Set<CollectionRunEntity>();
     public DbSet<ListingScoreEntity> ListingScores => Set<ListingScoreEntity>();
     public DbSet<ListingTermEntity> ListingTerms => Set<ListingTermEntity>();

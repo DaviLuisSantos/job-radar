@@ -78,6 +78,27 @@ internal sealed class InMemoryListings : IListingRepository
             .Where(k => k.Listing.Id.Source == source && k.FirstSeen > since)
             .Select(k => k.Listing.PostedAt)
             .Min());
+
+    public Task<IReadOnlyCollection<string>> GetSearchKeysAsync(ListingId id, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyCollection<string>>(_hits.Where(h => h.Item1 == id).Select(h => h.Item2).ToList());
+}
+
+internal sealed class InMemoryDescriptions : IListingDescriptionRepository
+{
+    public Dictionary<ListingId, ListingDescription> Saved { get; } = [];
+
+    public Task SaveAsync(ListingDescription description, CancellationToken ct = default)
+    {
+        Saved[description.Id] = description;
+        return Task.CompletedTask;
+    }
+
+    public Task<ListingDescription?> FindAsync(ListingId id, CancellationToken ct = default) =>
+        Task.FromResult(Saved.GetValueOrDefault(id));
+
+    public Task<IReadOnlyDictionary<ListingId, string>> GetTextsAsync(IReadOnlyCollection<ListingId> ids, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<ListingId, string>>(
+            Saved.Where(s => ids.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value.Text));
 }
 
 internal sealed class InMemoryRuns : ICollectionRunRepository

@@ -55,6 +55,21 @@ public class ComponentTests : BunitContext
     }
 }
 
+public class BookmarkletTests
+{
+    [Fact]
+    public void Sends_to_this_site_only_and_fits_one_line()
+    {
+        var code = Bookmarklet.For("http://100.67.84.28:5380/");
+
+        Assert.StartsWith("javascript:(()=>{const o=\"http://100.67.84.28:5380\";", code, StringComparison.Ordinal);
+        Assert.Contains("w.postMessage({type:'jobradar-capture'", code, StringComparison.Ordinal);
+        Assert.Contains("},o);", code, StringComparison.Ordinal);   // target origin: this site, never '*'
+        Assert.DoesNotContain('\n', code);
+        Assert.DoesNotContain('%', code);   // a '%' in a bookmark URL is read as an escape
+    }
+}
+
 public class WordingTests
 {
     [Fact]

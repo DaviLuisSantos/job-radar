@@ -325,6 +325,61 @@ public class FitScorerTests
         Assert.DoesNotContain(notOurs.Items, i => i.Rule == ScoreRule.FullTextLicence);
     }
 
+    private static ScoringInput Described(string title, string description, params string[] fullText) =>
+        Job(title, fullText: fullText) with { Description = description };
+
+    [Fact]
+    public void Citizenship_in_a_captured_ad_costs_55_unless_the_ad_welcomes_working_holiday_makers()
+    {
+        var citizensOnly = Score(Described("Labourer", "Applicants must be Australian citizens or permanent residents."), Trades);
+        var welcome = Score(Described("Labourer", "Open to Australian citizens, PR and working holiday visa holders."), Trades);
+
+        Assert.True(citizensOnly.Final > 0);   // weighed, not excluded: the ad may welcome other visas
+        Assert.Equal(ScoreWhere.Description, Item(citizensOnly, ScoreRule.FullTextCitizenship).Where);
+        Assert.Equal(-55, Item(citizensOnly, ScoreRule.FullTextCitizenship).Points);
+        Assert.Equal(ScoreWhere.Description, Item(welcome, ScoreRule.WorkingHolidayFriendly).Where);
+        Assert.DoesNotContain(welcome.Items, i => i.Rule == ScoreRule.FullTextCitizenship);
+    }
+
+    [Fact]
+    public void A_negated_working_holiday_mention_in_a_captured_ad_earns_nothing_and_beats_the_searched_phrase()
+    {
+        var score = Score(Described("Labourer", "Australian citizens only apply. We are unable to accept working holiday visa holders.",
+            "working holiday"), Trades);
+
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.WorkingHolidayFriendly);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextCitizenship).Points);
+    }
+
+    [Fact]
+    public void Work_rights_a_working_holiday_cannot_give_exclude_from_a_captured_ad()
+    {
+        var score = Score(Described("Labourer", "You must have unrestricted work rights in Australia to apply for this role."), Trades);
+
+        Assert.Equal(0, score.Final);
+        Assert.Equal(ScoreWhere.Description, Item(score, ScoreRule.WorkRightsIncompatible).Where);
+    }
+
+    [Fact]
+    public void Requirements_are_read_from_a_captured_ad_unless_negated_just_before()
+    {
+        var asks = Score(Described("Labourer", "Essential: minimum 2 years in a similar role and a current HR licence."), FifoWithRequirements);
+        var waives = Score(Described("Labourer", "No HRWL needed, and no minimum 2 years either: we train you from day one."), FifoWithRequirements);
+
+        Assert.Equal(ScoreWhere.Description, Item(asks, ScoreRule.FullTextExperience).Where);
+        Assert.Equal(-20, Item(asks, ScoreRule.TruckLicence).Points);   // "HR licence" read locally counts once
+        Assert.DoesNotContain(waives.Items, i => i.Rule is ScoreRule.FullTextExperience or ScoreRule.FullTextLicence);
+    }
+
+    [Fact]
+    public void Profile_signals_do_not_read_a_captured_ad()
+    {
+        var plain = Score(Job("Labourer"), Trades);
+        var described = Score(Described("Labourer", "You will report to the offsider lead and work under a cert III qualified supervisor."), Trades);
+
+        Assert.Equal(plain.Final, described.Final);
+    }
+
     [Fact]
     public void A_leading_hand_is_not_an_entry_title()
     {

@@ -15,13 +15,19 @@ public sealed record ScoringInput(
     DateTimeOffset? PostedAt,
     IReadOnlyCollection<string> FullTextTerms)
 {
-    public static ScoringInput From(Listing listing, IReadOnlyCollection<string>? fullTextTerms = null) => new(
+    /// <summary>The full ad text, when the candidate captured it; null for most listings.</summary>
+    public string? Description { get; init; }
+
+    public static ScoringInput From(Listing listing, IReadOnlyCollection<string>? fullTextTerms = null, string? description = null) => new(
         listing.Title,
         listing.Summary,
         FormatLocation(listing.Location),
         FormatWorkType(listing.WorkType),
         listing.PostedAt,
-        fullTextTerms ?? []);
+        fullTextTerms ?? [])
+    {
+        Description = description,
+    };
 
     /// <summary>"Suburb, Region STATE", leaving out what is unknown.</summary>
     public static string? FormatLocation(ListingLocation l)

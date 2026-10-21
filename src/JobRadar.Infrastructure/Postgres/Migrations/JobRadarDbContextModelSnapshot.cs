@@ -80,6 +80,38 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.ToTable("collection_runs", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Listings.ListingDescriptionEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<DateTimeOffset>("CapturedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("captured_at");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("origin");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("Source", "SourceId");
+
+                    b.ToTable("listing_descriptions", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Listings.ListingEntity", b =>
                 {
                     b.Property<string>("Source")
@@ -568,6 +600,15 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.HasKey("Source", "SourceId");
 
                     b.ToTable("listing_labels", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Listings.ListingDescriptionEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Postgres.Listings.ListingEntity", null)
+                        .WithOne()
+                        .HasForeignKey("JobRadar.Infrastructure.Postgres.Listings.ListingDescriptionEntity", "Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Listings.ListingPayloadEntity", b =>

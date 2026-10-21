@@ -53,6 +53,7 @@ public class TrackingServiceTests
         public Task<ObservationResult> ImportAsync(IReadOnlyCollection<ImportedListing> listings, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<DateTimeOffset?> GetOldestPostedAmongFirstSeenSinceAsync(string source, DateTimeOffset since, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyCollection<string>> GetSearchKeysAsync(ListingId id, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 21, 1, 0, 0, TimeSpan.Zero));

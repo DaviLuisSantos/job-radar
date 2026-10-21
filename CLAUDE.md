@@ -113,6 +113,12 @@ vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma 
 com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score, e no fim
 apaga os scores que a passada não gravou (vaga que as buscas do perfil não acham mais, perfil removido).
 
+**Descrição completa** — o autor captura o texto do anúncio que ele mesmo abriu (favorito da página
+`/capture` ou colar na página da vaga); `DescriptionService` grava em `listing_descriptions` e repontua na
+hora (`ScoreOneAsync`). O `FitScorer` lê a descrição **só** nas regras de requisito e de direito de trabalho;
+sinais do perfil ficam em título e resumo. O site lê os perfis do worker (`profiles.json`, copiado pelo build).
+Texto de uso pessoal: nunca no Raio-X, no repo ou em fixture.
+
 **Raio-X** — `MarketSnapshotService.TakeAsync(dia)`: por categoria (`Market:Categories`, código de cada fonte) e
 cidade, conta as vagas abertas e as que citam cada termo; nas `FullCities` lista todas. Contagem que falha tem
 uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatório mensal só usa `ok`**

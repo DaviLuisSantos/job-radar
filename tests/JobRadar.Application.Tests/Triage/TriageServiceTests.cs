@@ -31,7 +31,7 @@ public class TriageServiceTests
         new(new ListingId("seek", i.ToString(System.Globalization.CultureInfo.InvariantCulture)), "Same title", company,
             ListingLocation.Unknown, WorkType.Unknown, null, null, DateTimeOffset.UnixEpoch, 100 - i, null, null);
 
-    private static TriageService Service(IListingScoreRepository scores) => new(null!, scores, null!, null!);
+    private static TriageService Service(IListingScoreRepository scores) => new(null!, scores, null!, null!, null!);
 
     [Fact]
     public async Task Pages_after_collapsing_duplicates_so_counts_and_pages_are_right()

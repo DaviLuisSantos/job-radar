@@ -53,6 +53,29 @@ else if (_detail is { } d)
             </section>
         }
 
+        <section class="full-ad">
+            <h2>Full ad</h2>
+            @if (d.Description is { } desc)
+            {
+                <p class="muted">
+                    Captured @Wording.When(desc.CapturedAt) · @(desc.Origin == DescriptionOrigin.Browser ? "from the ad page" : "pasted")
+                </p>
+                <details>
+                    <summary>Show the text (@desc.Text.Length characters)</summary>
+                    <pre class="ad">@desc.Text</pre>
+                </details>
+            }
+            else
+            {
+                <p class="muted">Not captured. Open the ad and click <a href="capture">Send to JobRadar</a>, or paste the text here.</p>
+            }
+            <label class="notes">
+                @(d.Description is null ? "Paste the full ad text" : "Replace with another text")
+                <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Full ad text"></textarea>
+            </label>
+            <button @onclick="SaveDescriptionAsync" disabled="@string.IsNullOrWhiteSpace(_pasted)">Save and rescore</button>
+        </section>
+
         @if (d.Terms.Count > 0)
         {
             <section>
@@ -156,6 +179,23 @@ else if (_detail is { } d)
     private Task StatusAsync(ApplicationStatus status) => ActAsync(t => t.SetStatusAsync(Id, status));
 
     private Task SaveNotesAsync() => ActAsync(t => t.SetNotesAsync(Id, _notes));
+
+    private string? _pasted;
+
+    private async Task SaveDescriptionAsync()
+    {
+        _error = null;
+        try
+        {
+            await Backend.RunAsync<DescriptionService>(s => s.CaptureAsync(Id, _pasted, DescriptionOrigin.Pasted));
+            _pasted = null;
+            await LoadAsync();
+        }
+        catch (Exception ex) when (ex is ListingNotFoundException or DescriptionTooShortException)
+        {
+            _error = ex.Message;
+        }
+    }
 
     private async Task ActAsync(Func<TrackingService, Task> action)
     {

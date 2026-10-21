@@ -6,6 +6,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     Args = args,
     ContentRootPath = AppContext.BaseDirectory,
 });
+// The worker's profiles, copied by the build: capturing a full ad rescores the listing here.
+builder.Configuration.AddJsonFile("profiles.json", optional: true, reloadOnChange: false);
 // Machine-specific settings (the Tailscale address to listen on) stay out of git.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 builder.Configuration.AddEnvironmentVariables().AddCommandLine(args);

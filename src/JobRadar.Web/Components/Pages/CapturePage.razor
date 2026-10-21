@@ -1,0 +1,152 @@
+@page "/capture"
+@rendermode InteractiveServer
+@implements IDisposable
+@inject Backend Backend
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Capture · JobRadar AU</PageTitle>
+
+<div class="page-head">
+    <h1>Capture a full ad</h1>
+    <p class="muted">The score reads the full text of the ads you capture. The text stays in your database.</p>
+</div>
+
+@if (_id is { } id)
+{
+    <section class="panel capture">
+        @if (_missing)
+        {
+            <p class="alert" role="alert">@id was never collected: no profile search found it, so there is nothing to score.</p>
+        }
+        else if (_detail is { } d)
+        {
+            <h2><a href="@Pages.Triage.ListingLink(id)">@d.Record.Listing.Title</a></h2>
+            <p class="meta">
+                <span>@(d.Record.Listing.Company ?? "Company not given")</span>
+                <span>@Wording.Location(d.Record.Listing.Location)</span>
+            </p>
+        }
+
+        <label class="notes">
+            @(_received ? "Received from the ad page. Check it, then save." : "The ad text arrives here from the bookmarklet. If it does not, paste it (Ctrl+V).")
+            <textarea rows="14" @bind="_text" @bind:event="oninput" placeholder="Full ad text"></textarea>
+        </label>
+        <button @onclick="SaveAsync" disabled="@(_busy || _missing || string.IsNullOrWhiteSpace(_text))">Save and rescore</button>
+
+        @if (_error is { } error)
+        {
+            <p class="alert" role="alert">@error</p>
+        }
+        @if (_result is { } result)
+        {
+            <h3>New score</h3>
+            @if (result.Scores.Count == 0)
+            {
+                <p class="muted">Saved. No profile scores this listing.</p>
+            }
+            <ul class="rows">
+                @foreach (var s in result.Scores)
+                {
+                    <li class="row disagreement">
+                        <ScoreBadge Value="s.Score.Final" />
+                        <div class="what">
+                            <a class="title" href="@Pages.Triage.ListingLink(id)">@s.Profile</a>
+                            <ul class="why">
+                                @foreach (var item in s.Score.Items.Where(i => i.Where == ScoreWhere.Description))
+                                {
+                                    <li><b>@Wording.Points(item.Points)</b> @Wording.Describe(item)</li>
+                                }
+                            </ul>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+<section class="panel setup">
+    <h2>Bookmarklet</h2>
+    <p>Drag this button to your browser's bookmarks bar: <a class="button bookmarklet" href="@BookmarkletHref" @onclick:preventDefault>Send to JobRadar</a></p>
+    <ol class="steps">
+        <li>Open a job ad on Seek, in your own browser.</li>
+        <li>Click <b>Send to JobRadar</b>. If the page changed and the ad text is not found, select the ad text first.</li>
+        <li>This page opens with the text. Check it and save: the listing is scored again at once.</li>
+    </ol>
+    <p class="muted small">The bookmarklet only reads the page you opened; JobRadar never opens Seek ad pages. It also copies the text, so pasting works when the browser keeps the two pages apart.</p>
+</section>
+
+@code {
+    [SupplyParameterFromQuery] public string? Source { get; set; }
+    [SupplyParameterFromQuery(Name = "id")] public string? SourceId { get; set; }
+
+    private ListingId? _id;
+    private ListingDetail? _detail;
+    private bool _missing;
+    private string? _text;
+    private string? _receivedText;
+    private bool _received;
+    private bool _busy;
+    private string? _error;
+    private CaptureResult? _result;
+    private DotNetObjectReference<CapturePage>? _ref;
+
+    private string BookmarkletHref => Bookmarklet.For(new Uri(Nav.BaseUri).GetLeftPart(UriPartial.Authority));
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Source) && !string.IsNullOrWhiteSpace(SourceId) && !Source.Contains(':'))
+            await OpenAsync(new ListingId(Source, SourceId));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+        _ref = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("jobRadarCapture.listen", _ref);
+    }
+
+    [JSInvokable]
+    public async Task Receive(string source, string sourceId, string text)
+    {
+        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(sourceId) || source.Contains(':'))
+            return;
+        var id = new ListingId(source, sourceId);
+        if (_id != id)
+            await OpenAsync(id);
+        (_text, _receivedText, _received) = (text, text, true);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OpenAsync(ListingId id)
+    {
+        (_id, _result, _error) = (id, null, null);
+        _detail = await Backend.RunAsync<TriageService, ListingDetail?>(t => t.DetailAsync(id));
+        _missing = _detail is null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_id is not { } id)
+            return;
+        (_busy, _error) = (true, null);
+        try
+        {
+            // Edited after it arrived? Then it is the candidate's text, not the page's.
+            var origin = _received && _text == _receivedText ? DescriptionOrigin.Browser : DescriptionOrigin.Pasted;
+            _result = await Backend.RunAsync<DescriptionService, CaptureResult>(s => s.CaptureAsync(id, _text, origin));
+        }
+        catch (Exception ex) when (ex is ListingNotFoundException or DescriptionTooShortException)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => _ref?.Dispose();
+}

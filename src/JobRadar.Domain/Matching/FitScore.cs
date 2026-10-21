@@ -27,6 +27,8 @@ public enum ScoreWhere
     WorkType,
     Location,
     PostedDate,
+    /// <summary>The full ad text the candidate captured (see <c>ListingDescription</c>).</summary>
+    Description,
 }
 
 /// <summary>

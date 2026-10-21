@@ -28,6 +28,9 @@ public interface IListingRepository
     /// <summary>Every listing that any of these searches ever found.</summary>
     Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default);
 
+    /// <summary>Keys of the searches that ever found this listing: they decide which profiles score it.</summary>
+    Task<IReadOnlyCollection<string>> GetSearchKeysAsync(ListingId id, CancellationToken ct = default);
+
     /// <summary>
     /// Earliest posting date among the listings of <paramref name="source"/> first collected after
     /// <paramref name="since"/>; null when there are none (or none has a date).

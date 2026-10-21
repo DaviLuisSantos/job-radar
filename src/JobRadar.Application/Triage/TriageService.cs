@@ -9,7 +9,8 @@ public sealed class TriageService(
     IListingRepository listings,
     IListingScoreRepository scores,
     IListingTermRepository terms,
-    ITrackingRepository tracking)
+    ITrackingRepository tracking,
+    IListingDescriptionRepository descriptions)
 {
     public Task<IReadOnlyList<string>> ProfilesAsync(CancellationToken ct = default) => scores.ListProfilesAsync(ct);
 
@@ -41,6 +42,7 @@ public sealed class TriageService(
             await scores.GetScoresAsync(id, ct),
             byId.GetValueOrDefault(id) ?? [],
             await tracking.FindApplicationAsync(id, ct),
-            await tracking.FindLabelAsync(id, ct));
+            await tracking.FindLabelAsync(id, ct),
+            await descriptions.FindAsync(id, ct));
     }
 }

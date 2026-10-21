@@ -60,6 +60,7 @@ public static class Wording
         ScoreWhere.WorkType => "work type",
         ScoreWhere.Location => "location",
         ScoreWhere.PostedDate => "date",
+        ScoreWhere.Description => "captured ad",
         _ => "",
     };
 

@@ -57,9 +57,11 @@ public sealed record TriagePage(IReadOnlyList<TriageRow> Rows, int Total);
 public sealed record ProfileScore(string Profile, FitScore Score, DateTimeOffset ScoredAt);
 
 /// <summary>Everything known about one listing, for the detail view.</summary>
+/// <param name="Description">The full ad text, if the candidate captured it.</param>
 public sealed record ListingDetail(
     ListingRecord Record,
     IReadOnlyList<ProfileScore> Scores,
     IReadOnlyList<string> Terms,
     JobApplication? Application,
-    ListingLabel? Label);
+    ListingLabel? Label,
+    ListingDescription? Description = null);

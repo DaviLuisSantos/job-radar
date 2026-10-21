@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 5;
+    public const int RulesVersion = 6;
 
     private const int ExclusionPoints = -50;
 
@@ -35,6 +35,12 @@ public static class FitScorer
         var title = job.Title.ToLowerInvariant();
         var body = string.Join(" ", job.Summary ?? "", job.LocationLabel ?? "", job.WorkTypeLabel ?? "").ToLowerInvariant();
         var full = $"{title} {body}";
+        // The captured full ad, when there is one. Read only by the rules about requirements and work
+        // rights: profile signals stay on title and summary, or a listing with a description would
+        // score differently just for having more text ("report to the site manager").
+        var desc = job.Description?.ToLowerInvariant() ?? "";
+        var described = desc.Length > 0;
+        var fullAndDesc = described ? $"{full} {desc}" : full;
         var items = new List<ScoreItem>();
 
         FitScore Excluded(ScoreRule rule, string detail, ScoreWhere where)
@@ -50,6 +56,10 @@ public static class FitScorer
             return Excluded(ScoreRule.CitizenshipRequired, citizen.Value, ScoreWhere.Text);
         if (WorkRightsIncompatible.Match(full) is { Success: true } rights)
             return Excluded(ScoreRule.WorkRightsIncompatible, rights.Value, ScoreWhere.Text);
+        // Specific enough to exclude on the full ad too. Citizenship is not: "Australian or New Zealand
+        // citizens, PR or valid working visa holders" welcomes a WHV; it is weighed below.
+        if (described && WorkRightsIncompatible.Match(desc) is { Success: true } descRights)
+            return Excluded(ScoreRule.WorkRightsIncompatible, descRights.Value, ScoreWhere.Description);
         if (groups.TryGetValue(FullTextGroup.Exclude, out var excludeHits))
             return Excluded(ScoreRule.WorkRightsIncompatible, excludeHits[0], ScoreWhere.FullText);
         if (IdentifiedRole.Match(title) is { Success: true } identified)
@@ -128,12 +138,20 @@ public static class FitScorer
 
         // The full-text search gives no context: next to citizenship or residency, a working holiday
         // mention is mostly a refusal. The listing's own text still counts: it was read, not searched.
+        // A captured ad has the context the search lacks: it replaces the searched WHV phrases, and its
+        // mention counts unless negated just before ("unable to accept working holiday visas"); a
+        // refusal after it ("working holiday visa holders will not") was excluded above.
         var whvLocal = WorkingHolidayFriendly.Match(full);
+        var whvDescribed = described && WorkingHolidayFriendly.Match(desc) is { Success: true } inDesc && MatchesUnnegated(inDesc.Value, desc)
+            ? inDesc.Value
+            : null;
         var whvDoubtful = groups.ContainsKey(FullTextGroup.WhvWithResidency);
-        var whvHits = whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Whv);
-        var whv = whvLocal.Success || whvHits is not null;
+        var whvHits = described || whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Whv);
+        var whv = whvLocal.Success || whvDescribed is not null || whvHits is not null;
         if (whvLocal.Success)
             Add(ScoreRule.WorkingHolidayFriendly, whvLocal.Value, ScoreWhere.Text, 15);
+        else if (whvDescribed is not null)
+            Add(ScoreRule.WorkingHolidayFriendly, whvDescribed, ScoreWhere.Description, 15);
         else if (whvHits is not null)
             Add(ScoreRule.WorkingHolidayFriendly, whvHits[0], ScoreWhere.FullText, 15);
 
@@ -157,6 +175,9 @@ public static class FitScorer
         {
             if (!groups.TryGetValue(group, out var hits))
                 continue;
+            // The work-rights phrases are read from a captured ad instead (below).
+            if (described && group is FullTextGroup.Citizen or FullTextGroup.Ambiguous or FullTextGroup.Rights12Months or FullTextGroup.WhvWithResidency)
+                continue;
             if (whv && group is FullTextGroup.Citizen or FullTextGroup.Rights12Months or FullTextGroup.WhvWithResidency)
                 continue;
             // Same reason, counted once.
@@ -165,13 +186,28 @@ public static class FitScorer
             Add(rule, hits[0], ScoreWhere.FullText, points);
         }
 
+        if (described)
+        {
+            if (!whv && CitizenshipRequired.Match(desc) is { Success: true } descCitizen)
+                Add(ScoreRule.FullTextCitizenship, descCitizen.Value, ScoreWhere.Description, -55);
+            if (policy.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => Signal(p).IsMatch(desc)) is { } ambiguous)
+                Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -10);
+        }
+
         // Requirements of the profile found in the full ad: once per kind. A truck licence already
         // counted (local text or the policy's licence group) is not counted again; a training title
         // is where the trade certificate is earned. The context word only narrows the search: a phrase
         // found with any context ("HC licence + FIFO", searched for another profile) is in the ad.
+        // In a captured ad the phrase counts when not negated just before it ("no HR licence needed").
         var found = job.FullTextTerms.Select(t => new FullTextTerm(t).Phrases[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var truckCounted = groups.ContainsKey(FullTextGroup.Licence) || TruckLicence.IsMatch(full);
-        foreach (var requirement in profile.Requirements.Terms().Where(r => found.Contains(r.Phrase)).DistinctBy(r => r.Kind))
+        var truckCounted = groups.ContainsKey(FullTextGroup.Licence) || TruckLicence.IsMatch(fullAndDesc);
+        var requirements = profile.Requirements.Terms()
+            .Select(r => (r.Kind, r.Phrase, Where: described && MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description
+                : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
+            .Where(r => r.Where != ScoreWhere.None)
+            .OrderBy(r => r.Where == ScoreWhere.Description ? 0 : 1)
+            .DistinctBy(r => r.Kind);
+        foreach (var requirement in requirements)
         {
             if (requirement.Kind == RequirementKind.Licence && truckCounted)
                 continue;
@@ -183,18 +219,18 @@ public static class FitScorer
                 RequirementKind.Qualification => ScoreRule.FullTextQualification,
                 _ => ScoreRule.FullTextLicence,
             };
-            Add(rule, requirement.Phrase, ScoreWhere.FullText, -RequirementPenalty);
+            Add(rule, requirement.Phrase, requirement.Where, -RequirementPenalty);
         }
 
         if (policy.ApprenticeshipPenalty > 0 && trainingTitle)
             Add(ScoreRule.Apprenticeship, "apprentice", ScoreWhere.Title, -policy.ApprenticeshipPenalty);
 
-        if (policy.LongContractPenalty > 0 && LongContract.Match(full) is { Success: true } longContract)
+        if (policy.LongContractPenalty > 0 && LongContract.Match(fullAndDesc) is { Success: true } longContract)
             Add(ScoreRule.LongContract, longContract.Value, ScoreWhere.Text, -policy.LongContractPenalty);
 
-        if (CommissionOnly.Match(full) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
+        if (CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
             Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -30);
-        if (TruckLicence.Match(full) is { Success: true } truck && !groups.ContainsKey(FullTextGroup.Licence))
+        if (TruckLicence.Match(fullAndDesc) is { Success: true } truck && !groups.ContainsKey(FullTextGroup.Licence))
             Add(ScoreRule.TruckLicence, truck.Value, ScoreWhere.Text, -20);
 
         if (policy.VisaRequired && !sponsorConfirmed)

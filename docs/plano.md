@@ -64,16 +64,19 @@ Pendências conhecidas, com a etapa onde entram:
 
 Ideias decididas como direção, sem data. Entram como etapas quando a v1 fechar.
 
-### v1.x — Descrição completa das vagas que importam
+### v1.x — Descrição completa das vagas que importam ✅ 2026-10-22
 
 As páginas de vaga do Seek seguem atrás do Cloudflare e **contornar continua fora**. O texto completo
 entra pelo navegador do próprio autor, que abre a vaga como qualquer pessoa:
 
-1. **"Enviar para o JobRadar"**: bookmarklet que lê o texto da página aberta no navegador e envia ao site
-   local (`POST` para `localhost:5380`/Tailscale). Cobre exatamente as vagas do topo da triagem.
-2. **Campo "colar descrição"** no detalhe da vaga: a mesma coisa, manual, como reserva.
-3. O texto vira `FullDescription` da vaga (separado do `Summary`), as regras do `FitScorer` passam a lê-lo
-   (todas já leem o corpo: cidadania, "12 months", carteira, anos de experiência) e a vaga é repontuada na hora.
+1. **"Send to JobRadar"** (página `/capture` do site, arrastar para a barra de favoritos): lê o texto do
+   anúncio aberto (ou a seleção), copia para a área de transferência, abre `/capture?source=seek&id=…` e
+   manda o texto por `postMessage` quando a página avisa que está ouvindo. Sem `POST` cross-origin (mixed
+   content e Private Network Access bloqueariam); se o navegador separar as janelas, cola-se com Ctrl+V.
+2. **Campo "colar"** na página da vaga: a mesma coisa, manual.
+3. O texto fica em `listing_descriptions` (separado do `Summary`) e a vaga é repontuada na hora
+   (`DescriptionService` → `ListingScoringService.ScoreOneAsync`); a passada diária também o lê.
+   Lido **só** pelas regras de requisito e de direito de trabalho (ver Diário 2026-10-22).
 
 Cuidados: o texto fica só no banco do autor (uso pessoal); nunca entra no Raio-X, no repositório nem em
 fixture. A busca por frase (etapa 5) continua para as vagas sem descrição.
@@ -95,6 +98,24 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-22 — Captura da descrição completa (v1.x, `RulesVersion` 6)
+O que os rótulos ainda não explicavam (Driller's Offsider de Swick e Ozijobs) está no corpo do anúncio.
+Entrou a captura: favorito "Send to JobRadar" + página `/capture` + campo de colar na página da vaga;
+tabela `listing_descriptions` (migração `AddListingDescriptions`), repontuação na hora.
+Regras sobre a descrição, escolhidas para um texto longo e com contexto:
+- **Exclui** só por direito de trabalho incompatível (padrões específicos: unlimited/permanent rights,
+  "12 months work rights", "no working holiday visas").
+- **Cidadania/PR é −55, não exclusão**: "Australian or New Zealand citizens, PR or valid working visa holders"
+  inclui WHV. Anulado por boas-vindas a WHV no texto, desde que não negadas logo antes ("unable to accept
+  working holiday visas"). A descrição substitui as frases buscadas de cidadania, WHV e "full working rights".
+- **Requisitos do perfil** contam quando a frase não vem negada logo antes ("no HRWL needed").
+- **Sinais do perfil não leem a descrição**: num texto longo "supervisor", "manager" aparecem por acaso
+  ("report to the site manager"); uma vaga com descrição não pode subir ou cair só por ter mais texto.
+O site passou a ler os perfis do worker: o build copia `src/JobRadar.Worker/appsettings.Local.json` como
+`profiles.json` (sem ele a captura salvava e não repontuava nada; achado no teste no navegador).
+Não testável daqui: a recepção do texto vindo do Seek (não abro página de vaga). O seletor do corpo é
+`[data-automation=jobAdDetails]`; se o Seek mudar, a seleção manual do texto continua funcionando.
 
 ### 2026-10-22 — Calibragem de construction e trades (`RulesVersion` 5)
 Rótulos: construction 15 boas / 21 ruins (62%), trades 7 / 10 (60%). As ruins com score alto eram trades

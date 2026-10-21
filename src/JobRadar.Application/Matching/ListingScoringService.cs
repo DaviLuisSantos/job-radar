@@ -1,4 +1,5 @@
 using JobRadar.Application.Abstractions;
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,7 @@ public sealed class ListingScoringService(
     ProfileCatalog catalog,
     IListingRepository listings,
     IListingTermRepository terms,
+    IListingDescriptionRepository descriptions,
     IListingScoreRepository scores,
     TimeProvider time,
     ILogger<ListingScoringService> log)
@@ -21,19 +23,18 @@ public sealed class ListingScoringService(
     public async Task ScoreAllAsync(TimeZoneInfo zone, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
+        var today = Today(now, zone);
 
         foreach (var profile in catalog.Profiles)
         {
             var found = await listings.ListFoundByAsync(profile.SearchKeys, ct);
-            var termsById = await terms.GetTermsAsync(found.Select(l => l.Id).ToList(), ct);
+            var ids = found.Select(l => l.Id).ToList();
+            var termsById = await terms.GetTermsAsync(ids, ct);
+            var textsById = await descriptions.GetTextsAsync(ids, ct);
             // Pure and thread-safe: score on every core.
             var scored = found
                 .AsParallel()
-                .Select(l => new ListingScore(
-                    l.Id, profile.Name,
-                    FitScorer.Score(ScoringInput.From(l, termsById.GetValueOrDefault(l.Id)), profile.Profile, catalog.Policy, today),
-                    profile.RulesHash, now))
+                .Select(l => Score(l, termsById.GetValueOrDefault(l.Id), textsById.GetValueOrDefault(l.Id), profile, today, now))
                 .ToList();
             await scores.SaveAsync(scored, ct);
 
@@ -47,4 +48,34 @@ public sealed class ListingScoringService(
         if (orphans > 0)
             log.LogInformation("Deleted {Count} scores no profile search backs any more", orphans);
     }
+
+    /// <summary>
+    /// Scores one listing now, for every profile whose searches found it (after its text changed,
+    /// without waiting for the daily pass). Empty when the listing was never collected.
+    /// </summary>
+    public async Task<IReadOnlyList<ListingScore>> ScoreOneAsync(ListingId id, TimeZoneInfo zone, CancellationToken ct)
+    {
+        if (await listings.FindAsync(id, ct) is not { } record)
+            return [];
+
+        var keys = await listings.GetSearchKeysAsync(id, ct);
+        var now = time.GetUtcNow();
+        var listingTerms = (await terms.GetTermsAsync([id], ct)).GetValueOrDefault(id);
+        var text = (await descriptions.GetTextsAsync([id], ct)).GetValueOrDefault(id);
+        var scored = catalog.Profiles
+            .Where(p => keys.Any(p.SearchKeys.Contains))
+            .Select(p => Score(record.Listing, listingTerms, text, p, Today(now, zone), now))
+            .ToList();
+        await scores.SaveAsync(scored, ct);
+        return scored;
+    }
+
+    private ListingScore Score(
+        Listing listing, IReadOnlyCollection<string>? listingTerms, string? text, ProfileDefinition profile, DateOnly today, DateTimeOffset now) =>
+        new(listing.Id, profile.Name,
+            FitScorer.Score(ScoringInput.From(listing, listingTerms, text), profile.Profile, catalog.Policy, today),
+            profile.RulesHash, now);
+
+    private static DateOnly Today(DateTimeOffset now, TimeZoneInfo zone) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
 }
