@@ -1,0 +1,85 @@
+namespace JobRadar.Domain.Matching;
+
+/// <summary>
+/// What a candidate is looking for in one line of work. Data, not code: profiles come from
+/// configuration, so the same rules serve anyone.
+/// </summary>
+/// <param name="PositiveSignals">+16 in the title, +8 in the body; ignored when negated nearby.</param>
+/// <param name="NegativeSignals">−30 in the title, −15 in the body.</param>
+/// <param name="DisqualifySignals">Formal qualification the candidate lacks: caps the score.</param>
+/// <param name="QualifiedTitles">Qualified trade in the title (e.g. "electrician"): caps the score.</param>
+/// <param name="EntryLevelBoost">+12 per "no experience required"-style phrase.</param>
+/// <param name="AllowSenior">"Senior" in the title subtracts instead of excluding.</param>
+/// <param name="PreferredLocations">+10 when the location matches one of these.</param>
+public sealed record MatchingProfile(
+    string Name,
+    IReadOnlyList<string> PositiveSignals,
+    IReadOnlyList<string> NegativeSignals,
+    IReadOnlyList<string> DisqualifySignals,
+    IReadOnlyList<string> QualifiedTitles,
+    bool EntryLevelBoost,
+    bool AllowSenior,
+    IReadOnlyList<string> PreferredLocations);
+
+/// <summary>
+/// Weights shared by every profile. Defaults are the values calibrated in the prototype for a
+/// Working Holiday visa holder: sponsorship is a bonus, not a requirement.
+/// </summary>
+public sealed record ScoringPolicy
+{
+    public bool ExcludeSeniorTitles { get; init; } = true;
+    public bool VisaRequired { get; init; }
+    public int SponsorBonus { get; init; } = 10;
+    public int NoSponsorPenalty { get; init; } = 10;
+    public int DisqualifyMaxScore { get; init; } = 35;
+    public int ApprenticeshipPenalty { get; init; } = 25;
+    public int LongContractPenalty { get; init; } = 10;
+    public int AgingAfterDays { get; init; } = 14;
+    public int AgingPenalty { get; init; } = 5;
+    public int StaleAfterDays { get; init; } = 30;
+    public int StalePenalty { get; init; } = 30;
+
+    /// <summary>
+    /// Phrases searched in the full ad text, by group (<see cref="FullTextGroup"/>). A listing
+    /// carries the phrases found for it in <see cref="ScoringInput.FullTextTerms"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> FullTextGroups { get; init; } = FullTextGroup.Defaults;
+
+    public static ScoringPolicy Default { get; } = new();
+}
+
+/// <summary>Groups of full-text phrases and what each does to the score.</summary>
+public static class FullTextGroup
+{
+    /// <summary>Work rights a Working Holiday visa cannot give: excludes.</summary>
+    public const string Exclude = "exclude";
+    /// <summary>−55, unless the ad also mentions working holidays.</summary>
+    public const string Citizen = "citizen";
+    /// <summary>−10: "full working rights" may or may not include a WHV.</summary>
+    public const string Ambiguous = "ambiguous";
+    /// <summary>+15.</summary>
+    public const string Whv = "whv";
+    /// <summary>−30.</summary>
+    public const string Commission = "commission";
+    /// <summary>−20 (truck licence).</summary>
+    public const string Licence = "licence";
+    /// <summary>−40: 12 months of work rights, unless the ad also mentions working holidays.</summary>
+    public const string Rights12Months = "rights_12m";
+
+    public static IReadOnlyDictionary<string, IReadOnlyList<string>> Defaults { get; } =
+        new Dictionary<string, IReadOnlyList<string>>
+        {
+            [Exclude] =
+            [
+                "unlimited working rights", "unlimited australian working rights",
+                "unrestricted working rights", "unrestricted australian working rights",
+                "permanent working rights", "permanent australian working rights",
+            ],
+            [Citizen] = ["australian citizen", "permanent resident"],
+            [Ambiguous] = ["full working rights", "full australian working rights"],
+            [Whv] = ["working holiday", "backpackers", "88 days"],
+            [Commission] = ["commission only"],
+            [Licence] = ["HR licence", "heavy rigid"],
+            [Rights12Months] = ["12 months + working rights"],
+        };
+}

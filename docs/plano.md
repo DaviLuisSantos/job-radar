@@ -11,7 +11,8 @@
 | 1 | Esqueleto: camadas, `IListingRepository` + Postgres, testes de contrato, composição, CI | ✅ 2026-10-21 |
 | 2 | Integração Seek: porta `IJobSource`, cliente HTTP com resiliência, tradutor para `Listing` testado com respostas gravadas | ✅ 2026-10-21 |
 | 3 | Coleta: serviço que roda as buscas configuradas, grava vagas + payload bruto, job agendado no Worker, log de execuções | ✅ 2026-10-21 |
-| 4 | **Score**: perfil como dado; regras do protótipo portadas como domínio puro com explicação; teste de paridade contra o banco do Python | 🔨 próxima |
+| 4a | Score: regras do protótipo portadas como domínio puro (`FitScorer`) com explicação tipada; `Listing.Summary`; paridade com o Python | ✅ 2026-10-21 |
+| 4b | **Score em uso**: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil com versão das regras; recálculo quando as regras mudam | 🔨 próxima |
 | 5 | **Termos do texto completo**: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ⏳ |
 | 6 | **Candidaturas e rótulos**: status, datas, notas; rótulos bom/ruim e calibragem do score | ⏳ |
 | 7 | **Triagem**: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ⏳ |
@@ -20,9 +21,13 @@
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 4:** o score do protótipo lê o texto do anúncio (teaser + bullets). Hoje esse texto só
-  existe no payload bruto; a etapa decide se o `Listing` ganha um campo `Summary` ou se o score lê
-  o payload.
+- **Etapa 4b:** as vagas coletadas antes da coluna `summary` têm `summary` nulo; recalcular a partir
+  de `listing_payloads` (o texto está lá) ou recoletar.
+- **Etapa 6 (calibragem):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
+  "No experience required" anula a frase de entrada seguinte, se ela estiver a menos de 80
+  caracteres (teste `Known_quirk_the_no_of_no_experience_negates_the_next_entry_phrase`).
+- **Etapa 6 (calibragem):** nos 5.388 casos reais o score máximo foi 69. A compressão acima de 80
+  nunca atuou com dados reais; vale rever pesos com os rótulos.
 - **Etapa 8:** com a janela incremental, `last_seen_at` só se atualiza para vagas publicadas na
   janela; o sistema não percebe quando uma vaga antiga sai do ar. O Raio-X conta pela busca
   (`totalCount`), não por esta tabela.
@@ -31,6 +36,19 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 4a ✅
+`JobRadar.Domain.Matching`: `FitScorer.Score(input, profile, policy, today)`, puro, com as regras e a
+ordem do protótipo (eliminação → pontos → compressão acima de 80 → restrições → teto de
+qualificação). A explicação é uma lista de `ScoreItem(ScoreRule, Detail, Where, Points)`, sem texto em
+português, para a interface traduzir. O passo de IA (Gemini) ficou de fora (pendência da visão).
+`Listing.Summary` = teaser | bullets | modalidade, igual ao que o protótipo pontuava.
+**Paridade:** `export_parity.py` (fora do repo) gerou 5.388 vagas reais do banco do protótipo
+(tech 1.626, fifo 1.495, trades 1.382, construction 885; 592 eliminadas), com o score calculado pelo
+próprio Python numa data fixa. O .NET bate **score final e sequência de pontos em 100%**. Prova de que
+o teste compara: uma cópia com um score adulterado falhou ("1 of 5388 cases differ").
+A fixture não tem termos do texto completo nem nenhuma vaga acima de 80: compressão e termos ficam
+cobertos pelos testes fictícios (`FitScorerTests`, um caso por regra). 124 testes.
 
 ### 2026-10-21 — Etapa 3 ✅
 `ListingCollector` (Application) roda cada busca em cada fonte; falha numa busca é registrada e a

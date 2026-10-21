@@ -17,7 +17,12 @@ internal sealed record SeekJob(
     string? SalaryLabel,
     DateTimeOffset? ListingDate,
     IReadOnlyList<SeekClassificationPair>? Classifications,
-    string? DisplayType);
+    string? DisplayType,
+    string? Teaser = null,
+    IReadOnlyList<string>? BulletPoints = null,
+    SeekWorkArrangements? WorkArrangements = null);
+
+internal sealed record SeekWorkArrangements(string? DisplayText);
 
 internal sealed record SeekAdvertiser(string? Id, string? Description);
 

@@ -23,6 +23,7 @@ public class ListingEntityConfiguration : IEntityTypeConfiguration<ListingEntity
         b.Property(e => e.PostedAt).HasColumnName("posted_at");
         b.Property(e => e.Url).HasColumnName("url").HasMaxLength(500);
         b.Property(e => e.SourceCategory).HasColumnName("source_category").HasMaxLength(200);
+        b.Property(e => e.Summary).HasColumnName("summary");
         b.Property(e => e.FirstSeenAt).HasColumnName("first_seen_at");
         b.Property(e => e.LastSeenAt).HasColumnName("last_seen_at");
 

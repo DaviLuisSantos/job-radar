@@ -30,6 +30,16 @@ public class SeekListingTranslatorTests
     }
 
     [Fact]
+    public async Task Summary_joins_teaser_bullets_and_work_arrangement()
+    {
+        var listings = await Page1Async();
+
+        Assert.Equal("Fictional ad used as a test fixture. | Fictional bullet | Hybrid", listings["90000001"].Summary);
+        Assert.Equal("Fictional ad used as a test fixture.", listings["90000002"].Summary);
+        Assert.Null(listings["90000003"].Summary);
+    }
+
+    [Fact]
     public async Task Hidden_salary_is_null_and_title_is_trimmed()
     {
         var l = (await Page1Async())["90000001"];

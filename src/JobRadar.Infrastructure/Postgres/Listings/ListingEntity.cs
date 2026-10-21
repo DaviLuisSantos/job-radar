@@ -16,6 +16,7 @@ public class ListingEntity
     public DateTimeOffset? PostedAt { get; set; }
     public string Url { get; set; } = "";
     public string? SourceCategory { get; set; }
+    public string? Summary { get; set; }
     public DateTimeOffset FirstSeenAt { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
 }

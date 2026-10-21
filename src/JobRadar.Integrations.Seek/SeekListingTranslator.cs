@@ -21,7 +21,18 @@ internal static class SeekListingTranslator
         SalaryText: Blank(job.SalaryLabel),
         PostedAt: job.ListingDate,
         Url: new Uri(JobBase, job.Id),
-        SourceCategory: Blank(job.Classifications?.FirstOrDefault()?.Subclassification?.Description));
+        SourceCategory: Blank(job.Classifications?.FirstOrDefault()?.Subclassification?.Description),
+        Summary: Summary(job));
+
+    /// <summary>Teaser, bullet points and work arrangement ("Hybrid"), joined with " | ".</summary>
+    internal static string? Summary(SeekJob job)
+    {
+        var parts = new List<string?> { job.Teaser };
+        parts.AddRange(job.BulletPoints ?? []);
+        parts.Add(job.WorkArrangements?.DisplayText);
+        var text = string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p!.Trim()));
+        return text.Length == 0 ? null : text;
+    }
 
     /// <summary>
     /// Labels are "Region STATE" or "Suburb, Region STATE", and some regions contain a comma

@@ -2,4 +2,8 @@
 
   <!-- Núcleo puro: nenhuma referência a EF, HTTP ou integração. -->
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="JobRadar.Domain.Tests" />
+  </ItemGroup>
+
 </Project>

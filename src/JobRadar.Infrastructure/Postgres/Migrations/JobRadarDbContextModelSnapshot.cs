@@ -139,6 +139,10 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("suburb");
 
+                    b.Property<string>("Summary")
+                        .HasColumnType("text")
+                        .HasColumnName("summary");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)

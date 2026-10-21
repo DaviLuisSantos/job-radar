@@ -35,6 +35,7 @@ internal static class ListingMapper
         e.PostedAt = listing.PostedAt?.ToUniversalTime();
         e.Url = listing.Url.ToString();
         e.SourceCategory = listing.SourceCategory;
+        e.Summary = listing.Summary;
         e.LastSeenAt = observedAt.ToUniversalTime();
     }
 
@@ -48,7 +49,8 @@ internal static class ListingMapper
             SalaryText: e.SalaryText,
             PostedAt: e.PostedAt,
             Url: new Uri(e.Url),
-            SourceCategory: e.SourceCategory),
+            SourceCategory: e.SourceCategory,
+            Summary: e.Summary),
         FirstSeenAt: e.FirstSeenAt,
         LastSeenAt: e.LastSeenAt);
 

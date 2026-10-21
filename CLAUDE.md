@@ -30,6 +30,10 @@ JOBRADAR_LIVE_TESTS=1 dotnet test --project tests/JobRadar.Worker.Tests
 ```
 
 ```bash
+JOBRADAR_PARITY_FILE=D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json dotnet test --project tests/JobRadar.Domain.Tests
+```
+
+```bash
 docker compose up -d
 ```
 
@@ -42,6 +46,9 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
   e só rodam com `JOBRADAR_DB_TESTS=1`. O CI roda os dois.
 - Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek pela composição completa.
   Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou quando a coleta começar a falhar.
+- Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
+  fora do repo (são anúncios reais). **Mexeu em `Domain/Matching`? Rode.** Mudança de regra intencional
+  quebra a paridade: aí registre no `docs/plano.md` e incremente `FitScorer.RulesVersion`.
 - Testes usam Microsoft.Testing.Platform (opt-in em `global.json`), não VSTest.
 - Versões de pacote só em `Directory.Packages.props` (gerenciamento central, com pinning transitivo).
 
@@ -56,7 +63,7 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 ## Camadas
 
 ```
-src/JobRadar.Domain          modelo puro (Listings/, Collection/) — sem EF, HTTP ou integração
+src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/) — sem EF, HTTP ou integração
 src/JobRadar.Application     serviços (Collection/) + portas em Abstractions/
 src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
@@ -110,6 +117,10 @@ e o Worker com `Collection__RunOnStartup=true`.
   diretório corrente.
 - Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer
   que uma vaga saiu do ar.
+- Score: `FitScorer` é a **única** implementação; a ordem das fases faz parte da regra (ver o comentário
+  da classe). Os padrões de texto ficam em `ListingPatterns`. `".NET"` não casa dentro de `"ASP.NET"`
+  (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
+  vêm do protótipo, e a paridade depende delas.
 
 ## Convenções
 

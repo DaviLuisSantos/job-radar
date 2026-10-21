@@ -16,7 +16,8 @@ public class ListingMapperTests
         SalaryText: "$90k - $110k",
         PostedAt: Perth.AddDays(-2),
         Url: new Uri("https://www.seek.com.au/job/1"),
-        SourceCategory: "Developers/Programmers");
+        SourceCategory: "Developers/Programmers",
+        Summary: "Fictional teaser | Hybrid");
 
     [Fact]
     public void New_entity_round_trips_to_the_same_listing()
