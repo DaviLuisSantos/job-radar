@@ -96,6 +96,21 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — "Remote" é lugar, e diploma também é requisito (`RulesVersion` 4)
+Passada com requisitos: fifo 42% → **80%** de acerto de pares (5/8 boas ≥ 75, 8/33 ruins ≥ 50; 107 vagas
+com 70+, eram 554); construction 57% → 67%; 95 buscas de requisito completas, 4.804 marcas.
+Caso apontado pelo autor: "FIFO-Social Worker" com 84, pedindo diploma. Três falhas: (1) +10 de "remote":
+o resumo inclui o formato de trabalho do Seek, e em vaga de campo o anunciante marca "Remote" pelo local
+(remote mine, remote communities); só 5 de 116 bônus no fifo pareciam trabalho de casa. Agora
+`RewardRemote` por perfil, desligado em fifo, construction, trades e regional. (2) Diploma não era
+procurado: o grupo "TradeCertificate" virou **"Qualification"** e ganhou "degree in" (225 com FIFO),
+"tertiary qualification", "relevant degree". "degree" sozinho e "bachelor" deram contagens estranhas
+com palavra solta e ficaram de fora. (3) "demonstrated experience" (510 com FIFO) entrou em experiência;
+"social worker", "counsellor", "psychologist", "paramedic", "teacher", "nurse" nos títulos do fifo.
+O rename muda o nome da regra gravada na explicação: entre o deploy e a passada seguinte, explicações
+antigas com `FullTextTradeCertificate` não se leem (a passada regrava todas).
+Pendente: "insurance" nos sinais negativos do fifo pega benefício ("income protection insurance").
+
 ### 2026-10-21 — Calibragem do fifo e requisitos no texto completo (`RulesVersion` 3)
 Primeira calibragem com rótulos reais: **fifo 8 boas, 33 ruins, acerto de pares 42%** (pior que sorteio),
 30 das 33 ruins com 50+. Causa 1: o perfil premiava sinais que toda vaga FIFO tem (FIFO, roster, 2:1, 8:6,

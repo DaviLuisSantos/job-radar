@@ -65,7 +65,7 @@ public enum ScoreRule
     FullTextCommission,
     FullTextTruckLicence,
     FullTextExperience,
-    FullTextTradeCertificate,
+    FullTextQualification,
     FullTextLicence,
     Apprenticeship,
     LongContract,

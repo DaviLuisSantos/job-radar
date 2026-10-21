@@ -51,7 +51,8 @@ public sealed class ProfileCatalog
             o.EntryLevelBoost, o.AllowSenior, o.PreferredLocations)
         {
             Requirements = new ProfileRequirements(
-                o.Requirements.Contexts, o.Requirements.Experience, o.Requirements.TradeCertificate, o.Requirements.Licence),
+                o.Requirements.Contexts, o.Requirements.Experience, o.Requirements.Qualification, o.Requirements.Licence),
+            RewardRemote = o.RewardRemote,
         };
         var searches = o.Keywords
             .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l)))

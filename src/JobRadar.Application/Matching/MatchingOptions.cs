@@ -28,6 +28,9 @@ public sealed class ProfileOptions
     public bool AllowSenior { get; set; }
     public List<string> PreferredLocations { get; set; } = [];
 
+    /// <summary>Remote/hybrid bonus; turn off for site work, where "remote" means the place.</summary>
+    public bool RewardRemote { get; set; } = true;
+
     /// <summary>Requirements looked for in the full ad (see <c>ProfileRequirements</c>).</summary>
     public RequirementOptions Requirements { get; set; } = new();
 }
@@ -38,6 +41,6 @@ public sealed class RequirementOptions
     public List<string> Contexts { get; set; } = [];
 
     public List<string> Experience { get; set; } = [];
-    public List<string> TradeCertificate { get; set; } = [];
+    public List<string> Qualification { get; set; } = [];
     public List<string> Licence { get; set; } = [];
 }

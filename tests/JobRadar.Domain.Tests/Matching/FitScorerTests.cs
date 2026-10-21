@@ -170,6 +170,14 @@ public class FitScorerTests
     }
 
     [Fact]
+    public void Site_work_profiles_do_not_reward_remote_which_is_the_place_there()
+    {
+        var score = Score(Job("FIFO Social Worker", "Support remote communities | Remote"), Trades with { RewardRemote = false });
+
+        Assert.DoesNotContain(score.Items, i => i.Rule is ScoreRule.Remote or ScoreRule.Hybrid);
+    }
+
+    [Fact]
     public void Fifo_counts_once()
     {
         Assert.Equal(15, Item(Score(Job("Utility", "FIFO 2:1 roster")), ScoreRule.Fifo).Points);
@@ -290,7 +298,7 @@ public class FitScorerTests
         Requirements = new ProfileRequirements(
             Contexts: ["FIFO"],
             Experience: ["years experience", "minimum 2 years"],
-            TradeCertificate: ["cert III"],
+            Qualification: ["cert III"],
             Licence: ["HR licence", "HRWL"]),
     };
 
@@ -302,7 +310,7 @@ public class FitScorerTests
 
         Assert.Equal(-20, Item(score, ScoreRule.FullTextExperience).Points);
         Assert.Equal("years experience", Item(score, ScoreRule.FullTextExperience).Detail);
-        Assert.Equal(-20, Item(score, ScoreRule.FullTextTradeCertificate).Points);
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextQualification).Points);
         Assert.Equal(-20, Item(score, ScoreRule.FullTextLicence).Points);
         Assert.Equal(3, score.Items.Count(i => i.Where == ScoreWhere.FullText));   // two experience phrases, one penalty
     }
@@ -323,7 +331,7 @@ public class FitScorerTests
 
         Assert.Equal(-20, Item(truck, ScoreRule.TruckLicence).Points);
         Assert.DoesNotContain(truck.Items, i => i.Rule == ScoreRule.FullTextLicence);
-        Assert.DoesNotContain(apprentice.Items, i => i.Rule == ScoreRule.FullTextTradeCertificate);
+        Assert.DoesNotContain(apprentice.Items, i => i.Rule == ScoreRule.FullTextQualification);
     }
 
     [Fact]

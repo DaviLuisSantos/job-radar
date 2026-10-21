@@ -23,6 +23,12 @@ public sealed record MatchingProfile(
 {
     /// <summary>−20 per kind found in the full ad (see <see cref="ProfileRequirements"/>).</summary>
     public ProfileRequirements Requirements { get; init; } = ProfileRequirements.None;
+
+    /// <summary>
+    /// +10 remote, +5 hybrid. Off for site work: there, "remote" is where the site is (Seek's work
+    /// arrangement field says "Remote" for a remote mine), not working from home.
+    /// </summary>
+    public bool RewardRemote { get; init; } = true;
 }
 
 /// <summary>

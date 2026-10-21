@@ -38,7 +38,7 @@ public static class Wording
         ScoreRule.FullTextCommission => $"Full ad mentions “{item.Detail}”",
         ScoreRule.FullTextTruckLicence => $"Full ad asks for a truck licence: “{item.Detail}”",
         ScoreRule.FullTextExperience => $"Full ad asks for experience: “{item.Detail}”",
-        ScoreRule.FullTextTradeCertificate => $"Full ad asks for a trade qualification: “{item.Detail}”",
+        ScoreRule.FullTextQualification => $"Full ad asks for a qualification: “{item.Detail}”",
         ScoreRule.FullTextLicence => $"Full ad asks for a licence or ticket: “{item.Detail}”",
         ScoreRule.Apprenticeship => "Formal apprenticeship: often needs PR and lasts years",
         ScoreRule.LongContract => $"Longer than six months per employer: “{item.Detail}”",

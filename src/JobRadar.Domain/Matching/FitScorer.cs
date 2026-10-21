@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 3;
+    public const int RulesVersion = 4;
 
     private const int ExclusionPoints = -50;
 
@@ -106,9 +106,9 @@ public static class FitScorer
         else if (sponsorDenied)
             Add(ScoreRule.SponsorshipDenied, "sponsor", ScoreWhere.Text, 0);
 
-        if (Signal("remote").IsMatch(full))
+        if (profile.RewardRemote && Signal("remote").IsMatch(full))
             Add(ScoreRule.Remote, "remote", ScoreWhere.Text, 10);
-        else if (Signal("hybrid").IsMatch(full))
+        else if (profile.RewardRemote && Signal("hybrid").IsMatch(full))
             Add(ScoreRule.Hybrid, "hybrid", ScoreWhere.Text, 5);
 
         // Not twice when the profile already rewards FIFO as a signal.
@@ -174,12 +174,12 @@ public static class FitScorer
         {
             if (requirement.Kind == RequirementKind.Licence && truckCounted)
                 continue;
-            if (requirement.Kind == RequirementKind.TradeCertificate && trainingTitle)
+            if (requirement.Kind == RequirementKind.Qualification && trainingTitle)
                 continue;
             var rule = requirement.Kind switch
             {
                 RequirementKind.Experience => ScoreRule.FullTextExperience,
-                RequirementKind.TradeCertificate => ScoreRule.FullTextTradeCertificate,
+                RequirementKind.Qualification => ScoreRule.FullTextQualification,
                 _ => ScoreRule.FullTextLicence,
             };
             Add(rule, requirement.Phrase, ScoreWhere.FullText, -RequirementPenalty);

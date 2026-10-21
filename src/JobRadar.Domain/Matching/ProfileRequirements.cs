@@ -6,8 +6,8 @@ public enum RequirementKind
     /// <summary>Years or proven experience ("minimum 2 years").</summary>
     Experience,
 
-    /// <summary>A trade qualification ("trade qualified", "cert III").</summary>
-    TradeCertificate,
+    /// <summary>A trade certificate or a degree ("trade qualified", "cert III", "degree in").</summary>
+    Qualification,
 
     /// <summary>A licence or ticket ("HR licence", "HRWL").</summary>
     Licence,
@@ -23,7 +23,7 @@ public enum RequirementKind
 public sealed record ProfileRequirements(
     IReadOnlyList<string> Contexts,
     IReadOnlyList<string> Experience,
-    IReadOnlyList<string> TradeCertificate,
+    IReadOnlyList<string> Qualification,
     IReadOnlyList<string> Licence)
 {
     public static ProfileRequirements None { get; } = new([], [], [], []);
@@ -34,7 +34,7 @@ public sealed record ProfileRequirements(
         foreach (var (kind, phrases) in new[]
                  {
                      (RequirementKind.Experience, Experience),
-                     (RequirementKind.TradeCertificate, TradeCertificate),
+                     (RequirementKind.Qualification, Qualification),
                      (RequirementKind.Licence, Licence),
                  })
         {
