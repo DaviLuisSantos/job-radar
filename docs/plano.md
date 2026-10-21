@@ -91,6 +91,16 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — Perfis sem "All Australia"
+Decisão do autor: tirar "All Australia" dos perfis que já buscam cidades (tech, trades, construction, fifo);
+o regional mantém "Western Australia". Fica na configuração local (`appsettings.Local.json`, fora do repo):
+**311 → 256 buscas** por passada, e as 33 cortadas de "All Australia" deixam de rebuscar o histórico todo dia.
+Seguem cortadas as de cidade grande (Perth 17, Sydney 5, Brisbane 5, Melbourne 2): se pesar, dividir por
+subclassificação.
+Efeito colateral aceito: 5.209 vagas só foram achadas por buscas "… @ all australia" (de 8.752 com esse
+achado). Um perfil só repontua o que as suas buscas acharam, então essas ficam com o último score calculado
+e não entram mais em repontuação; continuam no banco e na triagem.
+
 ### 2026-10-21 — Carga completa forçada (`collect --full`)
 Achado antes: a prova da 4b (1 página) deixou 137 buscas cortadas, mas a janela avançou e as vagas além da
 1ª página nunca vieram. Correção (`6faa5da`): só execução **completa** avança a janela (buscas e termos);
@@ -100,8 +110,7 @@ Rodada no banco de produção, código do repositório: **204 s no total** (cole
 Melhores do tech: 162 com 70+.
 Ainda cortadas no teto de 500: **62 buscas** (All Australia 33, Perth 17, Sydney 5, Brisbane 5, Melbourne 2).
 Pela regra nova, elas buscam o histórico inteiro todo dia (+~310 requisições, ~60 s) e mesmo assim perdem o
-que passa de 500. Decisão pendente do autor: tirar "All Australia" dos perfis que já buscam cidades, ou
-dividir essas buscas por estado / subclassificação.
+que passa de 500. Decisão: ver "Perfis sem All Australia" acima.
 
 ### 2026-10-21 — Desempenho: paralelismo com orçamento
 O gargalo é rede e educação com o Seek, não CPU. `SeekPacingHandler` (dentro da resiliência, então retentativas
