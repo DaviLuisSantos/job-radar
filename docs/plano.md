@@ -55,6 +55,40 @@ Pendências conhecidas, com a etapa onde entram:
   incompleta). Dividir na configuração (por subclassificação ou região). O `collection_runs.complete`
   mostra quais.
 
+## Depois da v1 (registrado 2026-10-21)
+
+Ideias decididas como direção, sem data. Entram como etapas quando a v1 fechar.
+
+### v1.x — Descrição completa das vagas que importam
+
+As páginas de vaga do Seek seguem atrás do Cloudflare e **contornar continua fora**. O texto completo
+entra pelo navegador do próprio autor, que abre a vaga como qualquer pessoa:
+
+1. **"Enviar para o JobRadar"**: bookmarklet que lê o texto da página aberta no navegador e envia ao site
+   local (`POST` para `localhost:5380`/Tailscale). Cobre exatamente as vagas do topo da triagem.
+2. **Campo "colar descrição"** no detalhe da vaga: a mesma coisa, manual, como reserva.
+3. O texto vira `FullDescription` da vaga (separado do `Summary`), as regras do `FitScorer` passam a lê-lo
+   (todas já leem o corpo: cidadania, "12 months", carteira, anos de experiência) e a vaga é repontuada na hora.
+
+Cuidados: o texto fica só no banco do autor (uso pessoal); nunca entra no Raio-X, no repositório nem em
+fixture. A busca por frase (etapa 5) continua para as vagas sem descrição.
+
+### v2/v3 — Modelo de ML para o fit
+
+Pré-requisito: **rótulos**. Hoje há zero; a meta é ~200–300 por perfil, com boas e ruins. A métrica e os
+atributos já existem: o acerto de pares da calibragem (etapa 6) e os itens da explicação do score.
+
+1. **Regras como trava**: exclusões (cidadania/PR, direito de trabalho incompatível com WHV, vaga reservada)
+   continuam decidindo; o modelo só ordena o que sobra.
+2. **Modelo simples e explicável primeiro**: regressão logística (ML.NET) sobre os itens da explicação + palavras
+   do título/resumo (e da descrição completa, quando houver). Aprende os pesos que hoje são fixos.
+   Só substitui as regras se ganhar no acerto de pares em rótulos separados para teste.
+3. **Depois, se valer**: embeddings de texto (sinônimos: "Junior .NET" ≈ "Graduate C#") + classificador pequeno.
+4. **Aprendizado ativo na triagem**: mostrar primeiro as vagas em que o modelo tem mais dúvida.
+
+Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular de vez em quando vagas de score
+baixo, ou o modelo só aprende a separar "boa" de "quase boa".
+
 ## Diário
 
 ### 2026-10-21 — Etapa 9: comando de importação
