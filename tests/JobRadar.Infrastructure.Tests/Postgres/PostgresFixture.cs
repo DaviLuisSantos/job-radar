@@ -65,7 +65,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async Task ResetAsync()
     {
         await using var db = NewContext();
-        await db.Database.ExecuteSqlRawAsync("TRUNCATE listing_payloads, listings, collection_runs");
+        await db.Database.ExecuteSqlRawAsync("TRUNCATE listing_scores, listing_search_hits, listing_payloads, listings, collection_runs");
     }
 
     public async ValueTask DisposeAsync()

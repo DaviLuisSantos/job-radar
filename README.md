@@ -11,8 +11,9 @@ Two products share one core:
   the share that accepts working holiday makers, and the share that requires citizenship or PR.
   It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
 
-> **Status:** early. Daily collection from Seek works end to end (listings, raw payloads, run
-> log); scoring and the market snapshot are being ported from a Python prototype.
+> **Status:** early. Daily collection from Seek and scoring per profile work end to end; the
+> scorer matches the Python prototype on 5,388 real listings. Triage, applications and the market
+> snapshot are next.
 > Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
 
 ## Architecture
@@ -46,8 +47,10 @@ dotnet ef database update --project src/JobRadar.Infrastructure
 dotnet run --project src/JobRadar.Worker
 ```
 
-The worker collects the searches in `Collection:Searches` (see `appsettings.json`) every day at
-06:00 Perth time. Set `Collection__RunOnStartup=true` to run a pass immediately.
+Describe your profiles first: copy `src/JobRadar.Worker/appsettings.Local.example.json` to
+`appsettings.Local.json` (git-ignored). Every day at 06:00 Perth time the worker searches each
+profile's keywords in its locations, then scores what each profile found. Set
+`Collection__RunOnStartup=true` to run a pass immediately.
 
 ## Tests
 

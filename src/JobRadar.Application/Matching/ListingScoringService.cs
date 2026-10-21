@@ -1,0 +1,38 @@
+using JobRadar.Application.Abstractions;
+using JobRadar.Domain.Matching;
+using Microsoft.Extensions.Logging;
+
+namespace JobRadar.Application.Matching;
+
+/// <summary>
+/// Scores, for each profile, every listing its searches found. Runs every day after collection:
+/// a listing's age is part of its score, so yesterday's scores are stale even if nothing else changed.
+/// </summary>
+public sealed class ListingScoringService(
+    ProfileCatalog catalog,
+    IListingRepository listings,
+    IListingScoreRepository scores,
+    TimeProvider time,
+    ILogger<ListingScoringService> log)
+{
+    public async Task ScoreAllAsync(TimeZoneInfo zone, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
+
+        foreach (var profile in catalog.Profiles)
+        {
+            var found = await listings.ListFoundByAsync(profile.SearchKeys, ct);
+            var scored = found
+                .Select(l => new ListingScore(
+                    l.Id, profile.Name, FitScorer.Score(ScoringInput.From(l), profile.Profile, catalog.Policy, today),
+                    profile.RulesHash, now))
+                .ToList();
+            await scores.SaveAsync(scored, ct);
+
+            log.LogInformation(
+                "Scored {Count} listings for {Profile}: {Excluded} excluded, {Strong} at 70 or more",
+                scored.Count, profile.Name, scored.Count(s => s.Score.Excluded), scored.Count(s => s.Score.Final >= 70));
+        }
+    }
+}

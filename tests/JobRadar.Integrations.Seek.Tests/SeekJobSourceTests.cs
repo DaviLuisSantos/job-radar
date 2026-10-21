@@ -69,8 +69,8 @@ public class SeekJobSourceTests
     public void The_same_ad_from_two_requests_has_the_same_payload()
     {
         // Real shape: each request stamps its own tokens; "2d ago" changes daily.
-        const string first = """{"id":"1","title":"Chef","tracking":"ZXdv1","listingDateDisplay":"2d ago","solMetadata":{"token":"0~aaa","sectionRank":8}}""";
-        const string second = """{"id":"1","title":"Chef","tracking":"ZXdv2","listingDateDisplay":"3d ago","solMetadata":{"token":"0~bbb","sectionRank":10}}""";
+        const string first = """{"id":"1","title":"Chef","tracking":"ZXdv1","listingDateDisplay":"2d ago","solMetadata":{"token":"0~aaa","sectionRank":8},"displayType":"standard","isFeatured":false}""";
+        const string second = """{"id":"1","title":"Chef","tracking":"ZXdv2","listingDateDisplay":"3d ago","solMetadata":{"token":"0~bbb","sectionRank":10},"displayType":"promoted","isFeatured":true}""";
 
         static string Stable(string json) => Api.SeekSearchClient.StableRaw(JsonDocument.Parse(json).RootElement);
 

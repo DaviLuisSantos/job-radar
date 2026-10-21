@@ -1,4 +1,6 @@
 using JobRadar.Application.Collection;
+using JobRadar.Application.Matching;
+using JobRadar.Domain.Matching;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -19,6 +21,12 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddScoped<ListingCollector>();
+
+        services.AddOptions<MatchingOptions>().Bind(configuration.GetSection(MatchingOptions.Section));
+        // The defaults are the calibrated weights; overriding them is a code change, on purpose.
+        services.TryAddSingleton(ScoringPolicy.Default);
+        services.AddSingleton<ProfileCatalog>();
+        services.AddScoped<ListingScoringService>();
         return services;
     }
 }

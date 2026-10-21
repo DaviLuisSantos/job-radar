@@ -50,7 +50,7 @@ public sealed class ListingCollector(
         try
         {
             var result = await source.SearchAsync(search with { PostedWithinDays = window }, ct);
-            var observed = await listings.RecordObservationsAsync(result.Listings, started, ct);
+            var observed = await listings.RecordObservationsAsync(result.Listings, search.Key, started, ct);
             return new CollectionRun(source.Name, search.Key, window, started, time.GetUtcNow(),
                 result.Listings.Count, observed.New, result.Complete, Error: null);
         }

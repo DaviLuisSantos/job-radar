@@ -32,10 +32,12 @@ internal sealed class SeekSearchClient(HttpClient http, IOptions<SeekOptions> op
     }
 
     /// <summary>
-    /// Fields that change on every request (search tokens) or every day ("2d ago") without the ad
-    /// changing. Kept, they would make each sighting a new payload version.
+    /// Fields that change without the ad changing: per request (search tokens), per day ("2d ago")
+    /// or per search (an ad is "promoted"/featured in some result lists and not in others). Kept,
+    /// they would make each sighting a new payload version.
     /// </summary>
-    internal static readonly string[] VolatileFields = ["tracking", "solMetadata", "listingDateDisplay"];
+    internal static readonly string[] VolatileFields =
+        ["tracking", "solMetadata", "listingDateDisplay", "displayType", "isFeatured"];
 
     internal static string StableRaw(JsonElement job)
     {

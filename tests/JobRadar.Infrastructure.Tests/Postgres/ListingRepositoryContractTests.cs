@@ -16,10 +16,21 @@ public class ListingRepositoryContractTests(PostgresFixture db)
     private Task<ObservationResult> RecordAsync(DateTimeOffset at, params Listing[] listings) =>
         RecordAsync(at, listings.Select(l => Sourced(l)).ToArray());
 
-    private async Task<ObservationResult> RecordAsync(DateTimeOffset at, params SourcedListing[] listings)
+    private const string Search = ".net developer @ perth";
+
+    private Task<ObservationResult> RecordAsync(DateTimeOffset at, params SourcedListing[] listings) =>
+        RecordAsync(at, Search, listings);
+
+    private async Task<ObservationResult> RecordAsync(DateTimeOffset at, string searchKey, params SourcedListing[] listings)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingRepository(ctx).RecordObservationsAsync(listings, at, Ct);
+        return await new PostgresListingRepository(ctx).RecordObservationsAsync(listings, searchKey, at, Ct);
+    }
+
+    private async Task<IReadOnlyList<Listing>> FoundByAsync(params string[] searchKeys)
+    {
+        await using var ctx = db.NewContext();
+        return await new PostgresListingRepository(ctx).ListFoundByAsync(searchKeys, Ct);
     }
 
     private async Task<ListingRecord?> FindAsync(ListingId id)
@@ -136,10 +147,28 @@ public class ListingRepositoryContractTests(PostgresFixture db)
         // Not valid JSON: Postgres rejects it for the jsonb column.
         var broken = Sourced(ListingMapperTests.Sample(), "not json");
 
-        await Assert.ThrowsAnyAsync<DbUpdateException>(() => repo.RecordObservationsAsync([broken], Monday, Ct));
-        var result = await repo.RecordObservationsAsync([Sourced(ListingMapperTests.Sample("2"))], Monday, Ct);
+        await Assert.ThrowsAnyAsync<DbUpdateException>(() => repo.RecordObservationsAsync([broken], Search, Monday, Ct));
+        var result = await repo.RecordObservationsAsync([Sourced(ListingMapperTests.Sample("2"))], Search, Monday, Ct);
 
         Assert.Equal(1, result.New);
         Assert.Null(await FindAsync(new ListingId("seek", "1")));
+    }
+
+    [DatabaseFact]
+    public async Task Each_search_remembers_the_listings_it_found()
+    {
+        await db.ResetAsync();
+        var shared = ListingMapperTests.Sample("1");
+        await RecordAsync(Monday, ".net developer @ perth", Sourced(shared), Sourced(ListingMapperTests.Sample("2")));
+        await RecordAsync(Monday, "c# developer @ perth", Sourced(shared));
+        await RecordAsync(Monday, "hospitality @ perth", Sourced(ListingMapperTests.Sample("3")));
+        // Seen again by the same search: no duplicate hit.
+        await RecordAsync(Monday.AddDays(1), "c# developer @ perth", Sourced(shared));
+
+        Assert.Equal(["1"], (await FoundByAsync("c# developer @ perth")).Select(l => l.Id.SourceId));
+        Assert.Equal(["1", "2"], (await FoundByAsync(".net developer @ perth", "c# developer @ perth"))
+            .Select(l => l.Id.SourceId).Order());
+        Assert.Empty(await FoundByAsync("unknown @ nowhere"));
+        Assert.Empty(await FoundByAsync());
     }
 }

@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Real candidate profiles (see src/JobRadar.Worker/appsettings.Local.example.json)
+appsettings.Local.json

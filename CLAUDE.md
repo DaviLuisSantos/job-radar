@@ -83,16 +83,26 @@ src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar)
 
 ## Fluxo principal
 
-`ListingCollector.CollectAsync` (disparado por `DailyCollectionJob`, às `Collection:DailyAt` no fuso
-`Collection:TimeZone`):
-1. para cada fonte e busca de `Collection:Searches`, calcula a janela incremental pelo último sucesso;
+`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda duas etapas isoladas
+(uma falha não impede a outra):
+
+**Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
+1. para cada fonte e busca, calcula a janela incremental pelo último sucesso;
 2. `IJobSource.SearchAsync`, que devolve as vagas únicas e diz se a busca veio completa;
-3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas e guarda o
-   payload só quando o conteúdo mudou;
+3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas, guarda o
+   payload só quando o conteúdo mudou e registra que aquela busca achou a vaga (`listing_search_hits`);
 4. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
 
+**Score** — `ListingScoringService.ScoreAllAsync`: para cada perfil, pontua com `FitScorer` todas as
+vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma linha por vaga × perfil,
+com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score.
+
+Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**fora do git**; modelo em
+`appsettings.Local.example.json`). Cada palavra-chave é buscada em cada local; as buscas da coleta são a
+união dos perfis.
+
 Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
-e o Worker com `Collection__RunOnStartup=true`.
+e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma prova leve).
 
 ## Armadilhas
 
@@ -111,8 +121,13 @@ e o Worker com `Collection__RunOnStartup=true`.
   vagas depois de duas passadas. Inclua o campo em `SeekSearchClient.VolatileFields`.
 - `listing_payloads.payload` é jsonb, que normaliza espaços e ordem das chaves: o hash é do texto recebido
   (já sem os campos voláteis), não do que o banco devolve.
-- Falha no `SaveChanges` deixaria o `DbContext` do escopo sujo e derrubaria o registro da execução:
-  `PostgresListingRepository` limpa o `ChangeTracker` antes de relançar.
+- O `DbContext` vive o pass inteiro de coleta (um escopo): `PostgresListingRepository` limpa o
+  `ChangeTracker` depois de cada gravação, com sucesso ou falha. Sem isso, uma falha derrubava o registro da
+  execução e centenas de buscas acumulavam entidades rastreadas.
+- `appsettings.Local.json` é adicionado depois das fontes padrão; por isso o `Program.cs` reaplica variáveis
+  de ambiente e linha de comando em seguida, para elas continuarem vencendo.
+- Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
+  antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
 - `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no
   diretório corrente.
 - Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer

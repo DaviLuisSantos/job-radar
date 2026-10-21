@@ -12,8 +12,8 @@
 | 2 | Integração Seek: porta `IJobSource`, cliente HTTP com resiliência, tradutor para `Listing` testado com respostas gravadas | ✅ 2026-10-21 |
 | 3 | Coleta: serviço que roda as buscas configuradas, grava vagas + payload bruto, job agendado no Worker, log de execuções | ✅ 2026-10-21 |
 | 4a | Score: regras do protótipo portadas como domínio puro (`FitScorer`) com explicação tipada; `Listing.Summary`; paridade com o Python | ✅ 2026-10-21 |
-| 4b | **Score em uso**: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil com versão das regras; recálculo quando as regras mudam | 🔨 próxima |
-| 5 | **Termos do texto completo**: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ⏳ |
+| 4b | Score em uso: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil, recalculado todo dia | ✅ 2026-10-21 |
+| 5 | **Termos do texto completo**: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | 🔨 próxima |
 | 6 | **Candidaturas e rótulos**: status, datas, notas; rótulos bom/ruim e calibragem do score | ⏳ |
 | 7 | **Triagem**: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ⏳ |
 | 8 | **Raio-X**: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ⏳ |
@@ -21,8 +21,11 @@
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 4b:** as vagas coletadas antes da coluna `summary` têm `summary` nulo; recalcular a partir
-  de `listing_payloads` (o texto está lá) ou recoletar.
+- **Etapa 5:** o `FitScorer` já aplica os grupos de termos (`ScoringPolicy.FullTextGroups`), mas
+  nenhuma vaga tem termos ainda: `ScoringInput.From` recebe a lista vazia. A etapa coleta os termos
+  e os passa ao score.
+- **Etapa 10:** com páginas completas, as 311 buscas dos 5 perfis fazem até ~1.500 requisições na
+  1ª passada (a prova usou 1 página: 311). Depois, a janela incremental reduz muito.
 - **Etapa 6 (calibragem):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
   "No experience required" anula a frase de entrada seguinte, se ela estiver a menos de 80
   caracteres (teste `Known_quirk_the_no_of_no_experience_negates_the_next_entry_phrase`).
@@ -36,6 +39,21 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 4b ✅
+Perfis em `Matching:Profiles` (`appsettings.Local.json`, fora do git; modelo versionado em
+`appsettings.Local.example.json`), gerados dos 5 perfis do protótipo. `ProfileCatalog` expande
+palavra-chave × local (311 buscas distintas) e calcula o `rules_hash` (versão do scorer + perfil +
+política; buscas não entram). `listing_search_hits` registra qual busca achou cada vaga, e cada perfil
+pontua só o que as buscas dele acharam. `DailyPipelineJob` = coleta → score, etapas isoladas.
+`listing_scores`: uma linha por vaga × perfil, explicação em jsonb. 137 testes.
+Prova real (banco zerado, 5 perfis, `Seek:MaxPages=1`): 311 buscas, 0 falhas, 17.933 achados, 6.154
+vagas, 7.333 scores. Melhor vaga do tech: "Mid to Senior C# .NET Developer (Azure Integration) 6 Month
+Contract - Perth CBD" = 100. Eliminações conferidas (liderança no título, NV1). Com vagas recentes a
+compressão acima de 80 atuou (até 44 vagas ≥ 80 no tech), o que a fixture antiga nunca mostrou.
+Achado: 6.328 payloads para 6.154 vagas. O Seek marca o mesmo anúncio como `promoted`/`isFeatured` em
+algumas buscas e não em outras; os dois campos entraram em `VolatileFields`. Conferido nos dados
+reais: sem eles, 6.154 payloads = 6.154 vagas.
 
 ### 2026-10-21 — Etapa 4a ✅
 `JobRadar.Domain.Matching`: `FitScorer.Score(input, profile, policy, today)`, puro, com as regras e a

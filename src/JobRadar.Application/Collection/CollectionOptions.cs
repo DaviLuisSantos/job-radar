@@ -3,14 +3,12 @@ using System.ComponentModel.DataAnnotations;
 namespace JobRadar.Application.Collection;
 
 /// <summary>
-/// What to collect and when. Section: <c>Collection</c>. The searches are an operator decision
-/// (they live in configuration); the schedule defaults live here.
+/// When to collect. Section: <c>Collection</c>. What to collect comes from the profiles
+/// (<c>Matching:Profiles</c>), each searching its keywords in its locations.
 /// </summary>
 public sealed class CollectionOptions
 {
     public const string Section = "Collection";
-
-    public List<SearchOptions> Searches { get; set; } = [];
 
     /// <summary>Local time of the daily run, in <see cref="TimeZone"/>.</summary>
     public TimeOnly DailyAt { get; set; } = new(6, 0);
@@ -21,12 +19,4 @@ public sealed class CollectionOptions
 
     /// <summary>Run once as soon as the worker starts, then follow the schedule. For development.</summary>
     public bool RunOnStartup { get; set; }
-}
-
-public sealed class SearchOptions
-{
-    public string Keywords { get; set; } = "";
-
-    [Required]
-    public string Location { get; set; } = "";
 }

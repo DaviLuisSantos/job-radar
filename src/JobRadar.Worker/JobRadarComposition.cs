@@ -15,7 +15,7 @@ public static class JobRadarComposition
         services.AddApplication(configuration);
         services.AddPostgresInfrastructure(configuration);
         services.AddSeekIntegration(configuration);
-        services.AddHostedService<DailyCollectionJob>();
+        services.AddHostedService<DailyPipelineJob>();
         return services;
     }
 }

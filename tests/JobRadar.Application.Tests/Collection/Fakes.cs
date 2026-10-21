@@ -26,20 +26,31 @@ internal sealed class FakeSource(string name) : IJobSource
     }
 }
 
-/// <summary>Remembers listing ids; a listing is new the first time its id is recorded.</summary>
+/// <summary>Remembers listings and which searches found them.</summary>
 internal sealed class InMemoryListings : IListingRepository
 {
-    private readonly HashSet<ListingId> _known = [];
+    private readonly Dictionary<ListingId, Listing> _known = [];
+    private readonly HashSet<(ListingId, string)> _hits = [];
 
     public Task<ObservationResult> RecordObservationsAsync(
-        IReadOnlyCollection<SourcedListing> listings, DateTimeOffset observedAt, CancellationToken ct = default)
+        IReadOnlyCollection<SourcedListing> listings, string searchKey, DateTimeOffset observedAt, CancellationToken ct = default)
     {
-        var added = listings.Count(l => _known.Add(l.Listing.Id));
+        var added = 0;
+        foreach (var l in listings)
+        {
+            if (_known.TryAdd(l.Listing.Id, l.Listing))
+                added++;
+            _hits.Add((l.Listing.Id, searchKey));
+        }
         return Task.FromResult(new ObservationResult(added, listings.Count - added));
     }
 
     public Task<ListingRecord?> FindAsync(ListingId id, CancellationToken ct = default) =>
         throw new NotSupportedException();
+
+    public Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Listing>>(
+            _hits.Where(h => searchKeys.Contains(h.Item2)).Select(h => h.Item1).Distinct().Select(id => _known[id]).ToList());
 }
 
 internal sealed class InMemoryRuns : ICollectionRunRepository
