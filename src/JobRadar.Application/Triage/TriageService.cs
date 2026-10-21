@@ -24,6 +24,8 @@ public sealed class TriageService(
             Text = string.IsNullOrWhiteSpace(filter.Text) ? null : filter.Text.Trim(),
         };
         var rows = Duplicates.Collapse(await scores.ListForTriageAsync(f, ct));
+        if (f.Order == TriageOrder.AcrossScores)
+            rows = LabelSample.Spread(rows);
         return new TriagePage(rows.Skip((f.Page - 1) * f.PageSize).Take(f.PageSize).ToList(), rows.Count);
     }
 

@@ -32,6 +32,12 @@ public static class Calibration
     /// <summary>Below this a listing sinks out of sight; a bad one above it is a miss.</summary>
     public const int VisibleThreshold = 50;
 
+    /// <summary>
+    /// Judged listings per profile before the pair accuracy says much: a first target, not a stopping
+    /// point (a model needs a few hundred).
+    /// </summary>
+    public const int LabelGoal = 50;
+
     public static IReadOnlyList<ProfileCalibration> Measure(IEnumerable<JudgedScore> judged) => judged
         .GroupBy(j => j.Profile, StringComparer.Ordinal)
         .OrderBy(g => g.Key, StringComparer.Ordinal)

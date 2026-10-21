@@ -141,6 +141,24 @@ textarea { width: 100%; resize: vertical; }
     box-shadow: var(--shadow); transition: opacity .15s;
 }
 .row.busy { opacity: .5; pointer-events: none; }
+.row:focus { outline: none; }
+.row.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* Labeling */
+.progress { color: var(--muted); }
+.progress b { color: var(--text); font-variant-numeric: tabular-nums; }
+.keys { margin: 0 0 .5rem; }
+kbd {
+    display: inline-block; min-width: 1.4em; padding: 0 .35em; border-radius: 5px; text-align: center;
+    border: 1px solid var(--border); border-bottom-width: 2px; background: var(--surface);
+    font: .8rem ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--text);
+}
+.undo {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    margin: 0 0 1rem; padding: .45rem .5rem .45rem .9rem; border-radius: 8px;
+    background: var(--accent-soft); color: var(--text);
+}
+.undo span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .title { font-weight: 600; color: var(--text); }
 .row .title:hover { color: var(--accent); }
 .meta { display: flex; flex-wrap: wrap; gap: .25rem .9rem; color: var(--muted); font-size: .88rem; margin: .15rem 0 0; }

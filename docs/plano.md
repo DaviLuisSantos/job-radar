@@ -41,8 +41,13 @@ Pendências conhecidas, com a etapa onde entram:
   rights"); as vagas além do teto ficam sem a marca. Nas buscas diárias (~2 dias) não acontece.
   Correção possível: para termo incompleto, buscar termo + palavra-chave de cada perfil (restringe às
   vagas que o sistema coleta). `collection_runs` com `term:%` e `complete = false` mostra quais.
-- **Etapa 10:** com páginas completas, as 311 buscas dos 5 perfis fazem até ~1.500 requisições na
-  1ª passada (a prova usou 1 página: 311). Depois, a janela incremental reduz muito.
+- **Etapa 10:** com páginas completas, as buscas dos 5 perfis (256 desde 2026-10-21; eram 311) fazem até
+  ~1.300 requisições numa passada sem janela. Depois, a janela incremental reduz muito.
+- **Acerto do score (decidido 2026-10-21, nesta ordem):** (1) rotular: meta de 50 julgadas por perfil, com
+  a ordem "across scores" da triagem para não rotular só o topo; (2) ajustar regras e pesos com o
+  `calibrate` antes e depois; (3) descrição completa (v1.x, abaixo); (4) ML (v2/v3). **Fontes novas
+  esperam:** não melhoram o ranking e mudariam os dados no meio da calibragem. A primeira será o Adzuna
+  (API oficial), mais pelo Raio-X do que pela busca pessoal.
 - **Calibragem (depois de ter rótulos reais):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
   "No experience required" anula a frase de entrada seguinte, se ela estiver a menos de 80
   caracteres (teste `Known_quirk_the_no_of_no_experience_negates_the_next_entry_phrase`).
@@ -90,6 +95,20 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-21 — Rotular rápido e sem viés
+Ponto de partida medido: **0 rótulos e 0 candidaturas** em 15.575 vagas; o fifo tinha 835 vagas com 70+,
+sinal de que o score não separa o topo. A triagem já tinha Good/Bad por linha; entrou:
+- **Ordem "across scores"** (`LabelSample.Spread`): distribui as faixas de score (80+, 65, 50, 35, 1, excluídas)
+  em rodízio, com embaralhamento estável dentro da faixa (FNV-1a do id), para a página trazer de tudo.
+- **Teclado:** `j`/`k` movem, `g`/`b` rotulam, `u` desfaz, `o` abre. A seleção segue cliques e teclas, não
+  eventos de foco: o Blazor devolve o foco sozinho a uma linha reordenada, e isso movia a seleção.
+  O foco vai por posição (`wwwroot/triage.js`), não por `ElementReference`, que fica velha quando a linha volta.
+- **Desfazer** o último rótulo (barra acima da lista ou `u`): devolve o veredito anterior a todas as cópias.
+  Status (Applied/Dismiss) não tem desfazer; corrige-se com "Show handled".
+- **Progresso** no topo da triagem: julgadas boas/ruins do perfil (rótulo + Applied/Dismissed), meta
+  `Calibration.LabelGoal` = 50.
+Verificado no navegador contra o banco de produção (rotular → desfazer, 0 rótulos ao final). 309 testes.
 
 ### 2026-10-21 — Perfis sem "All Australia"
 Decisão do autor: tirar "All Australia" dos perfis que já buscam cidades (tech, trades, construction, fifo);

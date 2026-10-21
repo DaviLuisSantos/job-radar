@@ -2,12 +2,20 @@
 @rendermode InteractiveServer
 @inject Backend Backend
 @inject TimeProvider Time
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>@Profile · JobRadar AU</PageTitle>
 
 <div class="page-head">
     <h1>@Profile</h1>
     <p class="muted">@(_page is null ? "Loading…" : $"{_page.Total} listings{(_filter.OnlyUntriaged ? " to triage" : "")}")</p>
+    @if (_judged is { } judged)
+    {
+        <p class="progress" title="Your labels, plus Applied (counts as good) and Dismissed (counts as bad)">
+            Judged: <b>@judged.Good</b> good · <b>@judged.Bad</b> bad, goal @Calibration.LabelGoal
+        </p>
+    }
 </div>
 
 <form class="filters" @onsubmit="SearchAsync" @onsubmit:preventDefault>
@@ -21,6 +29,13 @@
             <option value="80">80+</option>
         </select>
     </label>
+    <label title="Across scores deals out a few listings of every score band per page, so labels are not only from the top">
+        Order
+        <select @bind="_order" @bind:after="FiltersChangedAsync">
+            <option value="@TriageOrder.BestFirst">best first</option>
+            <option value="@TriageOrder.AcrossScores">across scores, to label</option>
+        </select>
+    </label>
     <label class="check"><input type="checkbox" @bind="_showHandled" @bind:after="FiltersChangedAsync" /> Show handled</label>
     <label class="check"><input type="checkbox" @bind="_showExcluded" @bind:after="FiltersChangedAsync" /> Show excluded</label>
     <button type="submit" class="ghost">Search</button>
@@ -29,6 +44,14 @@
 @if (_error is { } error)
 {
     <p class="alert" role="alert">@error</p>
+}
+
+@if (_undo is { } undo)
+{
+    <p class="undo" role="status">
+        <span>Marked “@undo.Row.Title” as @Wording.Verdict(undo.Verdict).ToLowerInvariant().</span>
+        <button class="ghost" @onclick="UndoAsync">Undo</button>
+    </p>
 }
 
 @if (_page is { Rows.Count: 0 })
@@ -40,10 +63,15 @@
 }
 else if (_page is not null)
 {
-    <ul class="rows">
-        @foreach (var row in _page.Rows)
+    <p class="keys muted small">
+        Keys, once a row is selected: <kbd>j</kbd> <kbd>k</kbd> move · <kbd>g</kbd> good · <kbd>b</kbd> bad · <kbd>u</kbd> undo · <kbd>o</kbd> open
+    </p>
+
+    <ul class="rows" @onkeydown="KeyAsync">
+        @foreach (var (row, index) in _page.Rows.Select((r, i) => (r, i)))
         {
-            <li class="row @(_busy.Contains(row.Id) ? "busy" : "")" @key="row.Id">
+            <li class="row @(index == _cursor ? "current" : "") @(_busy.Contains(row.Id) ? "busy" : "")" @key="row.Id"
+                tabindex="-1" @onclick="() => _cursor = index">
                 <ScoreBadge Value="row.Score" />
                 <div class="what">
                     <a class="title" href="@ListingLink(row.Id)">@row.Title</a>
@@ -76,10 +104,10 @@ else if (_page is not null)
                     }
                 </div>
                 <div class="actions" role="group" aria-label="Triage @row.Title">
-                    <button class="good" title="Good match" @onclick="() => LabelAsync(row, Verdict.Good)">Good</button>
-                    <button class="bad" title="Bad match" @onclick="() => LabelAsync(row, Verdict.Bad)">Bad</button>
+                    <button class="good" title="Good match (g)" @onclick="() => LabelAsync(row, Verdict.Good)">Good</button>
+                    <button class="bad" title="Bad match (b)" @onclick="() => LabelAsync(row, Verdict.Bad)">Bad</button>
                     <button title="Mark as applied" @onclick="() => StatusAsync(row, ApplicationStatus.Applied)">Applied</button>
-                    <button class="ghost" title="Not for me" @onclick="() => StatusAsync(row, ApplicationStatus.Dismissed)">Dismiss</button>
+                    <button class="ghost" title="Not for me (counts as bad)" @onclick="() => StatusAsync(row, ApplicationStatus.Dismissed)">Dismiss</button>
                 </div>
             </li>
         }
@@ -97,13 +125,24 @@ else if (_page is not null)
 
     private TriageFilter _filter = new("");
     private TriagePage? _page;
+    private (int Good, int Bad)? _judged;
     private string? _text;
     private string? _error;
     private readonly HashSet<ListingId> _busy = [];
 
+    // Keyboard triage: the selected row (set by clicks and keys, never by focus events: Blazor moves
+    // the focus back to a reordered row by itself), and whether it takes the focus after the next render.
+    private int _cursor;
+    private bool _focusCursor;
+
+    /// <summary>The last label, to put back what was there before.</summary>
+    private sealed record LastLabel(TriageRow Row, Verdict? Previous, Verdict Verdict);
+    private LastLabel? _undo;
+
     private int Pages => _page is null ? 1 : Math.Max(1, (int)Math.Ceiling(_page.Total / (double)_filter.PageSize));
 
     private int _minScore;
+    private TriageOrder _order;
     private bool _showHandled;
     private bool _showExcluded;
 
@@ -112,16 +151,26 @@ else if (_page is not null)
         if (_filter.Profile == Profile)
             return;
         _filter = new TriageFilter(Profile);
-        (_text, _minScore, _showHandled, _showExcluded) = (null, 0, false, false);
+        (_text, _minScore, _order, _showHandled, _showExcluded) = (null, 0, TriageOrder.BestFirst, false, false);
+        (_cursor, _undo) = (0, null);
         await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusCursor || _page is not { Rows.Count: > 0 })
+            return;
+        _focusCursor = false;
+        await JS.InvokeVoidAsync("jobRadar.focusRow", _cursor);
     }
 
     private Task FiltersChangedAsync()
     {
         _filter = _filter with
         {
-            Text = _text, MinScore = _minScore, OnlyUntriaged = !_showHandled, IncludeExcluded = _showExcluded, Page = 1,
+            Text = _text, MinScore = _minScore, Order = _order, OnlyUntriaged = !_showHandled, IncludeExcluded = _showExcluded, Page = 1,
         };
+        _cursor = 0;
         return LoadAsync();
     }
 
@@ -130,18 +179,63 @@ else if (_page is not null)
     private Task GoToAsync(int page)
     {
         _filter = _filter with { Page = page };
+        _cursor = 0;
         return LoadAsync();
     }
 
     private async Task LoadAsync()
     {
         _page = await Backend.RunAsync<TriageService, TriagePage>(t => t.ListAsync(_filter));
+        _cursor = Math.Clamp(_cursor, 0, Math.Max(0, _page.Rows.Count - 1));
+        var calibration = await Backend.RunAsync<CalibrationService, IReadOnlyList<ProfileCalibration>>(c => c.MeasureAsync());
+        _judged = calibration.FirstOrDefault(c => c.Profile == Profile) is { } p ? (p.Good, p.Bad) : (0, 0);
+    }
+
+    private async Task KeyAsync(KeyboardEventArgs e)
+    {
+        if (_page is not { Rows.Count: > 0 } page || e.CtrlKey || e.AltKey || e.MetaKey)
+            return;
+        var row = page.Rows[_cursor];
+        switch (e.Key)
+        {
+            case "j":
+                (_cursor, _focusCursor) = (Math.Min(_cursor + 1, page.Rows.Count - 1), true);
+                break;
+            case "k":
+                (_cursor, _focusCursor) = (Math.Max(_cursor - 1, 0), true);
+                break;
+            case "g":
+                await LabelAsync(row, Verdict.Good);
+                break;
+            case "b":
+                await LabelAsync(row, Verdict.Bad);
+                break;
+            case "u":
+                await UndoAsync();
+                break;
+            case "o":
+                Nav.NavigateTo(ListingLink(row.Id));
+                break;
+        }
     }
 
     // A row stands for the job and its copies: the decision applies to all of them, or the next
     // copy would take its place in the list.
-    private Task LabelAsync(TriageRow row, Verdict verdict) =>
-        ActAsync(row.Id, async t => { foreach (var id in row.AllIds) await t.LabelAsync(id, verdict); });
+    private async Task LabelAsync(TriageRow row, Verdict verdict)
+    {
+        if (await ActAsync(row.Id, async t => { foreach (var id in row.AllIds) await t.LabelAsync(id, verdict); }))
+            _undo = new LastLabel(row, row.Verdict, verdict);
+    }
+
+    private async Task UndoAsync()
+    {
+        if (_undo is not { } undo)
+            return;
+        _undo = null;
+        if (await ActAsync(undo.Row.Id, async t => { foreach (var id in undo.Row.AllIds) await t.LabelAsync(id, undo.Previous); }) &&
+            _page?.Rows.ToList().FindIndex(r => r.Id == undo.Row.Id) is >= 0 and var back)
+            _cursor = back;
+    }
 
     private Task StatusAsync(TriageRow row, ApplicationStatus status) =>
         ActAsync(row.Id, async t => { foreach (var id in row.AllIds) await t.SetStatusAsync(id, status); });
@@ -149,7 +243,8 @@ else if (_page is not null)
     private static string CopiesTitle(TriageRow row) =>
         row.OtherLocations.Count > 0 ? $"Also in: {string.Join(", ", row.OtherLocations)}" : "Reposted with the same title and company";
 
-    private async Task ActAsync(ListingId id, Func<TrackingService, Task> action)
+    /// <returns>Whether the action went through.</returns>
+    private async Task<bool> ActAsync(ListingId id, Func<TrackingService, Task> action)
     {
         _error = null;
         _busy.Add(id);
@@ -157,10 +252,13 @@ else if (_page is not null)
         {
             await Backend.RunAsync(action);
             await LoadAsync();
+            _focusCursor = true;
+            return true;
         }
         catch (ListingNotFoundException ex)
         {
             _error = ex.Message;
+            return false;
         }
         finally
         {

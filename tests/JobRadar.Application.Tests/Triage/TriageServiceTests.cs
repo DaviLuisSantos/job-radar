@@ -45,6 +45,18 @@ public class TriageServiceTests
     }
 
     [Fact]
+    public async Task Across_scores_deals_out_the_bands_before_paging()
+    {
+        var repo = new FixedRows([Row(0, "A"), Row(1, "B"), Row(2, "C"), Row(60, "D")]);
+
+        var page1 = await Service(repo).ListAsync(new TriageFilter("tech", Order: TriageOrder.AcrossScores, PageSize: 2), Ct);
+
+        Assert.Equal(4, page1.Total);
+        Assert.Contains(page1.Rows, r => r.Score == 40);
+        Assert.Equal(TriageOrder.AcrossScores, repo.Received!.Order);
+    }
+
+    [Fact]
     public async Task Filter_values_are_kept_in_range()
     {
         var repo = new FixedRows([]);

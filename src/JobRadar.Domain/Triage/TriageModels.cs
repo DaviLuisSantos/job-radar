@@ -14,7 +14,17 @@ public sealed record TriageFilter(
     int MinScore = 0,
     string? Text = null,
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    TriageOrder Order = TriageOrder.BestFirst);
+
+public enum TriageOrder
+{
+    /// <summary>Highest score first: for deciding what to apply to.</summary>
+    BestFirst,
+
+    /// <summary>A few of every score band per page: for labeling (see <see cref="LabelSample"/>).</summary>
+    AcrossScores,
+}
 
 /// <summary>One line of the triage list: best scores first.</summary>
 /// <param name="Status">Application status, if the candidate acted on it.</param>
