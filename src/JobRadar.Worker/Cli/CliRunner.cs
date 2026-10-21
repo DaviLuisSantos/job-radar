@@ -50,6 +50,10 @@ public static class CliRunner
                             await output.WriteLineAsync($"  - {issue}");
                     }
                     break;
+                case CliCommand.Collect c:
+                    var failed = await sp.GetRequiredService<DailyPipeline>().RunAsync(c.FullHistory, ct);
+                    await output.WriteLineAsync(failed.Count == 0 ? "Pass finished." : $"Pass finished; failed: {string.Join(", ", failed)}");
+                    return failed.Count == 0 ? 0 : 1;
                 case CliCommand.ImportPrototype c:
                     WriteImport(await sp.GetRequiredService<PrototypeImportService>().ImportAsync(c.Path, c.DryRun, ct), c.DryRun, output);
                     break;

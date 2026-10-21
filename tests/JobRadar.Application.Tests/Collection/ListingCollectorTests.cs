@@ -176,4 +176,31 @@ public class ListingCollectorTests
             if (Interlocked.CompareExchange(ref target, value, current) == current)
                 return;
     }
+
+    [Fact]
+    public async Task A_run_cut_at_the_cap_does_not_move_the_window()
+    {
+        var calls = 0;
+        var seek = new FakeSource("seek") { Respond = _ => new SearchResult([], Complete: ++calls != 1) };
+        var collector = Collector(seek);
+
+        await collector.CollectAsync([Dev], Ct);   // day 0: cut at the cap
+        _time.Advance(TimeSpan.FromDays(1));
+        await collector.CollectAsync([Dev], Ct);   // day 1: must fetch everything again
+
+        Assert.Null(seek.Received[1].PostedWithinDays);
+    }
+
+    [Fact]
+    public async Task Full_history_ignores_the_windows()
+    {
+        var seek = new FakeSource("seek");
+        var collector = Collector(seek);
+        await collector.CollectAsync([Dev], Ct);
+        _time.Advance(TimeSpan.FromDays(1));
+
+        await collector.CollectAsync([Dev], fullHistory: true, Ct);
+
+        Assert.Null(seek.Received[1].PostedWithinDays);
+    }
 }

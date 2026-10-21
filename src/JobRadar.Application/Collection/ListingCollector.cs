@@ -23,7 +23,11 @@ public sealed class ListingCollector(
 {
     private readonly SemaphoreSlim _storage = new(1, 1);
 
-    public async Task<CollectionSummary> CollectAsync(IReadOnlyList<ListingSearch> searches, CancellationToken ct)
+    public Task<CollectionSummary> CollectAsync(IReadOnlyList<ListingSearch> searches, CancellationToken ct) =>
+        CollectAsync(searches, fullHistory: false, ct);
+
+    /// <param name="fullHistory">Ignore the incremental windows: fetch everything the source still has.</param>
+    public async Task<CollectionSummary> CollectAsync(IReadOnlyList<ListingSearch> searches, bool fullHistory, CancellationToken ct)
     {
         var done = new ConcurrentBag<CollectionRun>();
         var work = sources.SelectMany(source => searches.Select(search => (source, search)));
@@ -31,7 +35,7 @@ public sealed class ListingCollector(
 
         await Parallel.ForEachAsync(work, parallel, async (item, token) =>
         {
-            var run = await RunOneAsync(item.source, item.search, token);
+            var run = await RunOneAsync(item.source, item.search, fullHistory, token);
             await StoredAsync(() => runs.RecordAsync(run, token), token);
             done.Add(run);
         });
@@ -48,10 +52,10 @@ public sealed class ListingCollector(
         return summary;
     }
 
-    private async Task<CollectionRun> RunOneAsync(IJobSource source, ListingSearch search, CancellationToken ct)
+    private async Task<CollectionRun> RunOneAsync(IJobSource source, ListingSearch search, bool fullHistory, CancellationToken ct)
     {
         var started = time.GetUtcNow();
-        var last = await StoredAsync(() => runs.GetLastSuccessfulStartAsync(source.Name, search.Key, ct), ct);
+        var last = fullHistory ? null : await StoredAsync(() => runs.GetLastCompleteStartAsync(source.Name, search.Key, ct), ct);
         var window = IncrementalWindow(last, started);
 
         try
@@ -87,8 +91,8 @@ public sealed class ListingCollector(
         StoredAsync(async () => { await call(); return true; }, ct);
 
     /// <summary>
-    /// Days since the last successful run, plus one so runs always overlap by a day. A search
-    /// that never succeeded fetches everything.
+    /// Days since the last complete run, plus one so runs always overlap by a day. A search that never
+    /// completed fetches everything: a run cut at the source cap did not see its whole window.
     /// </summary>
     internal static int? IncrementalWindow(DateTimeOffset? lastSuccess, DateTimeOffset now) =>
         lastSuccess is { } last ? Math.Max(1, (now - last).Days + 1) : null;

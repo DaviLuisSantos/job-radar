@@ -12,6 +12,7 @@ public abstract record CliCommand
           notes     <id> <text...>
           label     <id> good|bad|clear [note...]
           calibrate
+          collect [--full]                run the daily pass now (--full: ignore the incremental windows)
           market                          take the market snapshot (Raio-X) now
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
           import-prototype <jobs.db> [--dry-run]  bring the Python prototype history in (safe to repeat)
@@ -23,11 +24,12 @@ public abstract record CliCommand
     public sealed record SetLabel(ListingId Id, Verdict? Verdict, string? Note) : CliCommand;
     public sealed record Calibrate : CliCommand;
     public sealed record TakeMarketSnapshot : CliCommand;
+    public sealed record Collect(bool FullHistory) : CliCommand;
     public sealed record MarketReport(string? Month, string? OutputFile) : CliCommand;
     public sealed record ImportPrototype(string Path, bool DryRun) : CliCommand;
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
-    public static readonly string[] Names = ["status", "notes", "label", "calibrate", "market", "market-report", "import-prototype"];
+    public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -46,6 +48,8 @@ public abstract record CliCommand
                 "label" when args.Length >= 3 => new SetLabel(ParseId(args[1]), ParseLabel(args[2]), Rest(args, 3)),
                 "calibrate" when args.Length == 1 => new Calibrate(),
                 "market" when args.Length == 1 => new TakeMarketSnapshot(),
+                "collect" when args.Length == 1 => new Collect(FullHistory: false),
+                "collect" when args.Length == 2 && args[1] == "--full" => new Collect(FullHistory: true),
                 "import-prototype" when args.Length == 2 && args[1] != "--dry-run" => new ImportPrototype(args[1], DryRun: false),
                 "import-prototype" when args.Length == 3 && args[2] == "--dry-run" => new ImportPrototype(args[1], DryRun: true),
                 "market-report" when args.Length <= 3 => new MarketReport(

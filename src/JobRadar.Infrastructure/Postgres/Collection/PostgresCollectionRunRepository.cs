@@ -35,9 +35,9 @@ internal sealed class PostgresCollectionRunRepository(JobRadarDbContext db) : IC
             .ToList();
     }
 
-    public Task<DateTimeOffset?> GetLastSuccessfulStartAsync(string source, string searchKey, CancellationToken ct = default) =>
+    public Task<DateTimeOffset?> GetLastCompleteStartAsync(string source, string searchKey, CancellationToken ct = default) =>
         db.CollectionRuns
-            .Where(r => r.Source == source && r.SearchKey == searchKey && r.Error == null)
+            .Where(r => r.Source == source && r.SearchKey == searchKey && r.Error == null && r.Complete)
             .MaxAsync(r => (DateTimeOffset?)r.StartedAt, ct);
 
     internal static CollectionRunEntity ToEntity(CollectionRun run) => new()

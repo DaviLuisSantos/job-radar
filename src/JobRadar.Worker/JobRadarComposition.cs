@@ -19,6 +19,7 @@ public static class JobRadarComposition
         // One-off import command: the archive reader and the service that uses it live only in the worker.
         services.AddPrototypeImport();
         services.AddScoped<JobRadar.Application.Import.PrototypeImportService>();
+        services.AddSingleton<DailyPipeline>();
         services.AddHostedService<DailyPipelineJob>();
         return services;
     }

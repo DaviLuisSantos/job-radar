@@ -51,7 +51,7 @@ public sealed class FullTextTermService(
     private async Task<CollectionRun> RunOneAsync(IFullTextSearch search, FullTextTerm term, CancellationToken ct)
     {
         var started = time.GetUtcNow();
-        var last = await StoredAsync(() => runs.GetLastSuccessfulStartAsync(search.Source, term.RunKey, ct), ct);
+        var last = await StoredAsync(() => runs.GetLastCompleteStartAsync(search.Source, term.RunKey, ct), ct);
         var oldest = last is { } since
             ? await StoredAsync(() => listings.GetOldestPostedAmongFirstSeenSinceAsync(search.Source, since, ct), ct)
             : null;

@@ -22,7 +22,7 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
     private async Task<DateTimeOffset?> LastSuccessAsync(string key = ".net developer @ perth", string source = "seek")
     {
         await using var ctx = db.NewContext();
-        return await new PostgresCollectionRunRepository(ctx).GetLastSuccessfulStartAsync(source, key, Ct);
+        return await new PostgresCollectionRunRepository(ctx).GetLastCompleteStartAsync(source, key, Ct);
     }
 
     [DatabaseFact]
@@ -34,12 +34,13 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
     }
 
     [DatabaseFact]
-    public async Task Last_success_ignores_failures_other_searches_and_other_sources()
+    public async Task Last_complete_ignores_failures_cut_runs_other_searches_and_other_sources()
     {
         await db.ResetAsync();
         await RecordAsync(Run(Monday));
         await RecordAsync(Run(Monday.AddDays(1)));
         await RecordAsync(Run(Monday.AddDays(2), error: "HttpRequestException: 503"));
+        await RecordAsync(Run(Monday.AddDays(2).AddHours(1)) with { Complete = false });
         await RecordAsync(Run(Monday.AddDays(3), key: "hospitality @ perth"));
         await RecordAsync(Run(Monday.AddDays(4)) with { Source = "adzuna" });
 

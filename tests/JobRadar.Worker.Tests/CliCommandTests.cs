@@ -36,6 +36,14 @@ public class CliCommandTests
     }
 
     [Fact]
+    public void Collect_now_with_or_without_the_full_history()
+    {
+        Assert.Equal(new CliCommand.Collect(false), Parse("collect"));
+        Assert.Equal(new CliCommand.Collect(true), Parse("collect", "--full"));
+        Assert.Null(Parse("collect", "--all"));
+    }
+
+    [Fact]
     public void Market_commands()
     {
         Assert.IsType<CliCommand.TakeMarketSnapshot>(Parse("market"));
