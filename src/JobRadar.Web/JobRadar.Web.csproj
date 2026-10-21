@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobRadar.Application\JobRadar.Application.csproj" />
+    <ProjectReference Include="..\JobRadar.Infrastructure\JobRadar.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="JobRadar.Web.Tests" />
+  </ItemGroup>
+
+</Project>

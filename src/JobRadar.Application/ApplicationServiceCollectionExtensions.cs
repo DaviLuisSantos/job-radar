@@ -1,6 +1,7 @@
 using JobRadar.Application.Collection;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tracking;
+using JobRadar.Application.Triage;
 using JobRadar.Domain.Matching;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<FullTextTermService>();
         services.AddScoped<TrackingService>();
         services.AddScoped<CalibrationService>();
+        services.AddScoped<TriageService>();
         return services;
     }
 }

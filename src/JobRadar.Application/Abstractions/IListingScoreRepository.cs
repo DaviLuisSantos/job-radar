@@ -1,4 +1,6 @@
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
+using JobRadar.Domain.Triage;
 
 namespace JobRadar.Application.Abstractions;
 
@@ -13,4 +15,16 @@ public interface IListingScoreRepository
     /// (explicit label, else the application status; see <c>Judgement.Effective</c>).
     /// </summary>
     Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default);
+
+    /// <summary>Profiles that have scores, alphabetically.</summary>
+    Task<IReadOnlyList<string>> ListProfilesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Every listing of the profile that passes the filter, best score first, then most recent.
+    /// Paging is ignored: duplicates are collapsed before paging, by the caller.
+    /// </summary>
+    Task<IReadOnlyList<TriageRow>> ListForTriageAsync(TriageFilter filter, CancellationToken ct = default);
+
+    /// <summary>The listing's score in every profile that scored it.</summary>
+    Task<IReadOnlyList<ProfileScore>> GetScoresAsync(ListingId id, CancellationToken ct = default);
 }

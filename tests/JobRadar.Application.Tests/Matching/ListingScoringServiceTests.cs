@@ -23,8 +23,10 @@ public class ListingScoringServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default) =>
-            throw new NotSupportedException();
+        public Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<string>> ListProfilesAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<JobRadar.Domain.Triage.TriageRow>> ListForTriageAsync(JobRadar.Domain.Triage.TriageFilter filter, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<JobRadar.Domain.Triage.ProfileScore>> GetScoresAsync(ListingId id, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     // 23:00 UTC on the 20th is 07:00 on the 21st in Perth.

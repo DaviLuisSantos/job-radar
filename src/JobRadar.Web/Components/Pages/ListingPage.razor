@@ -1,0 +1,173 @@
+@page "/listing/{Source}/{SourceId}"
+@rendermode InteractiveServer
+@inject Backend Backend
+@inject TimeProvider Time
+
+<PageTitle>@(_detail?.Record.Listing.Title ?? "Listing") · JobRadar AU</PageTitle>
+
+@if (_missing)
+{
+    <section class="empty">
+        <h1>Listing not found</h1>
+        <p>@Id was never collected.</p>
+    </section>
+}
+else if (_detail is { } d)
+{
+    var listing = d.Record.Listing;
+    <article class="listing">
+        <header>
+            <h1>@listing.Title</h1>
+            <p class="meta">
+                <span>@(listing.Company ?? "Company not given")</span>
+                <span>@Wording.Location(listing.Location)</span>
+                @if (Wording.WorkType(listing.WorkType) is { Length: > 0 } wt)
+                {
+                    <span>@wt</span>
+                }
+                @if (listing.SalaryText is { } salary)
+                {
+                    <span class="salary">@salary</span>
+                }
+            </p>
+            <p class="muted">
+                Posted @(listing.PostedAt?.ToString("d MMM yyyy") ?? "—") · first seen @d.Record.FirstSeenAt.ToString("d MMM yyyy")
+                @if (listing.SourceCategory is { } category)
+                {
+                    <text> · @category</text>
+                }
+            </p>
+            <a class="button" href="@listing.Url" target="_blank" rel="noopener noreferrer">Open on @listing.Id.Source ↗</a>
+        </header>
+
+        @if (listing.Summary is { } summary)
+        {
+            <section>
+                <h2>Summary</h2>
+                <ul class="summary">
+                    @foreach (var part in summary.Split(" | "))
+                    {
+                        <li>@part</li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @if (d.Terms.Count > 0)
+        {
+            <section>
+                <h2>Found in the full ad</h2>
+                <p class="chips">
+                    @foreach (var term in d.Terms)
+                    {
+                        <span class="chip term">“@term”</span>
+                    }
+                </p>
+            </section>
+        }
+
+        <div class="columns">
+            <section class="panel">
+                <h2>Your call</h2>
+                @if (_error is { } error)
+                {
+                    <p class="alert" role="alert">@error</p>
+                }
+                <div class="segmented" role="group" aria-label="Label">
+                    <button class="good @(d.Label?.Verdict == Verdict.Good ? "on" : "")" @onclick="() => LabelAsync(Verdict.Good)">Good match</button>
+                    <button class="bad @(d.Label?.Verdict == Verdict.Bad ? "on" : "")" @onclick="() => LabelAsync(Verdict.Bad)">Bad match</button>
+                    @if (d.Label is not null)
+                    {
+                        <button class="ghost" @onclick="() => LabelAsync(null)">Clear</button>
+                    }
+                </div>
+
+                <h3>Application</h3>
+                <div class="statuses" role="group" aria-label="Application status">
+                    @foreach (var status in Enum.GetValues<ApplicationStatus>())
+                    {
+                        <button class="@(d.Application?.Status == status ? "on" : "")" @onclick="() => StatusAsync(status)">@Wording.Status(status)</button>
+                    }
+                </div>
+                @if (d.Application?.AppliedAt is { } applied)
+                {
+                    <p class="muted">Applied on @applied.ToString("d MMM yyyy")</p>
+                }
+
+                <label class="notes">
+                    Notes
+                    <textarea rows="4" @bind="_notes" placeholder="Recruiter, contacts, next step…"></textarea>
+                </label>
+                <button @onclick="SaveNotesAsync" disabled="@(_notes == d.Application?.Notes)">Save notes</button>
+
+                @if (d.Application is { History.Count: > 0 } app)
+                {
+                    <h3>History</h3>
+                    <ol class="history">
+                        @foreach (var change in app.History.Reverse())
+                        {
+                            <li><time>@Wording.When(change.At)</time> @Wording.Status(change.To)</li>
+                        }
+                    </ol>
+                }
+            </section>
+
+            <section class="panel">
+                <h2>Why this score</h2>
+                @if (d.Scores.Count == 0)
+                {
+                    <p class="muted">Not scored yet.</p>
+                }
+                @foreach (var s in d.Scores)
+                {
+                    <details open="@(s == d.Scores[0])">
+                        <summary><ScoreBadge Value="s.Score.Final" /> @s.Profile</summary>
+                        <Explanation Score="s.Score" />
+                        <p class="muted small">Scored @Wording.When(s.ScoredAt)</p>
+                    </details>
+                }
+            </section>
+        </div>
+    </article>
+}
+
+@code {
+    [Parameter] public string Source { get; set; } = "";
+    [Parameter] public string SourceId { get; set; } = "";
+
+    private ListingDetail? _detail;
+    private bool _missing;
+    private string? _notes;
+    private string? _error;
+
+    private ListingId Id => new(Source, SourceId);
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _detail = await Backend.RunAsync<TriageService, ListingDetail?>(t => t.DetailAsync(Id));
+        _missing = _detail is null;
+        _notes = _detail?.Application?.Notes;
+    }
+
+    private Task LabelAsync(Verdict? verdict) => ActAsync(t => t.LabelAsync(Id, verdict));
+
+    private Task StatusAsync(ApplicationStatus status) => ActAsync(t => t.SetStatusAsync(Id, status));
+
+    private Task SaveNotesAsync() => ActAsync(t => t.SetNotesAsync(Id, _notes));
+
+    private async Task ActAsync(Func<TrackingService, Task> action)
+    {
+        _error = null;
+        try
+        {
+            await Backend.RunAsync(action);
+            await LoadAsync();
+        }
+        catch (ListingNotFoundException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

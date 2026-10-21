@@ -1,0 +1,26 @@
+@page "/"
+@inject Backend Backend
+@inject NavigationManager Nav
+
+<PageTitle>JobRadar AU</PageTitle>
+
+@if (_loaded)
+{
+    <section class="empty">
+        <h1>No scores yet</h1>
+        <p>Describe your profiles in <code>appsettings.Local.json</code> and let the worker run a pass:</p>
+        <pre>dotnet run --project src/JobRadar.Worker -- --Collection:RunOnStartup=true</pre>
+    </section>
+}
+
+@code {
+    private bool _loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var profiles = await Backend.RunAsync<TriageService, IReadOnlyList<string>>(t => t.ProfilesAsync());
+        if (profiles.Count > 0)
+            Nav.NavigateTo($"triage/{Uri.EscapeDataString(profiles[0])}");
+        _loaded = true;
+    }
+}

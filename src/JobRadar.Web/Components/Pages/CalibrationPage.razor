@@ -1,0 +1,87 @@
+@page "/calibration"
+@inject Backend Backend
+
+<PageTitle>Calibration · JobRadar AU</PageTitle>
+
+<div class="page-head">
+    <h1>Calibration</h1>
+    <p class="muted">How the score agrees with your labels and application decisions. Change a weight, rescore, and check this again.</p>
+</div>
+
+@if (_results is null)
+{
+    <p class="muted">Loading…</p>
+}
+else if (_results.Count == 0)
+{
+    <section class="empty">
+        <h2>Nothing judged yet</h2>
+        <p>Mark listings as good or bad, or move them to Applied or Dismissed, and they show up here.</p>
+    </section>
+}
+else
+{
+    <table class="grid">
+        <thead>
+            <tr>
+                <th>Profile</th>
+                <th class="num">Good</th>
+                <th class="num">Bad</th>
+                <th class="num" title="Of every (good, bad) pair, how often the good one scores higher">Pairs right</th>
+                <th class="num">Good ≥ @Calibration.AlertThreshold</th>
+                <th class="num">Bad ≥ @Calibration.VisibleThreshold</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _results)
+            {
+                <tr>
+                    <td><a href="@($"triage/{Uri.EscapeDataString(r.Profile)}")">@r.Profile</a></td>
+                    <td class="num">@r.Good</td>
+                    <td class="num">@r.Bad</td>
+                    <td class="num">@(r.PairAccuracy is { } p ? p.ToString("P0") : "—")</td>
+                    <td class="num">@r.GoodAtAlert / @r.Good</td>
+                    <td class="num">@r.BadVisible / @r.Bad</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    var misses = _results.SelectMany(r => r.Disagreements).ToList();
+    <h2>Where the score disagrees with you</h2>
+    @if (misses.Count == 0)
+    {
+        <p class="muted">No disagreements: good listings at @Calibration.AlertThreshold or more, bad ones under @Calibration.VisibleThreshold.</p>
+    }
+    else
+    {
+        <ul class="rows">
+            @foreach (var m in misses)
+            {
+                <li class="row disagreement">
+                    <ScoreBadge Value="m.Score.Final" />
+                    <div class="what">
+                        <a class="title" href="@Pages.Triage.ListingLink(m.Id)">@m.Title</a>
+                        <div class="meta">
+                            <span class="chip verdict-@m.Verdict.ToString().ToLowerInvariant()">You: @Wording.Verdict(m.Verdict)</span>
+                            <span>@m.Profile</span>
+                        </div>
+                        <ul class="why">
+                            @foreach (var item in m.Score.Items.OrderByDescending(i => Math.Abs(i.Points)).Take(3))
+                            {
+                                <li><b>@Wording.Points(item.Points)</b> @Wording.Describe(item)</li>
+                            }
+                        </ul>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private IReadOnlyList<ProfileCalibration>? _results;
+
+    protected override async Task OnInitializedAsync() =>
+        _results = await Backend.RunAsync<CalibrationService, IReadOnlyList<ProfileCalibration>>(c => c.MeasureAsync());
+}

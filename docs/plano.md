@@ -15,12 +15,17 @@
 | 4b | Score em uso: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil, recalculado todo dia | ✅ 2026-10-21 |
 | 5 | Termos do texto completo: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ✅ 2026-10-21 |
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
-| 7 | **Triagem**: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | 🔨 próxima |
-| 8 | **Raio-X**: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ⏳ |
+| 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
+| 8 | **Raio-X**: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | 🔨 próxima |
 | 9 | **Importação do histórico** do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏳ |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
 
 Pendências conhecidas, com a etapa onde entram:
+- **Etapa 10:** o site de triagem não tem login; hoje só escuta em `localhost:5380`. Antes de publicar em
+  qualquer servidor, entra autenticação (ao menos um usuário, cookie). Porta 5380 porque a 5080 é de outro
+  serviço do autor nesta máquina (Servidor de Câmeras).
+- **README/portfólio:** falta um print da triagem, gerado com dados fictícios (prints reais mostram anúncios
+  reais, que não se republicam).
 - **Etapa 10 (carga inicial):** na 1ª busca (31 dias), 4 termos passam de 500 mesmo por estado
   ("australian citizen", "permanent resident", "full working rights", "full australian working
   rights"); as vagas além do teto ficam sem a marca. Nas buscas diárias (~2 dias) não acontece.
@@ -41,6 +46,23 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 7 ✅
+`JobRadar.Web` (Blazor Web App, renderização no servidor): lista de triagem por perfil (filtros: texto,
+score mínimo, mostrar tratadas e eliminadas; ações Good/Bad/Applied/Dismiss por linha), detalhe da vaga
+(resumo, termos do texto completo, score de cada perfil explicado passo a passo a partir de 50, status,
+notas, histórico, rótulo) e calibragem. Toda frase sobre regras e status sai de `Text/Wording.cs`.
+`Backend.RunAsync` abre um escopo por operação: no Blazor interativo um serviço scoped vive a aba inteira e
+um único `DbContext` ficaria compartilhado por todos os cliques.
+Deduplicação portada do protótipo (`Domain/Triage/Duplicates`): mesmo título + mesma empresa = uma linha;
+o agrupamento vem antes da paginação, e as ações valem para todas as cópias (senão a próxima cópia ocupa a
+linha). 224 testes, incluindo bUnit (componentes) e a composição do site.
+Verificado no navegador sobre o banco local: lista, ação por linha (1.973 → 1.972), detalhe com candidatura,
+nota e histórico, calibragem, tela de celular (375 px sem rolagem horizontal), sem erros no console.
+Deduplicação: 1.972 → 1.876 linhas; Dismiss numa linha "posted 3×" gravou as 3 cópias.
+Achados: (1) a busca por texto com `%` não achava nada: sem o caractere de escape, o Npgsql gera
+`ESCAPE ''` e a barra vira texto (agora `ILike(..., @"")`); (2) a porta 5080 já era de outro serviço
+local, e as duas apps respondiam em `localhost` por IPv4 e IPv6 diferentes. Decisões de teste apagadas.
 
 ### 2026-10-21 — Etapa 6 ✅
 `Domain.Tracking`: `JobApplication` (status, data da candidatura, notas, histórico só de acréscimo) e

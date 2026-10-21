@@ -1,0 +1,32 @@
+@* Why a listing scored what it did, step by step from the base of 50. *@
+<ol class="explanation">
+    @if (!Score.Excluded)
+    {
+        <li class="base"><span class="pts">@FitScore.Base</span><span>Base</span></li>
+    }
+    @foreach (var item in Score.Items)
+    {
+        <li class="@Tone(item)">
+            <span class="pts">@Wording.Points(item.Points)</span>
+            <span>@Wording.Describe(item)</span>
+            @if (Wording.Where(item.Where) is { Length: > 0 } where)
+            {
+                <span class="where">@where</span>
+            }
+        </li>
+    }
+    <li class="total"><span class="pts">@Score.Final</span><span>@(Score.Excluded ? "Excluded: never shown" : "Final score")</span></li>
+</ol>
+
+@code {
+    [Parameter, EditorRequired] public FitScore Score { get; set; } = default!;
+
+    private static string Tone(ScoreItem item) => item.Points switch
+    {
+        _ when item.Points == -50 && item.Rule is ScoreRule.CitizenshipRequired or ScoreRule.WorkRightsIncompatible
+            or ScoreRule.IdentifiedRole or ScoreRule.LeadershipTitle or ScoreRule.SeniorTitle => "exclusion",
+        > 0 => "plus",
+        < 0 => "minus",
+        _ => "neutral",
+    };
+}

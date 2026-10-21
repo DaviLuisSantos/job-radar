@@ -4,6 +4,8 @@ using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
+using JobRadar.Domain.Triage;
+using JobRadar.Infrastructure.Postgres.Listings;
 using JobRadar.Infrastructure.Postgres.Tracking;
 using Microsoft.EntityFrameworkCore;
 
@@ -81,5 +83,61 @@ internal sealed class PostgresListingScoreRepository(JobRadarDbContext db) : ILi
             judged.Add(new JudgedScore(new ListingId(r.Source, r.SourceId), r.Title, r.Profile, new FitScore(r.Score, items), v));
         }
         return judged;
+    }
+
+    public async Task<IReadOnlyList<string>> ListProfilesAsync(CancellationToken ct = default) =>
+        await db.ListingScores.Select(s => s.Profile).Distinct().OrderBy(p => p).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<TriageRow>> ListForTriageAsync(TriageFilter filter, CancellationToken ct = default)
+    {
+        var query =
+            from s in db.ListingScores
+            where s.Profile == filter.Profile
+            join l in db.Listings on new { s.Source, s.SourceId } equals new { l.Source, l.SourceId }
+            join app in db.Applications on new { s.Source, s.SourceId } equals new { app.Source, app.SourceId } into apps
+            from app in apps.DefaultIfEmpty()
+            join lab in db.ListingLabels on new { s.Source, s.SourceId } equals new { lab.Source, lab.SourceId } into labels
+            from lab in labels.DefaultIfEmpty()
+            select new { s.Score, l, Status = app.Status, Verdict = lab.Verdict };
+
+        if (!filter.IncludeExcluded)
+            query = query.Where(r => r.Score > 0);
+        if (filter.MinScore > 0)
+            query = query.Where(r => r.Score >= filter.MinScore);
+        if (filter.OnlyUntriaged)
+            query = query.Where(r => r.Status == null && r.Verdict == null);
+        if (filter.Text is { } text)
+        {
+            // The search text is literal: escape LIKE wildcards. The escape character must be passed:
+            // without it Npgsql emits ESCAPE '' and the backslashes would be matched as text.
+            var pattern = "%" + text.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_") + "%";
+            query = query.Where(r => EF.Functions.ILike(r.l.Title, pattern, @"\") || EF.Functions.ILike(r.l.Company ?? "", pattern, @"\"));
+        }
+
+        var rows = await query
+            .OrderByDescending(r => r.Score).ThenByDescending(r => r.l.PostedAt).ThenBy(r => r.l.SourceId)
+            .ToListAsync(ct);
+
+        return rows.Select(r =>
+        {
+            var listing = ListingMapper.ToRecord(r.l);
+            return new TriageRow(
+                listing.Listing.Id, listing.Listing.Title, listing.Listing.Company, listing.Listing.Location,
+                listing.Listing.WorkType, listing.Listing.SalaryText, listing.Listing.PostedAt, listing.FirstSeenAt,
+                r.Score,
+                r.Status is null ? null : TrackingMapper.ToStatus(r.Status),
+                r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict));
+        }).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProfileScore>> GetScoresAsync(ListingId id, CancellationToken ct = default)
+    {
+        var (source, sourceId) = (id.Source, id.SourceId);
+        var rows = await db.ListingScores
+            .Where(s => s.Source == source && s.SourceId == sourceId)
+            .OrderByDescending(s => s.Score)
+            .ToListAsync(ct);
+        return rows.Select(r => new ProfileScore(
+            r.Profile, new FitScore(r.Score, JsonSerializer.Deserialize<List<ScoreItem>>(r.Explanation, Json) ?? []), r.ScoredAt)).ToList();
     }
 }

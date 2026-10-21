@@ -14,6 +14,8 @@ public interface ITrackingRepository
     /// <summary>Inserts or updates the application; history entries are only ever appended.</summary>
     Task SaveApplicationAsync(JobApplication application, CancellationToken ct = default);
 
+    Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default);
+
     /// <summary>Sets the label, or removes it when <paramref name="label"/> is null.</summary>
     Task SetLabelAsync(ListingId id, ListingLabel? label, CancellationToken ct = default);
 }

@@ -62,6 +62,13 @@ internal sealed class PostgresTrackingRepository(JobRadarDbContext db) : ITracki
         }
     }
 
+    public async Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default)
+    {
+        var (source, sourceId) = (id.Source, id.SourceId);
+        var row = await db.ListingLabels.FirstOrDefaultAsync(l => l.Source == source && l.SourceId == sourceId, ct);
+        return row is null ? null : new ListingLabel(id, TrackingMapper.ToVerdict(row.Verdict), row.Note, row.LabeledAt);
+    }
+
     public async Task SetLabelAsync(ListingId id, ListingLabel? label, CancellationToken ct = default)
     {
         var (source, sourceId) = (id.Source, id.SourceId);

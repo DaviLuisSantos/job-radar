@@ -28,6 +28,9 @@ public class TrackingServiceTests
             return Task.CompletedTask;
         }
 
+        public Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default) =>
+            Task.FromResult(Labels.GetValueOrDefault(id));
+
         public Task SetLabelAsync(ListingId id, ListingLabel? label, CancellationToken ct = default)
         {
             if (label is null)

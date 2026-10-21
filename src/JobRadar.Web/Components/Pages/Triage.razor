@@ -1,0 +1,173 @@
+@page "/triage/{Profile}"
+@rendermode InteractiveServer
+@inject Backend Backend
+@inject TimeProvider Time
+
+<PageTitle>@Profile · JobRadar AU</PageTitle>
+
+<div class="page-head">
+    <h1>@Profile</h1>
+    <p class="muted">@(_page is null ? "Loading…" : $"{_page.Total} listings{(_filter.OnlyUntriaged ? " to triage" : "")}")</p>
+</div>
+
+<form class="filters" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+    <input type="search" placeholder="Title or company" aria-label="Search title or company" @bind="_text" />
+    <label>
+        Min score
+        <select @bind="_minScore" @bind:after="FiltersChangedAsync">
+            <option value="0">any</option>
+            <option value="50">50+</option>
+            <option value="65">65+</option>
+            <option value="80">80+</option>
+        </select>
+    </label>
+    <label class="check"><input type="checkbox" @bind="_showHandled" @bind:after="FiltersChangedAsync" /> Show handled</label>
+    <label class="check"><input type="checkbox" @bind="_showExcluded" @bind:after="FiltersChangedAsync" /> Show excluded</label>
+    <button type="submit" class="ghost">Search</button>
+</form>
+
+@if (_error is { } error)
+{
+    <p class="alert" role="alert">@error</p>
+}
+
+@if (_page is { Rows.Count: 0 })
+{
+    <section class="empty">
+        <h2>Nothing here</h2>
+        <p>@(_filter.OnlyUntriaged ? "Every listing in this view is handled." : "No listing matches these filters.")</p>
+    </section>
+}
+else if (_page is not null)
+{
+    <ul class="rows">
+        @foreach (var row in _page.Rows)
+        {
+            <li class="row @(_busy.Contains(row.Id) ? "busy" : "")" @key="row.Id">
+                <ScoreBadge Value="row.Score" />
+                <div class="what">
+                    <a class="title" href="@ListingLink(row.Id)">@row.Title</a>
+                    <div class="meta">
+                        <span>@(row.Company ?? "Company not given")</span>
+                        <span>@Wording.Location(row.Location)@(row.OtherLocations.Count > 0 ? $" +{row.OtherLocations.Count} more" : "")</span>
+                        @if (Wording.WorkType(row.WorkType) is { Length: > 0 } wt)
+                        {
+                            <span>@wt</span>
+                        }
+                        @if (row.SalaryText is { } salary)
+                        {
+                            <span class="salary">@salary</span>
+                        }
+                    </div>
+                </div>
+                <div class="state">
+                    <span class="age" title="@row.PostedAt?.ToString("d MMM yyyy")">@Wording.Age(row.PostedAt, Time.GetUtcNow())</span>
+                    @if (row.Copies.Count > 0)
+                    {
+                        <span class="chip" title="@CopiesTitle(row)">posted @(row.Copies.Count + 1)×</span>
+                    }
+                    @if (row.Status is { } status)
+                    {
+                        <span class="chip status-@status.ToString().ToLowerInvariant()">@Wording.Status(status)</span>
+                    }
+                    @if (row.Verdict is { } verdict)
+                    {
+                        <span class="chip verdict-@verdict.ToString().ToLowerInvariant()">@Wording.Verdict(verdict)</span>
+                    }
+                </div>
+                <div class="actions" role="group" aria-label="Triage @row.Title">
+                    <button class="good" title="Good match" @onclick="() => LabelAsync(row, Verdict.Good)">Good</button>
+                    <button class="bad" title="Bad match" @onclick="() => LabelAsync(row, Verdict.Bad)">Bad</button>
+                    <button title="Mark as applied" @onclick="() => StatusAsync(row, ApplicationStatus.Applied)">Applied</button>
+                    <button class="ghost" title="Not for me" @onclick="() => StatusAsync(row, ApplicationStatus.Dismissed)">Dismiss</button>
+                </div>
+            </li>
+        }
+    </ul>
+
+    <nav class="pager" aria-label="Pages">
+        <button class="ghost" disabled="@(_filter.Page <= 1)" @onclick="() => GoToAsync(_filter.Page - 1)">← Previous</button>
+        <span>Page @_filter.Page of @Pages</span>
+        <button class="ghost" disabled="@(_filter.Page >= Pages)" @onclick="() => GoToAsync(_filter.Page + 1)">Next →</button>
+    </nav>
+}
+
+@code {
+    [Parameter] public string Profile { get; set; } = "";
+
+    private TriageFilter _filter = new("");
+    private TriagePage? _page;
+    private string? _text;
+    private string? _error;
+    private readonly HashSet<ListingId> _busy = [];
+
+    private int Pages => _page is null ? 1 : Math.Max(1, (int)Math.Ceiling(_page.Total / (double)_filter.PageSize));
+
+    private int _minScore;
+    private bool _showHandled;
+    private bool _showExcluded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_filter.Profile == Profile)
+            return;
+        _filter = new TriageFilter(Profile);
+        (_text, _minScore, _showHandled, _showExcluded) = (null, 0, false, false);
+        await LoadAsync();
+    }
+
+    private Task FiltersChangedAsync()
+    {
+        _filter = _filter with
+        {
+            Text = _text, MinScore = _minScore, OnlyUntriaged = !_showHandled, IncludeExcluded = _showExcluded, Page = 1,
+        };
+        return LoadAsync();
+    }
+
+    private Task SearchAsync() => FiltersChangedAsync();
+
+    private Task GoToAsync(int page)
+    {
+        _filter = _filter with { Page = page };
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _page = await Backend.RunAsync<TriageService, TriagePage>(t => t.ListAsync(_filter));
+    }
+
+    // A row stands for the job and its copies: the decision applies to all of them, or the next
+    // copy would take its place in the list.
+    private Task LabelAsync(TriageRow row, Verdict verdict) =>
+        ActAsync(row.Id, async t => { foreach (var id in row.AllIds) await t.LabelAsync(id, verdict); });
+
+    private Task StatusAsync(TriageRow row, ApplicationStatus status) =>
+        ActAsync(row.Id, async t => { foreach (var id in row.AllIds) await t.SetStatusAsync(id, status); });
+
+    private static string CopiesTitle(TriageRow row) =>
+        row.OtherLocations.Count > 0 ? $"Also in: {string.Join(", ", row.OtherLocations)}" : "Reposted with the same title and company";
+
+    private async Task ActAsync(ListingId id, Func<TrackingService, Task> action)
+    {
+        _error = null;
+        _busy.Add(id);
+        try
+        {
+            await Backend.RunAsync(action);
+            await LoadAsync();
+        }
+        catch (ListingNotFoundException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy.Remove(id);
+        }
+    }
+
+    internal static string ListingLink(ListingId id) =>
+        $"listing/{Uri.EscapeDataString(id.Source)}/{Uri.EscapeDataString(id.SourceId)}";
+}

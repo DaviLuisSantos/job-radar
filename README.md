@@ -11,9 +11,9 @@ Two products share one core:
   the share that accepts working holiday makers, and the share that requires citizenship or PR.
   It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
 
-> **Status:** early. Daily collection from Seek, full-text clause detection, scoring per profile
-> and application tracking work end to end; the scorer matches the Python prototype on 5,388 real
-> listings. Triage UI and the market snapshot are next.
+> **Status:** v1 in progress. Daily collection from Seek, full-text clause detection, scoring per
+> profile, application tracking and a triage UI work end to end; the scorer matches the Python
+> prototype on 5,388 real listings. The market snapshot is next.
 > Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
 
 ## Architecture
@@ -24,7 +24,8 @@ src/
   JobRadar.Application      business services + ports (Abstractions/) they depend on
   JobRadar.Infrastructure   Postgres: entity → configuration → mapper → repository, migrations
   JobRadar.Integrations.Seek  Seek search API: resilient HTTP client, translator to the neutral model
-  JobRadar.Worker           composition root and scheduled jobs
+  JobRadar.Worker           composition root, daily pipeline and CLI commands
+  JobRadar.Web              triage UI (Blazor, server rendering)
 tests/
   *.Domain.Tests            pure unit tests
   *.Infrastructure.Tests    mapper tests + repository contract tests on real Postgres (opt-in)
@@ -52,7 +53,18 @@ Describe your profiles first: copy `src/JobRadar.Worker/appsettings.Local.exampl
 profile's keywords in its locations, then scores what each profile found. Set
 `Collection__RunOnStartup=true` to run a pass immediately.
 
-Track applications and check the score against your judgement with the same executable:
+Triage in the browser at http://localhost:5380:
+
+```bash
+dotnet run --project src/JobRadar.Web
+```
+
+Each profile gets a queue, best score first, with the same job posted several times shown once.
+Mark a listing good or bad, applied or dismissed from the list; the detail page explains the score
+rule by rule from the base of 50 and keeps notes and the application history. The site has no
+login yet and only listens on localhost.
+
+The worker executable also takes commands:
 
 ```bash
 dotnet run --project src/JobRadar.Worker -- status seek:81234567 applied

@@ -38,6 +38,10 @@ docker compose up -d
 ```
 
 ```bash
+dotnet run --project src/JobRadar.Web
+```
+
+```bash
 dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-dir Postgres/Migrations
 ```
 
@@ -68,6 +72,7 @@ src/JobRadar.Application     serviços (Collection/, Matching/, Tracking/) + por
 src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
+src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
 ```
 
 - Um `.csproj` por camada: Application não referencia Infrastructure, o compilador garante.
@@ -143,6 +148,13 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   o primeiro conta como ruim e o segundo como **boa**. Não junte os dois de novo.
 - Os argumentos de um comando não entram na configuração do host (`Program.cs`): o texto livre de `notes`
   poderia ser lido como chave=valor.
+- Web: componente interativo chama serviço **só** por `Backend.RunAsync` (um escopo, e um `DbContext`, por
+  operação). Injetar `TriageService` direto no componente prende um `DbContext` à aba inteira.
+- Web sem login: escuta só em `localhost:5380` (`appsettings.json`). A 5080 é de outro serviço local do autor.
+- `EF.Functions.ILike` com padrão escapado precisa do terceiro argumento (`@""`): sem ele o Npgsql usa
+  `ESCAPE ''` (`PostgresListingScoreRepository.ListForTriageAsync`).
+- Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
+  todas as cópias (`TriageRow.AllIds`).
 - Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
   antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
 - `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no
