@@ -47,11 +47,13 @@ finally { Pop-Location }
 # Real profiles live next to the binary and are not versioned.
 $profiles = Join-Path $repo 'src\JobRadar.Worker\appsettings.Local.json'
 if (Test-Path $profiles) { Copy-Item $profiles (Join-Path $staging 'worker') -Force }
-else { Write-Warning "No $profiles: the worker will start with no profiles and collect nothing." }
+else { Write-Warning "No ${profiles}: the worker will start with no profiles and collect nothing." }
 
 # The site listens on localhost and on the Tailscale address; Host headers are limited to those names.
-$tailscaleIp = (& tailscale ip -4 2>$null | Select-Object -First 1)
+# In Windows PowerShell 5.1 a native command writing to stderr under 'Stop' throws: keep it local.
+$tailscaleIp = $null
 $dnsName = $null
+try { $tailscaleIp = (& tailscale ip -4 2>$null | Select-Object -First 1) } catch { Write-Warning 'Tailscale not available: the site will listen on localhost only.' }
 try { $dnsName = ((& tailscale status --json 2>$null | ConvertFrom-Json).Self.DNSName).TrimEnd('.') } catch { }
 $urls = @("http://localhost:$WebPort")
 $hosts = @('localhost')
@@ -82,12 +84,12 @@ if ($LASTEXITCODE) { throw 'Migrations failed: is the database up (docker compos
 Write-Host '== Installing services' -ForegroundColor Cyan
 foreach ($s in $services) {
     $exe = '"' + (Join-Path (Join-Path $Target $s.Dir) $s.Exe) + '"'
-    if (Get-Service $s.Name -ErrorAction SilentlyContinue) {
-        sc.exe config $s.Name binPath= $exe start= delayed-auto | Out-Null
+    if (-not (Get-Service $s.Name -ErrorAction SilentlyContinue)) {
+        # Works in Windows PowerShell 5.1 too (AutomaticDelayedStart only exists from PowerShell 6).
+        New-Service -Name $s.Name -BinaryPathName $exe -DisplayName $s.Display -Description $s.Description -StartupType Automatic | Out-Null
     }
-    else {
-        New-Service -Name $s.Name -BinaryPathName $exe -DisplayName $s.Display -Description $s.Description -StartupType AutomaticDelayedStart | Out-Null
-    }
+    sc.exe config $s.Name binPath= $exe start= delayed-auto | Out-Null
+    if ($LASTEXITCODE) { throw "Configuring service $($s.Name) failed (sc.exe $LASTEXITCODE)." }
     # Restart after 1 min, 1 min, then 5 min; the failure count resets after a day.
     sc.exe failure $s.Name reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
     # Configuration the service needs, kept in its registry key instead of files.
