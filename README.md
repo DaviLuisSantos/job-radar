@@ -89,6 +89,13 @@ dotnet run --project src/JobRadar.Worker -- market-report 2026-10 raio-x_2026-10
 
 The report holds aggregates only: counts, shares, salary medians. Never an individual listing.
 
+## Production
+
+It runs on the author's Windows PC as two Windows services (worker and site), with Postgres in
+Docker. The worker waits for the database at boot and catches up on a run missed while the
+machine was off; the site is reachable on localhost and over Tailscale only. One script publishes,
+migrates and installs everything: see [docs/producao.md](docs/producao.md) (Portuguese).
+
 ## Tests
 
 ```bash

@@ -202,6 +202,15 @@ details summary .score { width: 2rem; height: 2rem; font-size: .85rem; }
 .row.disagreement { grid-template-columns: auto minmax(0, 1fr); }
 .why { margin: .4rem 0 0; padding-left: 1rem; color: var(--muted); font-size: .88rem; }
 
+/* Status */
+.status-summary dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
+.status-summary dt { color: var(--muted); }
+.status-summary dd { margin: 0; }
+.grid tr.warn td { background: var(--warn-soft); }
+.chip.snapshot-ok { background: var(--good-soft); color: var(--good); }
+.chip.snapshot-partial { background: var(--warn-soft); color: var(--warn); }
+.chip.snapshot-suspect { background: var(--bad-soft); color: var(--bad); }
+
 /* Small screens */
 @media (max-width: 760px) {
     .row { grid-template-columns: auto minmax(0, 1fr); }

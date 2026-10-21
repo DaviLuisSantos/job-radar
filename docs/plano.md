@@ -17,19 +17,24 @@
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
-| 9 | **Importação do histórico** do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 próxima |
-| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
+| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏸ adiada (ver pendências) |
+| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 implantação pronta; falta instalar (autor, como admin) e acompanhar a 1ª passada |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 9:** o banco local do protótipo (`job-tracker/data/jobs.db`) **não tem nenhum retrato do Raio-X**
-  (`market_runs` vazio): o recurso chegou no último pull e nunca rodou nesta máquina. Se existe histórico
-  real, ele está em outro banco/máquina; é preciso saber onde antes de importar.
+- **Etapa 9 (adiada, 2026-10-21):** o `jobs.db` desta máquina só tem 5.388 vagas de 1–2/jun, sem rótulos,
+  candidaturas ou Raio-X. O histórico real está em outra máquina do autor, que vai fazer a importação lá.
+  Falta construir o **comando de importação** (`import-prototype <jobs.db>`): vagas, `job_labels` → rótulos,
+  `status`/`notes` → candidaturas (o "rejected" do protótipo precisa de decisão: Dismissed ou Declined),
+  `market_runs`/`market_counts`/`market_listings` → Raio-X. Sem ele, o histórico fica de fora.
 - **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
-- **Etapa 10:** o site de triagem não tem login; hoje só escuta em `localhost:5380`. Antes de publicar em
-  qualquer servidor, entra autenticação (ao menos um usuário, cookie). Porta 5380 porque a 5080 é de outro
-  serviço do autor nesta máquina (Servidor de Câmeras).
+- **Etapa 10 (para fechar):** rodar `deploy\deploy.ps1` como administrador; acompanhar a 1ª passada completa
+  pela página de status (buscas incompletas = dividir na configuração; termos incompletos na carga de 31
+  dias, ver abaixo); decidir se o backup entra no Agendador de Tarefas; desligar o protótipo na outra máquina.
+- **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
+  firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
+  5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
 - **README/portfólio:** falta um print da triagem, gerado com dados fictícios (prints reais mostram anúncios
   reais, que não se republicam).
 - **Etapa 10 (carga inicial):** na 1ª busca (31 dias), 4 termos passam de 500 mesmo por estado
@@ -52,6 +57,19 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 10 (implantação pronta)
+Decisões: produção **no PC do autor** (Windows); site **só local + Tailscale**, sem login no app.
+Worker e site viram serviços do Windows (`AddWindowsService`; nomes `JobRadarWorker`/`JobRadarWeb`).
+O Worker espera o banco (Docker Desktop sobe no login) e roda a passada perdida se o PC estava desligado
+na hora agendada (`DailySchedule.Missed`). Página `/status` no site: próxima execução, passadas por dia
+(no fuso de Perth), falhas, incompletas e os retratos do Raio-X. `deploy/deploy.ps1` (admin): publica,
+gera o pacote de migrations, para, copia para `C:\JobRadar`, migra, cria/atualiza os serviços (início
+atrasado, reinício em falha, ambiente e conexão no registro do serviço), firewall só para a Tailscale.
+`deploy/backup.ps1`: `pg_dump` com retenção de 30. Manual em `docs/producao.md`. 273 testes.
+Validado sem admin: publicação dos dois projetos, pacote de migrations aplicado ao banco local, Worker
+publicado rodando a partir de `System32` (como serviço roda) em Production, site publicado em Production
+com `/status` mostrando os dados reais, sem erros no console.
 
 ### 2026-10-21 — Etapa 8 ✅
 Raio-X como contexto à parte. Capacidade opcional `IMarketSource` (Seek: `SeekMarketSource`, por

@@ -31,7 +31,10 @@ internal sealed class DailyPipelineJob(
         }
         log.LogInformation("{Profiles} profiles, {Searches} distinct searches", catalog.Profiles.Count, catalog.Searches.Count);
 
-        if (o.RunOnStartup)
+        if (!await WaitForStorageAsync(stoppingToken))
+            return;
+
+        if (o.RunOnStartup || await MissedLastRunAsync(o, zone, stoppingToken))
             await RunAsync(zone, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -49,6 +52,37 @@ internal sealed class DailyPipelineJob(
         await StageAsync("Full-text terms", sp => sp.GetRequiredService<FullTextTermService>().TagAsync(ct), ct);
         await StageAsync("Scoring", sp => sp.GetRequiredService<ListingScoringService>().ScoreAllAsync(zone, ct), ct);
         await StageAsync("Market snapshot", sp => sp.GetRequiredService<MarketSnapshotService>().TakeAsync(Today(zone), ct), ct);
+    }
+
+    /// <summary>
+    /// The database may come up after the service (Docker Desktop starts at login). Waits with a
+    /// growing pause; gives up only when the worker stops.
+    /// </summary>
+    private async Task<bool> WaitForStorageAsync(CancellationToken ct)
+    {
+        var pause = TimeSpan.FromSeconds(5);
+        while (!ct.IsCancellationRequested)
+        {
+            await using (var scope = scopes.CreateAsyncScope())
+            {
+                if (await scope.ServiceProvider.GetRequiredService<JobRadar.Application.Abstractions.IStorageHealth>().CanConnectAsync(ct))
+                    return true;
+            }
+            log.LogWarning("Database not reachable yet; retrying in {Pause}", pause);
+            await Task.Delay(pause, time, ct);
+            pause = TimeSpan.FromSeconds(Math.Min(pause.TotalSeconds * 2, 120));
+        }
+        return false;
+    }
+
+    private async Task<bool> MissedLastRunAsync(CollectionOptions o, TimeZoneInfo zone, CancellationToken ct)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var last = await scope.ServiceProvider.GetRequiredService<JobRadar.Application.Abstractions.ICollectionRunRepository>().GetLastStartAsync(ct);
+        var missed = DailySchedule.Missed(last, time.GetUtcNow(), o.DailyAt, zone);
+        if (missed)
+            log.LogInformation("Last scheduled run was missed (last start {Last}); running now", last);
+        return missed;
     }
 
     private DateOnly Today(TimeZoneInfo zone) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), zone).DateTime);

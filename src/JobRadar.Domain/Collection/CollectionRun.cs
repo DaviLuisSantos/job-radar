@@ -21,5 +21,8 @@ public sealed record CollectionRun(
     public bool Succeeded => Error is null;
 }
 
+/// <summary>Runs of one local day, for the status page: searches and full-text terms together.</summary>
+public sealed record DailyRunSummary(DateOnly Day, int Runs, int Failed, int Incomplete, int Found, int New, DateTimeOffset LastFinished);
+
 /// <summary>Totals of one collection pass over every configured search and source.</summary>
 public sealed record CollectionSummary(int Runs, int Failed, int Incomplete, int Found, int New);

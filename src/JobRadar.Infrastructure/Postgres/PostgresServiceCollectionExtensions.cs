@@ -31,6 +31,7 @@ public static class PostgresServiceCollectionExtensions
         services.AddScoped<IListingTermRepository, PostgresListingTermRepository>();
         services.AddScoped<ITrackingRepository, PostgresTrackingRepository>();
         services.AddScoped<IMarketRepository, PostgresMarketRepository>();
+        services.AddScoped<IStorageHealth, PostgresStorageHealth>();
         return services;
     }
 }

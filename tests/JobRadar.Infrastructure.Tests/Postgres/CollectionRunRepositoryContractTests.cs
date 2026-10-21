@@ -47,6 +47,39 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
     }
 
     [DatabaseFact]
+    public async Task Last_start_is_the_latest_of_anything_run()
+    {
+        await db.ResetAsync();
+        await using (var empty = db.NewContext())
+            Assert.Null(await new PostgresCollectionRunRepository(empty).GetLastStartAsync(Ct));
+
+        await RecordAsync(Run(Monday));
+        await RecordAsync(Run(Monday.AddDays(1), key: "term: backpackers", error: "boom"));
+
+        await using var ctx = db.NewContext();
+        Assert.Equal(Monday.AddDays(1), await new PostgresCollectionRunRepository(ctx).GetLastStartAsync(Ct));
+    }
+
+    [DatabaseFact]
+    public async Task Days_are_summarised_in_the_schedule_time_zone()
+    {
+        await db.ResetAsync();
+        var perth = TimeZoneInfo.FindSystemTimeZoneById("Australia/Perth");
+        var today = DateTimeOffset.UtcNow;
+        // 23:30 UTC is already the next day in Perth (UTC+8): both runs below are the same Perth day.
+        var evening = new DateTimeOffset(today.Year, today.Month, today.Day, 23, 30, 0, TimeSpan.Zero).AddDays(-2);
+        await RecordAsync(Run(evening));
+        await RecordAsync(Run(evening.AddHours(2), error: "429") with { Found = 0, New = 0 });
+        await RecordAsync(Run(evening.AddHours(3)) with { Complete = false });
+
+        await using var ctx = db.NewContext();
+        var day = Assert.Single(await new PostgresCollectionRunRepository(ctx).SummariseRecentDaysAsync(10, perth, Ct));
+
+        Assert.Equal(DateOnly.FromDateTime(evening.AddDays(1).UtcDateTime), day.Day);
+        Assert.Equal((3, 1, 1, 20, 6), (day.Runs, day.Failed, day.Incomplete, day.Found, day.New));
+    }
+
+    [DatabaseFact]
     public async Task Runs_are_stored_as_they_happened()
     {
         await db.ResetAsync();

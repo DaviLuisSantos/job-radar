@@ -1,6 +1,7 @@
 using JobRadar.Application.Collection;
 using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
+using JobRadar.Application.Operations;
 using JobRadar.Application.Tracking;
 using JobRadar.Application.Triage;
 using JobRadar.Domain.Matching;
@@ -39,6 +40,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<MarketOptions>, MarketDefaults>();
         services.AddScoped<MarketSnapshotService>();
         services.AddScoped<MarketReportService>();
+        services.AddScoped<StatusService>();
         return services;
     }
 }

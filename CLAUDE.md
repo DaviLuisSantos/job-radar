@@ -6,6 +6,8 @@ explica o score, acompanha candidaturas) e **Raio-X** (público: só números ag
 da newsletter Raio-X WHV em português). Reescrita em .NET de um protótipo Python
 (`D:\Desenvolvimento\job-tracker`), que é a especificação das regras de negócio.
 
+Produção (onde roda, instalar, atualizar, logs, backup): [docs/producao.md](docs/producao.md).
+
 Escopo, públicos, não-objetivos e fases: [docs/visao.md](docs/visao.md). Fontes de vagas: [docs/fontes.md](docs/fontes.md).
 
 **Onde estamos e o que vem a seguir: [docs/plano.md](docs/plano.md).** Ao fechar uma etapa, atualize o
@@ -155,7 +157,10 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   poderia ser lido como chave=valor.
 - Web: componente interativo chama serviço **só** por `Backend.RunAsync` (um escopo, e um `DbContext`, por
   operação). Injetar `TriageService` direto no componente prende um `DbContext` à aba inteira.
-- Web sem login: escuta só em `localhost:5380` (`appsettings.json`). A 5080 é de outro serviço local do autor.
+- Web sem login: escuta em `localhost:5380` e, em produção, no IP da Tailscale (`appsettings.Local.json` gerado
+  por `deploy/deploy.ps1`; firewall só `100.64.0.0/10`). A 5080 é de outro serviço local do autor.
+- Serviço do Windows inicia antes do Docker Desktop (que sobe no login): o `DailyPipelineJob` espera o banco
+  (`IStorageHealth`) e recupera a passada perdida. Não remova a espera achando que é lentidão.
 - `EF.Functions.ILike` com padrão escapado precisa do terceiro argumento (`@""`): sem ele o Npgsql usa
   `ESCAPE ''` (`PostgresListingScoreRepository.ListForTriageAsync`).
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a

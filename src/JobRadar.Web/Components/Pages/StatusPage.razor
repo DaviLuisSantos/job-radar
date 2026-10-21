@@ -1,0 +1,104 @@
+@page "/status"
+@using JobRadar.Application.Operations
+@using JobRadar.Domain.Market
+@inject Backend Backend
+
+<PageTitle>Status · JobRadar AU</PageTitle>
+
+<div class="page-head">
+    <h1>Pipeline status</h1>
+    <p class="muted">Collection, full-text terms, scoring and the market snapshot run once a day.</p>
+</div>
+
+@if (_status is { } s)
+{
+    <section class="panel status-summary">
+        @if (s.LastRunMissed)
+        {
+            <p class="alert" role="alert">The last scheduled run did not start. The worker runs it as soon as it is back up.</p>
+        }
+        <dl>
+            <dt>Next run</dt>
+            <dd>@s.NextRun.ToString("ddd d MMM, HH:mm") (schedule time zone) · @Wording.When(s.NextRun) here</dd>
+            <dt>Last start</dt>
+            <dd>@(s.LastStart is { } last ? Wording.When(last) : "never")</dd>
+        </dl>
+    </section>
+
+    <h2>Collection, by day</h2>
+    @if (s.Days.Count == 0)
+    {
+        <p class="muted">No runs yet.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th class="num">Runs</th>
+                    <th class="num" title="Searches or terms that raised an error">Failed</th>
+                    <th class="num" title="Stopped at the source cap: more listings exist">Incomplete</th>
+                    <th class="num">Found</th>
+                    <th class="num">New</th>
+                    <th>Finished</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in s.Days)
+                {
+                    <tr class="@(d.Failed > 0 ? "warn" : "")">
+                        <td>@d.Day.ToString("ddd d MMM")</td>
+                        <td class="num">@d.Runs</td>
+                        <td class="num">@d.Failed</td>
+                        <td class="num">@d.Incomplete</td>
+                        <td class="num">@d.Found.ToString("N0")</td>
+                        <td class="num">@d.New.ToString("N0")</td>
+                        <td>@Wording.When(d.LastFinished)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h2>Market snapshots</h2>
+    @if (s.Snapshots.Count == 0)
+    {
+        <p class="muted">No snapshot yet.</p>
+    }
+    else
+    {
+        <ul class="rows">
+            @foreach (var snap in s.Snapshots)
+            {
+                <li class="row disagreement">
+                    <span class="chip snapshot-@snap.Status.ToString().ToLowerInvariant()">@snap.Status</span>
+                    <div class="what">
+                        <span class="title">@snap.Date.ToString("ddd d MMM yyyy")</span>
+                        <div class="meta"><span>@snap.Saved / @snap.Expected counts</span><span>@snap.Listings listings</span></div>
+                        @if (snap.Issues.Count > 0)
+                        {
+                            <ul class="why">
+                                @foreach (var issue in snap.Issues)
+                                {
+                                    <li>@issue</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+}
+else
+{
+    <p class="muted">Loading…</p>
+}
+
+@code {
+    private PipelineStatus? _status;
+
+    protected override async Task OnInitializedAsync() =>
+        _status = await Backend.RunAsync<StatusService, PipelineStatus>(s => s.GetAsync());
+}

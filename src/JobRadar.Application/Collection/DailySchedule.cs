@@ -22,4 +22,21 @@ public static class DailySchedule
 
         throw new InvalidOperationException("Unreachable: a daily time always recurs within two days.");
     }
+
+    /// <summary>The latest occurrence at or before <paramref name="now"/>, as UTC.</summary>
+    public static DateTimeOffset LastAtOrBefore(DateTimeOffset now, TimeOnly at, TimeZoneInfo zone)
+    {
+        // The next occurrence after (now − 2 days) walks forward to the one just before now.
+        var candidate = NextAfter(now.AddDays(-2), at, zone);
+        while (NextAfter(candidate, at, zone) is var next && next <= now)
+            candidate = next;
+        return candidate;
+    }
+
+    /// <summary>
+    /// True when the last scheduled run was missed: nothing started since it. On a PC that was off
+    /// (or asleep) at the scheduled time, the pass runs as soon as the worker is back.
+    /// </summary>
+    public static bool Missed(DateTimeOffset? lastStart, DateTimeOffset now, TimeOnly at, TimeZoneInfo zone) =>
+        lastStart is not { } last || last < LastAtOrBefore(now, at, zone);
 }

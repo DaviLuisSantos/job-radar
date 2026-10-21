@@ -16,6 +16,8 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, relo
 // Environment and command line keep the last word, as in the default host.
 builder.Configuration.AddEnvironmentVariables().AddCommandLine(hostArgs);
 builder.Services.AddJobRadar(builder.Configuration);
+// No-op unless started by the Service Control Manager; then logs also go to the Event Log.
+builder.Services.AddWindowsService(o => o.ServiceName = "JobRadarWorker");
 
 var host = builder.Build();
 if (isCommand)

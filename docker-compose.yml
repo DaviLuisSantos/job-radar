@@ -2,6 +2,8 @@
 services:
   postgres:
     image: postgres:18
+    # Comes back with Docker Desktop (at login): the worker waits for it.
+    restart: unless-stopped
     environment:
       POSTGRES_DB: jobradar
       POSTGRES_USER: jobradar

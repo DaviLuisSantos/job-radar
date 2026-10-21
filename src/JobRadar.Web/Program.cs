@@ -6,7 +6,11 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     Args = args,
     ContentRootPath = AppContext.BaseDirectory,
 });
+// Machine-specific settings (the Tailscale address to listen on) stay out of git.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddEnvironmentVariables().AddCommandLine(args);
 builder.Services.AddJobRadarWeb(builder.Configuration);
+builder.Services.AddWindowsService(o => o.ServiceName = "JobRadarWeb");
 
 var app = builder.Build();
 
