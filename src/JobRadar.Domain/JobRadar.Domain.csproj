@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Núcleo puro: nenhuma referência a EF, HTTP ou integração. -->
+
+</Project>

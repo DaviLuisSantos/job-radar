@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>dotnet-JobRadar.Worker-e5c8294a-753e-4e8e-9e95-e4e7b4b7a9c5</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobRadar.Application\JobRadar.Application.csproj" />
+    <ProjectReference Include="..\JobRadar.Infrastructure\JobRadar.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+</Project>
