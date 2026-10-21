@@ -20,4 +20,10 @@ public interface IListingRepository
 
     /// <summary>Every listing that any of these searches ever found.</summary>
     Task<IReadOnlyList<Listing>> ListFoundByAsync(IReadOnlyCollection<string> searchKeys, CancellationToken ct = default);
+
+    /// <summary>
+    /// Earliest posting date among the listings of <paramref name="source"/> first collected after
+    /// <paramref name="since"/>; null when there are none (or none has a date).
+    /// </summary>
+    Task<DateTimeOffset?> GetOldestPostedAmongFirstSeenSinceAsync(string source, DateTimeOffset since, CancellationToken ct = default);
 }

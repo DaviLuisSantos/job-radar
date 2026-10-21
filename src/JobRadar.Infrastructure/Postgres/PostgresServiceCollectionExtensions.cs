@@ -26,6 +26,7 @@ public static class PostgresServiceCollectionExtensions
         services.AddScoped<IListingRepository, PostgresListingRepository>();
         services.AddScoped<ICollectionRunRepository, PostgresCollectionRunRepository>();
         services.AddScoped<IListingScoreRepository, PostgresListingScoreRepository>();
+        services.AddScoped<IListingTermRepository, PostgresListingTermRepository>();
         return services;
     }
 }

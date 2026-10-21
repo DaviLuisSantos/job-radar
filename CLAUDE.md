@@ -83,8 +83,8 @@ src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar)
 
 ## Fluxo principal
 
-`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda duas etapas isoladas
-(uma falha não impede a outra):
+`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda três etapas isoladas
+(uma falha não impede a seguinte): coleta → termos do texto completo → score.
 
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
 1. para cada fonte e busca, calcula a janela incremental pelo último sucesso;
@@ -92,6 +92,12 @@ src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar)
 3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas, guarda o
    payload só quando o conteúdo mudou e registra que aquela busca achou a vaga (`listing_search_hits`);
 4. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
+
+**Termos** — `FullTextTermService.TagAsync`: cada frase de `ScoringPolicy.FullTextGroups` (17 hoje) é
+buscada na Austrália toda por cada fonte com a capacidade `IFullTextSearch` (o Seek tem: a busca dele cobre
+o anúncio inteiro). As vagas que já estão no banco ganham a marca em `listing_terms`. Cada termo é uma
+execução em `collection_runs` com chave `term: <frase>`. Janela: 31 dias na primeira vez; depois, dias desde o
+último sucesso + 2, alargada até a vaga mais antiga coletada desde então.
 
 **Score** — `ListingScoringService.ScoreAllAsync`: para cada perfil, pontua com `FitScorer` todas as
 vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma linha por vaga × perfil,
@@ -126,6 +132,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   execução e centenas de buscas acumulavam entidades rastreadas.
 - `appsettings.Local.json` é adicionado depois das fontes padrão; por isso o `Program.cs` reaplica variáveis
   de ambiente e linha de comando em seguida, para elas continuarem vencendo.
+- Termos: a busca do Seek não dá o contexto da frase ("no sponsorship" também contém "sponsorship"). Por isso os
+  pesos dos grupos são moderados e só o grupo `exclude` elimina. A divisão por estado quando passa de 500 é
+  peculiaridade do Seek e fica em `SeekFullTextSearch`, não no serviço.
 - Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
   antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
 - `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no

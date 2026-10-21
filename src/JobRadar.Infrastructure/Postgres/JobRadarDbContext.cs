@@ -16,6 +16,7 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<ListingSearchHitEntity> ListingSearchHits => Set<ListingSearchHitEntity>();
     public DbSet<CollectionRunEntity> CollectionRuns => Set<CollectionRunEntity>();
     public DbSet<ListingScoreEntity> ListingScores => Set<ListingScoreEntity>();
+    public DbSet<ListingTermEntity> ListingTerms => Set<ListingTermEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(JobRadarDbContext).Assembly);

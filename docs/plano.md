@@ -13,17 +13,19 @@
 | 3 | Coleta: serviço que roda as buscas configuradas, grava vagas + payload bruto, job agendado no Worker, log de execuções | ✅ 2026-10-21 |
 | 4a | Score: regras do protótipo portadas como domínio puro (`FitScorer`) com explicação tipada; `Listing.Summary`; paridade com o Python | ✅ 2026-10-21 |
 | 4b | Score em uso: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil, recalculado todo dia | ✅ 2026-10-21 |
-| 5 | **Termos do texto completo**: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | 🔨 próxima |
-| 6 | **Candidaturas e rótulos**: status, datas, notas; rótulos bom/ruim e calibragem do score | ⏳ |
+| 5 | Termos do texto completo: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ✅ 2026-10-21 |
+| 6 | **Candidaturas e rótulos**: status, datas, notas; rótulos bom/ruim e calibragem do score | 🔨 próxima |
 | 7 | **Triagem**: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ⏳ |
 | 8 | **Raio-X**: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ⏳ |
 | 9 | **Importação do histórico** do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ⏳ |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ⏳ |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 5:** o `FitScorer` já aplica os grupos de termos (`ScoringPolicy.FullTextGroups`), mas
-  nenhuma vaga tem termos ainda: `ScoringInput.From` recebe a lista vazia. A etapa coleta os termos
-  e os passa ao score.
+- **Etapa 10 (carga inicial):** na 1ª busca (31 dias), 4 termos passam de 500 mesmo por estado
+  ("australian citizen", "permanent resident", "full working rights", "full australian working
+  rights"); as vagas além do teto ficam sem a marca. Nas buscas diárias (~2 dias) não acontece.
+  Correção possível: para termo incompleto, buscar termo + palavra-chave de cada perfil (restringe às
+  vagas que o sistema coleta). `collection_runs` com `term:%` e `complete = false` mostra quais.
 - **Etapa 10:** com páginas completas, as 311 buscas dos 5 perfis fazem até ~1.500 requisições na
   1ª passada (a prova usou 1 página: 311). Depois, a janela incremental reduz muito.
 - **Etapa 6 (calibragem):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
@@ -39,6 +41,17 @@ Pendências conhecidas, com a etapa onde entram:
   mostra quais.
 
 ## Diário
+
+### 2026-10-21 — Etapa 5 ✅
+Capacidade opcional `IFullTextSearch` (fontes.md, regra 2); o Seek implementa em `SeekFullTextSearch`
+(frases entre aspas, "a + b" = as duas; Austrália toda e, passando de 500, estado por estado).
+`FullTextTermService` busca os 17 termos da política, marca em `listing_terms` só vagas já coletadas e
+registra cada termo em `collection_runs` (`term: <frase>`). Janela: 31 dias na 1ª; depois desde o
+último sucesso + 2, alargada até a vaga mais antiga coletada desde então. Pipeline: coleta → termos →
+score; o score recebe os termos de cada vaga. 161 testes.
+Prova real sobre as 6.154 vagas locais: 959 marcas em 16 termos (mais: "full australian working
+rights" 182, "HR licence" 171, "australian citizen" 140; "commission only" nenhuma). Eliminadas no
+tech: 134 → 143. 4 termos incompletos na carga de 31 dias (ver pendências).
 
 ### 2026-10-21 — Etapa 4b ✅
 Perfis em `Matching:Profiles` (`appsettings.Local.json`, fora do git; modelo versionado em

@@ -27,6 +27,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddSingleton(ScoringPolicy.Default);
         services.AddSingleton<ProfileCatalog>();
         services.AddScoped<ListingScoringService>();
+        services.AddScoped<FullTextTermService>();
         return services;
     }
 }

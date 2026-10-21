@@ -108,4 +108,12 @@ internal sealed class PostgresListingRepository(JobRadarDbContext db) : IListing
             .ToListAsync(ct);
         return rows.Select(r => ListingMapper.ToRecord(r).Listing).ToList();
     }
+
+    public Task<DateTimeOffset?> GetOldestPostedAmongFirstSeenSinceAsync(string source, DateTimeOffset since, CancellationToken ct = default)
+    {
+        var after = since.ToUniversalTime();
+        return db.Listings
+            .Where(l => l.Source == source && l.FirstSeenAt > after && l.PostedAt != null)
+            .MinAsync(l => l.PostedAt, ct);
+    }
 }

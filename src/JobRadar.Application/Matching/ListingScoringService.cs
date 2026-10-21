@@ -11,6 +11,7 @@ namespace JobRadar.Application.Matching;
 public sealed class ListingScoringService(
     ProfileCatalog catalog,
     IListingRepository listings,
+    IListingTermRepository terms,
     IListingScoreRepository scores,
     TimeProvider time,
     ILogger<ListingScoringService> log)
@@ -23,9 +24,11 @@ public sealed class ListingScoringService(
         foreach (var profile in catalog.Profiles)
         {
             var found = await listings.ListFoundByAsync(profile.SearchKeys, ct);
+            var termsById = await terms.GetTermsAsync(found.Select(l => l.Id).ToList(), ct);
             var scored = found
                 .Select(l => new ListingScore(
-                    l.Id, profile.Name, FitScorer.Score(ScoringInput.From(l), profile.Profile, catalog.Policy, today),
+                    l.Id, profile.Name,
+                    FitScorer.Score(ScoringInput.From(l, termsById.GetValueOrDefault(l.Id)), profile.Profile, catalog.Policy, today),
                     profile.RulesHash, now))
                 .ToList();
             await scores.SaveAsync(scored, ct);

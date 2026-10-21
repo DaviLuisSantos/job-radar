@@ -38,6 +38,7 @@ public static class SeekServiceCollectionExtensions
             });
 
         services.AddTransient<IJobSource, SeekJobSource>();
+        services.AddTransient<IFullTextSearch, SeekFullTextSearch>();
         return services;
     }
 }

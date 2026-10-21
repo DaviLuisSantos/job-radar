@@ -1,0 +1,26 @@
+namespace JobRadar.Domain.Matching;
+
+/// <summary>
+/// A phrase looked for in the full ad text. "a + b" means both phrases in the same ad, as in
+/// "12 months + working rights".
+/// </summary>
+public sealed record FullTextTerm(string Text)
+{
+    public IReadOnlyList<string> Phrases { get; } = Text
+        .Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>Stable identity of the term search, used as its run key.</summary>
+    public string RunKey => $"term: {Text.Trim().ToLowerInvariant()}";
+
+    /// <summary>Every distinct term of the policy's groups, in a stable order.</summary>
+    public static IReadOnlyList<FullTextTerm> AllOf(ScoringPolicy policy) => policy.FullTextGroups.Values
+        .SelectMany(t => t)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.Ordinal)
+        .Select(t => new FullTextTerm(t))
+        .ToList();
+}
+
+/// <summary>Ids, within one source, of the listings whose full text contains a term.</summary>
+/// <param name="Complete">False when the source capped the results and some may be missing.</param>
+public sealed record FullTextResult(IReadOnlySet<string> SourceIds, bool Complete);
