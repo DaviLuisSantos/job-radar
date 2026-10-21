@@ -66,6 +66,23 @@ sc.exe delete JobRadarWorker; sc.exe delete JobRadarWeb
 Remove-NetFirewallRule -Name JobRadarWebTailscale
 ```
 
+## Migrar para uma VM (depois)
+
+Decidido em 2026-10-21: fica no PC por enquanto. O ganho de uma VM é não depender do PC ligado e não
+deixar lacunas na série do Raio-X (dia perdido = buraco na newsletter). Pesquisa de outubro de 2026:
+
+| Opção | Resumo |
+|---|---|
+| Google Cloud e2-micro (Always Free) | 1 GB RAM, 30 GB disco, só regiões dos EUA; o IPv4 público custa ~US$ 3,65/mês e é necessário para acessar o Seek |
+| Oracle Ampere A1 | cota cortada para 2 OCPU / 12 GB em jun/2026; o autor já usa o limite (Sirene). Não dividir VM com a Sirene |
+| AWS | contas novas: créditos de US$ 100–200 por 6 meses; não é permanente |
+| Postgres gerenciado grátis (Neon, Supabase) | ~0,5 GB: o banco passa disso em meses |
+| VPS paga pequena (Hetzner e similares) | ~€ 4/mês, mais RAM, menos manutenção |
+
+Em VM Linux o empacotamento muda: imagens Docker do Worker e do site + `docker compose` (Postgres, Worker,
+site) + Tailscale, no lugar dos serviços do Windows. Domínio, testes e configuração não mudam. Leve o banco
+com `deploy/backup.ps1` → `pg_restore`.
+
 ## Desligar o protótipo Python
 
 Neste PC não há tarefa agendada do protótipo. Ele rodava em **outra máquina do autor** (Agendador de

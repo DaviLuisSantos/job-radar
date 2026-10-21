@@ -32,6 +32,7 @@ Pendências conhecidas, com a etapa onde entram:
 - **Etapa 10 (para fechar):** rodar `deploy\deploy.ps1` como administrador; acompanhar a 1ª passada completa
   pela página de status (buscas incompletas = dividir na configuração; termos incompletos na carga de 31
   dias, ver abaixo); decidir se o backup entra no Agendador de Tarefas; desligar o protótipo na outra máquina.
+- **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
