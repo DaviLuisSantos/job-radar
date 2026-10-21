@@ -59,6 +59,7 @@ public enum ScoreRule
 
     // Restrictions applied after compression
     FullTextCitizenship,
+    FullTextWhvWithResidency,
     FullTextAmbiguousRights,
     FullTextTwelveMonthRights,
     FullTextCommission,

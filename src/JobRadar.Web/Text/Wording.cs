@@ -32,6 +32,7 @@ public static class Wording
         ScoreRule.PreferredLocation => $"Preferred location: {item.Detail}",
         ScoreRule.Compression => "Compressed above 80 to keep the best in order",
         ScoreRule.FullTextCitizenship => $"Full ad mentions “{item.Detail}”",
+        ScoreRule.FullTextWhvWithResidency => $"Full ad mentions “{item.Detail.Replace(" + ", "” and “", StringComparison.Ordinal)}”: usually turning working holiday visas down",
         ScoreRule.FullTextAmbiguousRights => $"Full ad asks for “{item.Detail}” (may exclude visas)",
         ScoreRule.FullTextTwelveMonthRights => $"Full ad asks for “{item.Detail}”",
         ScoreRule.FullTextCommission => $"Full ad mentions “{item.Detail}”",

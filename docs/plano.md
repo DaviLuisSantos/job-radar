@@ -96,6 +96,19 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-21 — WHV citado para recusar (`RulesVersion` 2)
+Na triagem, o autor viu se repetir: anúncio pede cidadania/residência e cita WHV **para recusar**. A busca
+por frase não dá contexto, e "working holiday" no texto completo dava +15 e ainda **cancelava** a penalidade de
+cidadania (regra herdada do protótipo). Todas as 4 Driller's Offsider rotuladas como ruins tinham esse +15.
+Medição no Seek (31 dias, Austrália): "working holiday" 499 anúncios; com citizen(s) 40, resident(s) 46,
+residency 19, citizenship 16 (o Seek trata citizen/citizens e resident/residents igual, mas não citizenship
+nem residency). Regra nova: grupo `whv_residency` com 4 termos compostos ("working holiday + citizen" etc.;
+21 termos no total). Com ele, a menção a WHV no texto completo não dá bônus nem cancela penalidades, e o
+anúncio leva −55, só uma vez se a penalidade de cidadania também se aplicar. O texto da própria vaga
+(título/resumo) ainda vale como boas-vindas: esse foi lido, não buscado. Custo aceito: "citizens, PR or
+WHV welcome" no corpo do anúncio também cai; os rótulos dirão se isso pesa. Paridade com o protótipo mantida
+(o grupo não existe lá).
+
 ### 2026-10-21 — Rotular rápido e sem viés
 Ponto de partida medido: **0 rótulos e 0 candidaturas** em 15.575 vagas; o fifo tinha 835 vagas com 70+,
 sinal de que o score não separa o topo. A triagem já tinha Good/Bad por linha; entrou:

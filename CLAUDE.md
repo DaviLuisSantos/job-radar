@@ -101,7 +101,7 @@ src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRad
    payload só quando o conteúdo mudou e registra que aquela busca achou a vaga (`listing_search_hits`);
 4. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
 
-**Termos** — `FullTextTermService.TagAsync`: cada frase de `ScoringPolicy.FullTextGroups` (17 hoje) é
+**Termos** — `FullTextTermService.TagAsync`: cada frase de `ScoringPolicy.FullTextGroups` (21 hoje) é
 buscada na Austrália toda por cada fonte com a capacidade `IFullTextSearch` (o Seek tem: a busca dele cobre
 o anúncio inteiro). As vagas que já estão no banco ganham a marca em `listing_terms`. Cada termo é uma
 execução em `collection_runs` com chave `term: <frase>`. Janela: 31 dias na primeira vez; depois, dias desde o

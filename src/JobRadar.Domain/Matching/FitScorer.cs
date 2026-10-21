@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 1;
+    public const int RulesVersion = 2;
 
     private const int ExclusionPoints = -50;
 
@@ -120,11 +120,15 @@ public static class FitScorer
             }
         }
 
+        // The full-text search gives no context: next to citizenship or residency, a working holiday
+        // mention is mostly a refusal. The listing's own text still counts: it was read, not searched.
         var whvLocal = WorkingHolidayFriendly.Match(full);
-        var whv = whvLocal.Success || groups.ContainsKey(FullTextGroup.Whv);
+        var whvDoubtful = groups.ContainsKey(FullTextGroup.WhvWithResidency);
+        var whvHits = whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Whv);
+        var whv = whvLocal.Success || whvHits is not null;
         if (whvLocal.Success)
             Add(ScoreRule.WorkingHolidayFriendly, whvLocal.Value, ScoreWhere.Text, 15);
-        else if (groups.TryGetValue(FullTextGroup.Whv, out var whvHits))
+        else if (whvHits is not null)
             Add(ScoreRule.WorkingHolidayFriendly, whvHits[0], ScoreWhere.FullText, 15);
 
         // Contract, temp and casual fit the six months per employer.
@@ -147,7 +151,10 @@ public static class FitScorer
         {
             if (!groups.TryGetValue(group, out var hits))
                 continue;
-            if (whv && group is FullTextGroup.Citizen or FullTextGroup.Rights12Months)
+            if (whv && group is FullTextGroup.Citizen or FullTextGroup.Rights12Months or FullTextGroup.WhvWithResidency)
+                continue;
+            // Same reason, counted once.
+            if (group == FullTextGroup.WhvWithResidency && groups.ContainsKey(FullTextGroup.Citizen))
                 continue;
             Add(rule, hits[0], ScoreWhere.FullText, points);
         }
@@ -190,6 +197,7 @@ public static class FitScorer
     private static readonly (string Group, ScoreRule Rule, int Points)[] FullTextRestrictions =
     [
         (FullTextGroup.Citizen, ScoreRule.FullTextCitizenship, -55),
+        (FullTextGroup.WhvWithResidency, ScoreRule.FullTextWhvWithResidency, -55),
         (FullTextGroup.Ambiguous, ScoreRule.FullTextAmbiguousRights, -10),
         (FullTextGroup.Rights12Months, ScoreRule.FullTextTwelveMonthRights, -40),
         (FullTextGroup.Commission, ScoreRule.FullTextCommission, -30),

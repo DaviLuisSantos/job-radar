@@ -57,8 +57,15 @@ public static class FullTextGroup
     public const string Citizen = "citizen";
     /// <summary>−10: "full working rights" may or may not include a WHV.</summary>
     public const string Ambiguous = "ambiguous";
-    /// <summary>+15.</summary>
+    /// <summary>+15, unless the same ad also names citizenship or residency (<see cref="WhvWithResidency"/>).</summary>
     public const string Whv = "whv";
+    /// <summary>
+    /// −55: working holidays and citizenship or residency in the same ad. In practice that is mostly
+    /// turning working holiday visas down ("citizens or PR only, no WHV"), so the mention neither
+    /// earns the WHV bonus nor cancels the citizenship penalties. Seek matches citizen/citizens and
+    /// resident/residents alike, but not citizenship or residency: those are terms of their own.
+    /// </summary>
+    public const string WhvWithResidency = "whv_residency";
     /// <summary>−30.</summary>
     public const string Commission = "commission";
     /// <summary>−20 (truck licence).</summary>
@@ -78,6 +85,11 @@ public static class FullTextGroup
             [Citizen] = ["australian citizen", "permanent resident"],
             [Ambiguous] = ["full working rights", "full australian working rights"],
             [Whv] = ["working holiday", "backpackers", "88 days"],
+            [WhvWithResidency] =
+            [
+                "working holiday + citizen", "working holiday + citizenship",
+                "working holiday + resident", "working holiday + residency",
+            ],
             [Commission] = ["commission only"],
             [Licence] = ["HR licence", "heavy rigid"],
             [Rights12Months] = ["12 months + working rights"],

@@ -42,14 +42,16 @@ public class FullTextTermServiceTests
     }
 
     [Fact]
-    public async Task The_default_policy_has_every_prototype_term_once()
+    public async Task The_default_policy_has_every_term_once()
     {
         var seek = new FakeFullTextSearch("seek");
 
         await Service(seek, ScoringPolicy.Default).TagAsync(Ct);
 
-        Assert.Equal(17, seek.Received.Count);   // 6 exclude + 2 citizen + 2 ambiguous + 3 whv + 1 + 2 + 1
+        // The prototype's 17 (6 exclude + 2 citizen + 2 ambiguous + 3 whv + 1 + 2 + 1) and 4 whv + residency.
+        Assert.Equal(21, seek.Received.Count);
         Assert.Contains(seek.Received, r => r.Term == "12 months + working rights");
+        Assert.Contains(seek.Received, r => r.Term == "working holiday + residency");
     }
 
     [Fact]

@@ -256,6 +256,36 @@ public class FitScorerTests
     }
 
     [Fact]
+    public void Working_holiday_next_to_citizenship_or_residency_is_a_refusal_not_a_welcome()
+    {
+        var score = Score(Job("Barista", fullText: ["working holiday", "working holiday + residency", "12 months + working rights"]));
+
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.WorkingHolidayFriendly);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextWhvWithResidency).Points);
+        Assert.Equal(-40, Item(score, ScoreRule.FullTextTwelveMonthRights).Points);
+    }
+
+    [Fact]
+    public void Working_holiday_with_citizenship_is_penalised_once()
+    {
+        var score = Score(Job("Barista", fullText: ["australian citizen", "working holiday", "working holiday + citizen"]));
+
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextCitizenship).Points);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextWhvWithResidency);
+        Assert.Equal(1, score.Final);   // 50 − 55, floored
+    }
+
+    [Fact]
+    public void A_welcome_in_the_listing_own_text_still_wins_over_the_doubtful_full_text()
+    {
+        var score = Score(Job("Barista", "Backpackers welcome", fullText: ["working holiday", "working holiday + citizen"]));
+
+        Assert.Equal(ScoreWhere.Text, Item(score, ScoreRule.WorkingHolidayFriendly).Where);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextWhvWithResidency);
+        Assert.Equal(65, score.Final);
+    }
+
+    [Fact]
     public void Commission_and_truck_licence_count_once_whether_local_or_full_text()
     {
         Assert.Equal(-30, Item(Score(Job("Sales", "Commission only role")), ScoreRule.CommissionOnly).Points);
