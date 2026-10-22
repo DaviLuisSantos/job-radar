@@ -18,7 +18,7 @@
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
 | 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 comando pronto 2026-10-21; falta rodar com o `jobs.db` da outra máquina |
-| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 instalado 2026-10-21; falta acompanhar a 1ª passada completa |
+| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 instalado 2026-10-21; 1ª passada agendada acompanhada 2026-10-22 (ok); falta desligar o protótipo na outra máquina |
 
 Pendências conhecidas, com a etapa onde entram:
 - **Etapa 9 (para fechar):** trazer o `jobs.db` da outra máquina e rodar `import-prototype` aqui (o banco de
@@ -27,20 +27,20 @@ Pendências conhecidas, com a etapa onde entram:
 - **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
-- **Etapa 10 (para fechar):** acompanhar a 1ª passada completa
-  pela página de status (buscas incompletas = dividir na configuração; termos incompletos na carga de 31
-  dias, ver abaixo); desligar o protótipo na outra máquina. (Backup agendado diariamente às 23:00 desde 2026-10-21.)
+- **Etapa 10 (para fechar):** desligar a tarefa do protótipo na outra máquina. A 1ª passada agendada foi
+  acompanhada em 2026-10-22 (ver Diário). Backup agendado diariamente às 23:00 desde 2026-10-21.
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
 - **README/portfólio:** falta um print da triagem, gerado com dados fictícios (prints reais mostram anúncios
   reais, que não se republicam).
-- **Etapa 10 (carga inicial):** na 1ª busca (31 dias), 4 termos passam de 500 mesmo por estado
+- **Termos de cidadania e direito de trabalho incompletos:** 4 termos passam de 500 mesmo por estado
   ("australian citizen", "permanent resident", "full working rights", "full australian working
-  rights"); as vagas além do teto ficam sem a marca. Nas buscas diárias (~2 dias) não acontece.
-  Correção possível: para termo incompleto, buscar termo + palavra-chave de cada perfil (restringe às
-  vagas que o sistema coleta). `collection_runs` com `term:%` e `complete = false` mostra quais.
+  rights"); as vagas além do teto ficam sem a marca. **Acontece também na passada diária** (visto em
+  2026-10-21 22:00 UTC): como a janela só avança com execução completa, eles buscam 31 dias todo dia.
+  Correção: o mesmo desenho dos requisitos (frase + palavra de contexto de cada perfil), que já cabe no teto.
+  `collection_runs` com `term:%` e `complete = false` mostra quais.
 - **Etapa 10:** com páginas completas, as buscas dos 5 perfis (256 desde 2026-10-21; eram 311) fazem até
   ~1.300 requisições numa passada sem janela. Depois, a janela incremental reduz muito.
 - **Acerto do score (decidido 2026-10-21, nesta ordem):** (1) rotular: meta de 50 julgadas por perfil, com
@@ -56,9 +56,9 @@ Pendências conhecidas, com a etapa onde entram:
 - **Etapa 8:** com a janela incremental, `last_seen_at` só se atualiza para vagas publicadas na
   janela; o sistema não percebe quando uma vaga antiga sai do ar. O Raio-X conta pela busca
   (`totalCount`), não por esta tabela.
-- **Etapa 10:** buscas amplas batem no teto de 500 (ex.: "hospitality @ perth" = 490 únicas,
-  incompleta). Dividir na configuração (por subclassificação ou região). O `collection_runs.complete`
-  mostra quais.
+- **Etapa 10:** buscas amplas batem no teto de 500. Desde que "All Australia" saiu dos perfis
+  (2026-10-21), nenhuma busca de vaga ficou incompleta; se voltar a acontecer, dividir na configuração (por
+  subclassificação ou região). O `collection_runs.complete` mostra quais.
 
 ## Depois da v1 (registrado 2026-10-21)
 
@@ -98,6 +98,14 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-22 — Etapa 10: 1ª passada agendada acompanhada
+A passada das 06:00 de Perth (2026-10-21 22:00 UTC, 19:00 em Brasília) rodou sozinha, pelo serviço, em
+cerca de 2 minutos: 256 buscas de vaga, 0 falhas, 0 cortadas no teto, 13 vagas novas; 136 termos, 0 falhas,
+4 incompletos (os de cidadania e direito de trabalho, pendência acima); score dos 5 perfis regravado às
+22:01; retrato do Raio-X `ok`. Nenhum aviso ou erro dos serviços no Event Log. Backup das 23:00 ok
+(`jobradar_2026-10-21_230000.dump`, 7,9 MB; tarefa com resultado 0). Para fechar a etapa falta só desligar
+o protótipo na outra máquina; depois, a etapa 9 (importar o `jobs.db` de lá).
 
 ### 2026-10-22 — Captura da descrição completa (v1.x, `RulesVersion` 6)
 O que os rótulos ainda não explicavam (Driller's Offsider de Swick e Ozijobs) está no corpo do anúncio.
