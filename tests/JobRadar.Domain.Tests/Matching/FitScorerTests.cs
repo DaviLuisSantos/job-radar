@@ -381,6 +381,24 @@ public class FitScorerTests
     }
 
     [Fact]
+    public void A_policy_term_found_with_a_context_word_counts_as_the_term()
+    {
+        var score = Score(Job("Barista", fullText: ["australian citizen + FIFO"]));
+
+        Assert.Equal("australian citizen", Item(score, ScoreRule.FullTextCitizenship).Detail);
+    }
+
+    [Fact]
+    public void A_composite_policy_term_is_never_read_as_another_term_plus_a_context_word()
+    {
+        // "working holiday + citizen" is its own term (a refusal), not "working holiday" found with "citizen".
+        var score = Score(Job("Barista", fullText: ["working holiday + citizen"]));
+
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.WorkingHolidayFriendly);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextWhvWithResidency).Points);
+    }
+
+    [Fact]
     public void A_leading_hand_is_not_an_entry_title()
     {
         var leading = Score(Job("FIFO Shift Electricians / Leading Hands"), Trades);
@@ -396,8 +414,9 @@ public class FitScorerTests
         var truck = Score(Job("Labourer", "HR licence required", fullText: ["HR licence + FIFO"]), FifoWithRequirements);
         var apprentice = Score(Job("Apprentice Labourer", fullText: ["cert III + FIFO"]), FifoWithRequirements);
 
-        Assert.Equal(-20, Item(truck, ScoreRule.TruckLicence).Points);
-        Assert.DoesNotContain(truck.Items, i => i.Rule == ScoreRule.FullTextLicence);
+        // One licence penalty, whichever rule carries it ("HR licence + FIFO" is also the policy's "HR licence").
+        var licence = Assert.Single(truck.Items, i => i.Rule is ScoreRule.TruckLicence or ScoreRule.FullTextTruckLicence or ScoreRule.FullTextLicence);
+        Assert.Equal(-20, licence.Points);
         Assert.DoesNotContain(apprentice.Items, i => i.Rule == ScoreRule.FullTextQualification);
     }
 

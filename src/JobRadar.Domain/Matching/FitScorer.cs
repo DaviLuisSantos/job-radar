@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 6;
+    public const int RulesVersion = 7;
 
     private const int ExclusionPoints = -50;
 
@@ -267,11 +267,24 @@ public static class FitScorer
         (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -20),
     ];
 
-    /// <summary>Groups with at least one phrase found, each with the phrases found, in policy order.</summary>
+    /// <summary>
+    /// Groups with at least one phrase found, each with the phrases found, in policy order. A term found
+    /// with a context word ("australian citizen + FIFO", see <see cref="ScoringPolicy.ContextGroups"/>)
+    /// counts as the term; a mark that is itself a policy term ("working holiday + citizen") is never
+    /// read as another term plus a context word.
+    /// </summary>
     private static Dictionary<string, List<string>> FullTextHits(
         IReadOnlyCollection<string> found, IReadOnlyDictionary<string, IReadOnlyList<string>> groups)
     {
-        var lower = found.Select(t => t.ToLowerInvariant()).ToHashSet(StringComparer.Ordinal);
+        var policyTerms = groups.Values.SelectMany(t => t).Select(t => t.ToLowerInvariant()).ToHashSet(StringComparer.Ordinal);
+        var lower = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var term in found.Select(t => t.ToLowerInvariant()))
+        {
+            lower.Add(term);
+            var cut = term.LastIndexOf(" + ", StringComparison.Ordinal);
+            if (cut > 0 && !policyTerms.Contains(term))
+                lower.Add(term[..cut]);
+        }
         return groups
             .Select(g => (g.Key, Hits: g.Value.Where(t => lower.Contains(t.ToLowerInvariant())).ToList()))
             .Where(g => g.Hits.Count > 0)

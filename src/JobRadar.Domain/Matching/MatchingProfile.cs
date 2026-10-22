@@ -55,6 +55,13 @@ public sealed record ScoringPolicy
     /// </summary>
     public IReadOnlyDictionary<string, IReadOnlyList<string>> FullTextGroups { get; init; } = FullTextGroup.Defaults;
 
+    /// <summary>
+    /// Groups whose phrases pass the 500-result cap even state by state ("australian citizen" is in
+    /// ~2,400 ads a month): also searched with each profile's context words ("australian citizen + FIFO"),
+    /// which stays under it. The phrase alone is still searched, for profiles without context words.
+    /// </summary>
+    public IReadOnlyList<string> ContextGroups { get; init; } = [FullTextGroup.Citizen, FullTextGroup.Ambiguous];
+
     public static ScoringPolicy Default { get; } = new();
 }
 

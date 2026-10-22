@@ -12,14 +12,26 @@ public sealed record FullTextTerm(string Text)
     /// <summary>Stable identity of the term search, used as its run key.</summary>
     public string RunKey => $"term: {Text.Trim().ToLowerInvariant()}";
 
-    /// <summary>Every distinct term of the policy's groups and of the profiles' requirements, in a stable order.</summary>
-    public static IReadOnlyList<FullTextTerm> AllOf(ScoringPolicy policy, IEnumerable<MatchingProfile>? profiles = null) => policy.FullTextGroups.Values
-        .SelectMany(t => t)
-        .Concat((profiles ?? []).SelectMany(p => p.Requirements.Terms().Select(r => r.Term)))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .Order(StringComparer.Ordinal)
-        .Select(t => new FullTextTerm(t))
-        .ToList();
+    /// <summary>
+    /// Every distinct term of the policy's groups (those of <see cref="ScoringPolicy.ContextGroups"/> also
+    /// with each profile context word) and of the profiles' requirements, in a stable order.
+    /// </summary>
+    public static IReadOnlyList<FullTextTerm> AllOf(ScoringPolicy policy, IEnumerable<MatchingProfile>? profiles = null)
+    {
+        var all = (profiles ?? []).ToList();
+        var contexts = all.SelectMany(p => p.Requirements.Contexts).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var narrowed = policy.ContextGroups
+            .SelectMany(g => policy.FullTextGroups.GetValueOrDefault(g) ?? [])
+            .SelectMany(term => contexts.Select(c => $"{term} + {c}"));
+        return policy.FullTextGroups.Values
+            .SelectMany(t => t)
+            .Concat(narrowed)
+            .Concat(all.SelectMany(p => p.Requirements.Terms().Select(r => r.Term)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .Select(t => new FullTextTerm(t))
+            .ToList();
+    }
 }
 
 /// <summary>Ids, within one source, of the listings whose full text contains a term.</summary>

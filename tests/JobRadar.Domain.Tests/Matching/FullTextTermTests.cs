@@ -31,4 +31,24 @@ public class FullTextTermTests
 
         Assert.Equal(["backpackers", "working holiday"], FullTextTerm.AllOf(policy).Select(t => t.Text));
     }
+
+    [Fact]
+    public void Terms_of_the_context_groups_are_also_searched_with_each_profile_context_word()
+    {
+        var policy = ScoringPolicy.Default with
+        {
+            FullTextGroups = new Dictionary<string, IReadOnlyList<string>>
+            {
+                [FullTextGroup.Citizen] = ["australian citizen"],
+                [FullTextGroup.Whv] = ["working holiday"],
+            },
+        };
+        static MatchingProfile Profile(string name, params string[] contexts) =>
+            new(name, [], [], [], [], false, false, []) { Requirements = ProfileRequirements.None with { Contexts = contexts } };
+
+        var terms = FullTextTerm.AllOf(policy, [Profile("fifo", "FIFO"), Profile("construction", "labourer", "fifo"), Profile("tech")]);
+
+        Assert.Equal(["australian citizen", "australian citizen + FIFO", "australian citizen + labourer", "working holiday"],
+            terms.Select(t => t.Text));
+    }
 }

@@ -41,9 +41,11 @@ public class FullTextTermServiceTests
 
         await Service(seek, profiles: [("fifo", fifo), ("mining", mining)]).TagAsync(Ct);
 
-        // The second profile's "Years Experience + FIFO" is the same search, in another case.
+        // The second profile's "Years Experience + FIFO" is the same search, in another case. The citizen
+        // group is a context group: its term also goes with each context word.
         Assert.Equal(
-            ["HRWL + FIFO", "HRWL + offsider", "australian citizen", "working holiday", "years experience + FIFO", "years experience + offsider"],
+            ["HRWL + FIFO", "HRWL + offsider", "australian citizen", "australian citizen + FIFO", "australian citizen + offsider",
+                "working holiday", "years experience + FIFO", "years experience + offsider"],
             seek.Received.Select(r => r.Term));
     }
 

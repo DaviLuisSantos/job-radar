@@ -35,11 +35,9 @@ Pendências conhecidas, com a etapa onde entram:
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
 - **README/portfólio:** falta um print da triagem, gerado com dados fictícios (prints reais mostram anúncios
   reais, que não se republicam).
-- **Termos de cidadania e direito de trabalho incompletos:** 4 termos passam de 500 mesmo por estado
-  ("australian citizen", "permanent resident", "full working rights", "full australian working
-  rights"); as vagas além do teto ficam sem a marca. **Acontece também na passada diária** (visto em
-  2026-10-21 22:00 UTC): como a janela só avança com execução completa, eles buscam 31 dias todo dia.
-  Correção: o mesmo desenho dos requisitos (frase + palavra de contexto de cada perfil), que já cabe no teto.
+- **Termos de cidadania e direito de trabalho:** corrigido em 2026-10-22 com a palavra de contexto (ver
+  Diário). A busca do termo sozinho continua incompleta todo dia (ela segue rodando para tech e regional,
+  que não têm palavra de contexto); para esses dois perfis, falta escolher palavras de contexto.
   `collection_runs` com `term:%` e `complete = false` mostra quais.
 - **Etapa 10:** com páginas completas, as buscas dos 5 perfis (256 desde 2026-10-21; eram 311) fazem até
   ~1.300 requisições numa passada sem janela. Depois, a janela incremental reduz muito.
@@ -98,6 +96,17 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-22 — Termos de cidadania com palavra de contexto (`RulesVersion` 7)
+"australian citizen", "permanent resident", "full working rights" e "full australian working rights" passavam
+de 500 mesmo por estado (2.000–3.250 anúncios em 31 dias), todo dia. Com as palavras de contexto dos perfis
+ficam em 3–333 (ex.: "australian citizen" + FIFO 47, + labourer 64; "full australian working rights" + FIFO
+333). `ScoringPolicy.ContextGroups` (cidadania e "full working rights") faz esses termos serem buscados também
+como "termo + contexto" para cada palavra de contexto dos perfis (+20 buscas por passada); a busca sozinha
+continua, para os perfis sem contexto. No score, "termo + contexto" conta como o termo; uma marca que é ela
+própria termo da política ("working holiday + citizen") nunca é lida como "working holiday" + contexto.
+Efeito colateral aceito: "HR licence + FIFO" (requisito) agora também conta como o "HR licence" da política;
+o peso é o mesmo (−20, uma vez).
 
 ### 2026-10-22 — Etapa 10: 1ª passada agendada acompanhada
 A passada das 06:00 de Perth (2026-10-21 22:00 UTC, 19:00 em Brasília) rodou sozinha, pelo serviço, em
