@@ -53,6 +53,43 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
     }
 
     [DatabaseFact]
+    public async Task To_fetch_are_recent_listings_without_text_whose_best_score_is_high_enough_best_first()
+    {
+        await db.ResetAsync();
+        var posted = ListingMapperTests.Sample("1").PostedAt!.Value;
+        await using (var ctx = db.NewContext())
+        {
+            await new PostgresListingRepository(ctx).RecordObservationsAsync(
+            [
+                .. new[] { "1", "2", "3", "4" }.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")),
+                new SourcedListing(ListingMapperTests.Sample("5") with { PostedAt = posted.AddDays(-60) }, """{"id":"5"}"""),
+            ], "labourer @ perth wa", Monday, Ct);
+        }
+        await using (var ctx = db.NewContext())
+        {
+            static Domain.Matching.ListingScore Score(string id, string profile, int final) =>
+                new(new ListingId("seek", id), profile, new Domain.Matching.FitScore(final, []), "aaaa", Monday);
+            await new Infrastructure.Postgres.Matching.PostgresListingScoreRepository(ctx).SaveAsync(
+            [
+                Score("1", "fifo", 45), Score("1", "trades", 80),   // best 80
+                Score("2", "fifo", 60),
+                Score("3", "fifo", 30),                             // too low
+                Score("4", "fifo", 90),                             // already has text
+                Score("5", "fifo", 95),                             // too old
+            ], Ct);
+        }
+        await using (var ctx = db.NewContext())
+            await Repo(ctx).SaveAsync(new ListingDescription(new ListingId("seek", "4"), "the ad", DescriptionOrigin.Pasted, Monday), Ct);
+
+        await using var read = db.NewContext();
+        var ids = await Repo(read).ListToFetchAsync("seek", 40, posted.AddDays(-31), 10, Ct);
+        var limited = await Repo(read).ListToFetchAsync("seek", 40, posted.AddDays(-31), 1, Ct);
+
+        Assert.Equal(["1", "2"], ids.Select(i => i.SourceId));
+        Assert.Equal(["1"], limited.Select(i => i.SourceId));
+    }
+
+    [DatabaseFact]
     public async Task The_search_keys_of_a_listing_are_the_searches_that_found_it()
     {
         await db.ResetAsync();

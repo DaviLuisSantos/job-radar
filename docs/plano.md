@@ -97,6 +97,18 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Descrição completa automática (GraphQL do Seek)
+O autor pediu para não depender de captura manual. Pesquisa: Adzuna devolve só trecho; Workforce
+Australia sem API pública; Google Jobs (SerpApi/DataForSEO) pago e sem garantia de texto completo; a API
+oficial do Seek é só para publicar. O site do Seek carrega o texto pelo GraphQL `jobDetails` (`/graphql`);
+uma requisição de teste, com o User-Agent identificado, voltou 200 sem desafio e com o anúncio inteiro.
+Decisão do autor: usar, aceitando o risco nos termos do Seek (as páginas de vaga continuam fora).
+Entrou a etapa **Full descriptions** na passada (depois dos termos, antes do score): `DescriptionFetchService`
+escolhe vagas sem texto, com melhor score ≥ 40, publicadas há até 31 dias, até 3.000 por passada (opções
+`Descriptions`); `SeekJobDetailsClient` no mesmo orçamento da busca (`SeekPacing`: 4 simultâneas, 5/s) e na
+mesma resiliência; HTML vira texto (`SeekHtml`); grava com origem `source`. 403, 429 depois das tentativas,
+`cf-mitigated` ou resposta HTML = `SourceBlockedException`: a etapa para e o resto da passada segue.
+
 ### 2026-10-22 — Termos de cidadania com palavra de contexto (`RulesVersion` 7)
 "australian citizen", "permanent resident", "full working rights" e "full australian working rights" passavam
 de 500 mesmo por estado (2.000–3.250 anúncios em 31 dias), todo dia. Com as palavras de contexto dos perfis

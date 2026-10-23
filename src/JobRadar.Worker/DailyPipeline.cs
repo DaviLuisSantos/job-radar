@@ -6,8 +6,9 @@ using Microsoft.Extensions.Options;
 namespace JobRadar.Worker;
 
 /// <summary>
-/// One pass: collect every profile's searches, mark the full-text terms of what was collected, score
-/// what each profile found, and take the day's market snapshot (Raio-X). Each stage is isolated: a
+/// One pass: collect every profile's searches, mark the full-text terms of what was collected, fetch
+/// the full text of the listings that matter, score what each profile found, and take the day's
+/// market snapshot (Raio-X). Each stage is isolated: a
 /// failed stage does not stop the next one. The scheduled job and the <c>collect</c> command run this
 /// same pass.
 /// </summary>
@@ -28,6 +29,7 @@ internal sealed class DailyPipeline(
 
         await StageAsync("Collection", sp => sp.GetRequiredService<ListingCollector>().CollectAsync(catalog.Searches, fullHistory, ct), failed, ct);
         await StageAsync("Full-text terms", sp => sp.GetRequiredService<FullTextTermService>().TagAsync(ct), failed, ct);
+        await StageAsync("Full descriptions", sp => sp.GetRequiredService<DescriptionFetchService>().FetchAsync(ct), failed, ct);
         await StageAsync("Scoring", sp => sp.GetRequiredService<ListingScoringService>().ScoreAllAsync(zone, ct), failed, ct);
         await StageAsync("Market snapshot", sp => sp.GetRequiredService<MarketSnapshotService>().TakeAsync(Today(zone), ct), failed, ct);
 

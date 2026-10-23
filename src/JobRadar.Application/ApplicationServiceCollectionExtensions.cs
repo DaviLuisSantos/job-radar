@@ -26,6 +26,12 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<ListingCollector>();
 
+        services.AddOptions<DescriptionOptions>()
+            .Bind(configuration.GetSection(DescriptionOptions.Section))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddScoped<DescriptionFetchService>();
+
         services.AddOptions<MatchingOptions>().Bind(configuration.GetSection(MatchingOptions.Section));
         // The defaults are the calibrated weights; overriding them is a code change, on purpose.
         services.TryAddSingleton(ScoringPolicy.Default);

@@ -30,7 +30,11 @@
 - `totalCount` conta os promovidos repetidos em cada página. Para contar, use sempre `pageSize=100`.
 - User-Agent identificado (`JobRadarAU/0.1 (+repo)`), pausa de ~1 s com variação entre páginas,
   backoff em 429.
-- Não abre páginas de vaga (Cloudflare). O texto completo só entra pela busca por frase (etapa 5).
+- Não abre páginas de vaga (Cloudflare). O texto completo entra pela busca por frase (etapa 5) e, desde
+  2026-10-23, pelo endpoint GraphQL `jobDetails` que o próprio site usa (respondeu sem desafio, com o
+  User-Agent identificado). Decisão do autor, aceitando o risco nos termos do Seek. Só para as vagas que
+  importam (score ≥ 40, até 31 dias, até 3.000 por passada), no mesmo orçamento da busca; o primeiro
+  403/429/desafio para a etapa.
 
 ## Regras do desenho
 

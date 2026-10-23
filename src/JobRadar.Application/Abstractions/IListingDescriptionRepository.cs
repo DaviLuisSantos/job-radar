@@ -12,4 +12,12 @@ public interface IListingDescriptionRepository
 
     /// <summary>The captured text of each of these listings that has one.</summary>
     Task<IReadOnlyDictionary<ListingId, string>> GetTextsAsync(IReadOnlyCollection<ListingId> ids, CancellationToken ct = default);
+
+    /// <summary>
+    /// Listings of <paramref name="source"/> with no text yet, posted (or first seen, when the date is
+    /// unknown) since <paramref name="postedSince"/>, whose best score in any profile is at least
+    /// <paramref name="minScore"/>: best score first, then most recent. At most <paramref name="limit"/>.
+    /// </summary>
+    Task<IReadOnlyList<ListingId>> ListToFetchAsync(
+        string source, int minScore, DateTimeOffset postedSince, int limit, CancellationToken ct = default);
 }

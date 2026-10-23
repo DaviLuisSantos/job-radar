@@ -81,6 +81,14 @@ public static class Wording
         _ => status.ToString(),
     };
 
+    public static string Origin(DescriptionOrigin origin) => origin switch
+    {
+        DescriptionOrigin.Browser => "from the ad page",
+        DescriptionOrigin.Pasted => "pasted",
+        DescriptionOrigin.Source => "fetched from the source",
+        _ => origin.ToString(),
+    };
+
     public static string Verdict(Verdict verdict) => verdict == Domain.Tracking.Verdict.Good ? "Good match" : "Bad match";
 
     public static string WorkType(WorkType workType) => ScoringInput.FormatWorkType(workType) ?? "";

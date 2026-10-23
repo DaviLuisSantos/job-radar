@@ -59,10 +59,28 @@ internal sealed class PostgresListingDescriptionRepository(JobRadarDbContext db)
         return result;
     }
 
+    public async Task<IReadOnlyList<ListingId>> ListToFetchAsync(
+        string source, int minScore, DateTimeOffset postedSince, int limit, CancellationToken ct = default)
+    {
+        var since = postedSince.ToUniversalTime();
+        var rows = await (
+                from l in db.Listings
+                where l.Source == source && (l.PostedAt ?? l.FirstSeenAt) >= since
+                where !db.ListingDescriptions.Any(d => d.Source == l.Source && d.SourceId == l.SourceId)
+                let best = db.ListingScores.Where(s => s.Source == l.Source && s.SourceId == l.SourceId).Max(s => (int?)s.Score)
+                where best >= minScore
+                orderby best descending, l.PostedAt descending, l.SourceId
+                select l.SourceId)
+            .Take(limit)
+            .ToListAsync(ct);
+        return rows.Select(id => new ListingId(source, id)).ToList();
+    }
+
     internal static string ToColumn(DescriptionOrigin origin) => origin switch
     {
         DescriptionOrigin.Browser => "browser",
         DescriptionOrigin.Pasted => "pasted",
+        DescriptionOrigin.Source => "source",
         _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null),
     };
 
@@ -70,6 +88,7 @@ internal sealed class PostgresListingDescriptionRepository(JobRadarDbContext db)
     {
         "browser" => DescriptionOrigin.Browser,
         "pasted" => DescriptionOrigin.Pasted,
+        "source" => DescriptionOrigin.Source,
         _ => throw new InvalidOperationException($"Unknown description origin '{column}'."),
     };
 }

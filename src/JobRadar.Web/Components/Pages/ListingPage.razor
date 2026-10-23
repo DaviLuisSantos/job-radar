@@ -58,7 +58,7 @@ else if (_detail is { } d)
             @if (d.Description is { } desc)
             {
                 <p class="muted">
-                    Captured @Wording.When(desc.CapturedAt) · @(desc.Origin == DescriptionOrigin.Browser ? "from the ad page" : "pasted")
+                    Captured @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin)
                 </p>
                 <details>
                     <summary>Show the text (@desc.Text.Length characters)</summary>

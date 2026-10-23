@@ -10,12 +10,15 @@ public enum DescriptionOrigin
 
     /// <summary>Pasted by hand on the listing page.</summary>
     Pasted,
+
+    /// <summary>Fetched from the source's own data endpoint (Seek: the one its site loads ad text from).</summary>
+    Source,
 }
 
 /// <summary>
-/// The full text of an ad, captured by the candidate from a page they opened themselves: ad pages
-/// sit behind an anti-bot challenge and are never fetched by this system. Personal use only: it never
-/// goes into the Raio-X, the repository or a test fixture.
+/// The full text of an ad: fetched from the source's data endpoint, or captured by the candidate from
+/// a page they opened. Ad pages themselves sit behind an anti-bot challenge and are never fetched.
+/// Personal use only: it never goes into the Raio-X, the repository or a test fixture.
 /// </summary>
 public sealed partial record ListingDescription(ListingId Id, string Text, DescriptionOrigin Origin, DateTimeOffset CapturedAt)
 {

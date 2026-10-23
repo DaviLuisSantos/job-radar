@@ -111,8 +111,10 @@ JOBRADAR_DB_TESTS=1 dotnet test
 ## Data and ethics
 
 Only aggregated numbers are published, never individual listings. The system does not bypass
-anti-bot protection and does not open protected job pages. Requests identify the bot in the
-User-Agent, are paced with jitter, and back off on HTTP 429.
+anti-bot protection and does not open protected job pages. Ad text, for the listings that score well,
+comes from the same data endpoint the source's own site uses; the first refusal stops that stage.
+Requests identify the bot in the User-Agent, share one paced budget (a few per second), and back off
+on HTTP 429. Ad text stays in the owner's database for personal use.
 
 ## License
 

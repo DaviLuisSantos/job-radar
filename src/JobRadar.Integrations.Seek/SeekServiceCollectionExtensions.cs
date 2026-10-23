@@ -21,15 +21,29 @@ public static class SeekServiceCollectionExtensions
         services.AddSingleton<SeekPacing>();
         services.AddTransient<SeekPacingHandler>();
 
-        var http = services.AddHttpClient<SeekSearchClient>((sp, client) =>
-        {
-            var o = sp.GetRequiredService<IOptions<SeekOptions>>().Value;
-            client.BaseAddress = o.BaseAddress;
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(o.UserAgent);
-            client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
-            client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-AU");
-        });
+        // Search and ad text share one request budget (SeekPacing is a singleton).
+        Polite(services.AddHttpClient<SeekSearchClient>(Configure));
+        Polite(services.AddHttpClient<SeekJobDetailsClient>(Configure));
 
+        services.AddTransient<IJobSource, SeekJobSource>();
+        services.AddTransient<IFullTextSearch, SeekFullTextSearch>();
+        services.AddTransient<SeekJobSource>();
+        services.AddTransient<IMarketSource, SeekMarketSource>();
+        services.AddTransient<IDescriptionSource, SeekDescriptionSource>();
+        return services;
+    }
+
+    private static void Configure(IServiceProvider sp, HttpClient client)
+    {
+        var o = sp.GetRequiredService<IOptions<SeekOptions>>().Value;
+        client.BaseAddress = o.BaseAddress;
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(o.UserAgent);
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-AU");
+    }
+
+    private static void Polite(IHttpClientBuilder http)
+    {
         // Retries 429 and 5xx with exponential backoff, honouring Retry-After.
         http.AddStandardResilienceHandler(r =>
         {
@@ -44,11 +58,5 @@ public static class SeekServiceCollectionExtensions
         // Registered after the resilience handler, so it sits inside it: every attempt, retries included,
         // goes through the one budget shared by the whole process.
         http.AddHttpMessageHandler<SeekPacingHandler>();
-
-        services.AddTransient<IJobSource, SeekJobSource>();
-        services.AddTransient<IFullTextSearch, SeekFullTextSearch>();
-        services.AddTransient<SeekJobSource>();
-        services.AddTransient<IMarketSource, SeekMarketSource>();
-        return services;
     }
 }

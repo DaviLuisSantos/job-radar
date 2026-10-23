@@ -99,6 +99,17 @@ internal sealed class InMemoryDescriptions : IListingDescriptionRepository
     public Task<IReadOnlyDictionary<ListingId, string>> GetTextsAsync(IReadOnlyCollection<ListingId> ids, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyDictionary<ListingId, string>>(
             Saved.Where(s => ids.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value.Text));
+
+    /// <summary>What <see cref="ListToFetchAsync"/> answers (the selection rules are the real repository's, tested there).</summary>
+    public List<ListingId> ToFetch { get; } = [];
+
+    public (string Source, int MinScore, DateTimeOffset PostedSince, int Limit)? Asked { get; private set; }
+
+    public Task<IReadOnlyList<ListingId>> ListToFetchAsync(string source, int minScore, DateTimeOffset postedSince, int limit, CancellationToken ct = default)
+    {
+        Asked = (source, minScore, postedSince, limit);
+        return Task.FromResult<IReadOnlyList<ListingId>>(ToFetch.Where(i => i.Source == source && !Saved.ContainsKey(i)).Take(limit).ToList());
+    }
 }
 
 internal sealed class InMemoryRuns : ICollectionRunRepository
