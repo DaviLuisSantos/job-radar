@@ -96,6 +96,14 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Importador: dias do Raio-X pela data de Perth
+No cruzamento antes de importar, os 5 dias do Raio-X do `jobs.db` final estavam um dia atrás dos daqui: o
+protótipo nomeava o dia pela data do Brasil e rodava à noite, já a manhã seguinte em Perth. O "21/out" dele foi
+tirado meia hora antes do "22/out" daqui; importado assim, o mesmo momento viraria dois dias no relatório mensal.
+`PrototypeMapping.InScheduleDays` renomeia cada retrato pela data, no fuso da agenda, de `market_runs.ran_at`, e as
+datas de primeira/última vista das vagas do Raio-X (que são dias do protótipo) seguem o seu retrato. Sem
+`ran_at`, o dia fica como está. O dry-run passou a listar os dias.
+
 ### 2026-10-23 — `/status` mostra a última passada e o que está implantado
 Da outra máquina só a página de status é alcançável (Tailscale, firewall só na 5380), e ela não dizia quais
 buscas falharam nem qual versão estava rodando: a conferência dos termos "+ contexto" virou dedução pela

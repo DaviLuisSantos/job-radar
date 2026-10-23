@@ -138,6 +138,8 @@ Pode repetir: o que já está aqui vence (candidatura, rótulo, dia do Raio-X) e
 O que vira o quê: vagas (com a data em que o protótipo as viu primeiro e o payload = a linha do protótipo),
 perfis (`profiles` → chave `profile: <nome>`, pontuada pelo perfil), termos, rótulos, status (`rejected` com
 candidatura → `Declined`, sem → `Dismissed`), notas, retratos do Raio-X com contagens e o histórico de vagas.
+Os dias do Raio-X são renomeados para a data de Perth em que o retrato foi tirado (`market_runs.ran_at`): o
+protótipo usava a data do Brasil, e à noite lá já é a manhã seguinte em Perth. O dry-run lista os dias já assim.
 
 ## Desligar o protótipo Python
 

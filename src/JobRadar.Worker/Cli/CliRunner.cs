@@ -107,6 +107,8 @@ public static class CliRunner
         if (r.ApplicationsByStatus.Count > 0)
             o.WriteLine("                  as " + string.Join(", ", r.ApplicationsByStatus.OrderBy(s => s.Key).Select(s => $"{s.Key} {s.Value:N0}")));
         o.WriteLine(dryRun ? $"  market days     {r.SnapshotsInFile:N0}" : $"  market days     {r.SnapshotsAdded:N0} added, {r.SnapshotsSkipped:N0} already here (of {r.SnapshotsInFile:N0})");
+        if (r.SnapshotDays.Count > 0)
+            o.WriteLine("                  dated " + string.Join(", ", r.SnapshotDays.Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))) + " (schedule time zone)");
         o.WriteLine(dryRun ? $"  market listings {r.MarketListingsInFile:N0}" : $"  market listings {r.MarketListingsMerged:N0} merged");
         if (!dryRun)
             o.WriteLine("Scores of the imported listings are computed in the next daily pass.");

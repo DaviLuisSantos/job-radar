@@ -1,8 +1,10 @@
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Collection;
 using JobRadar.Application.Matching;
 using JobRadar.Domain.Import;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Tracking;
+using Microsoft.Extensions.Options;
 
 namespace JobRadar.Application.Import;
 
@@ -14,7 +16,11 @@ public sealed record ImportReport(
     int ApplicationsInFile, int ApplicationsAdded, int ApplicationsSkipped,
     IReadOnlyDictionary<ApplicationStatus, int> ApplicationsByStatus,
     int SnapshotsInFile, int SnapshotsAdded, int SnapshotsSkipped,
-    int MarketListingsInFile, int MarketListingsMerged);
+    int MarketListingsInFile, int MarketListingsMerged)
+{
+    /// <summary>The market days in the file, already as this system names them (schedule time zone).</summary>
+    public IReadOnlyList<DateOnly> SnapshotDays { get; init; } = [];
+}
 
 /// <summary>
 /// Brings the prototype's history in. Safe to run again: what this system already holds wins (an
@@ -26,13 +32,16 @@ public sealed class PrototypeImportService(
     IListingTermRepository terms,
     ITrackingRepository tracking,
     IMarketRepository market,
+    IOptions<CollectionOptions> options,
     TimeProvider time)
 {
     private const int Chunk = 1000;
 
     public async Task<ImportReport> ImportAsync(string path, bool dryRun, CancellationToken ct = default)
     {
-        var data = await archive.ReadAsync(path, ct);
+        var data = PrototypeMapping.InScheduleDays(await archive.ReadAsync(path, ct),
+            TimeZoneInfo.FindSystemTimeZoneById(options.Value.TimeZone));
+        var snapshotDays = data.Snapshots.Select(s => s.Snapshot.Date).ToList();
         var applications = data.Jobs
             .Select(j => (Job: j, Status: PrototypeMapping.Status(j.Status, j.Applied)))
             .Where(a => a.Status is not null || !string.IsNullOrWhiteSpace(a.Job.Notes))
@@ -46,7 +55,8 @@ public sealed class PrototypeImportService(
         if (dryRun)
         {
             return new ImportReport(data.Jobs.Count, 0, 0, termCount, 0, labelled.Count, 0, 0,
-                applications.Count, 0, 0, byStatus, data.Snapshots.Count, 0, 0, data.MarketListings.Count, 0);
+                applications.Count, 0, 0, byStatus, data.Snapshots.Count, 0, 0, data.MarketListings.Count, 0)
+            { SnapshotDays = snapshotDays };
         }
 
         // 1. Listings first: terms, labels and applications need them stored.
@@ -111,6 +121,7 @@ public sealed class PrototypeImportService(
 
         return new ImportReport(data.Jobs.Count, newListings, knownListings, termCount, termsNew,
             labelled.Count, labelsAdded, labelsSkipped, applications.Count, appsAdded, appsSkipped, byStatus,
-            data.Snapshots.Count, snapsAdded, snapsSkipped, data.MarketListings.Count, merged);
+            data.Snapshots.Count, snapsAdded, snapsSkipped, data.MarketListings.Count, merged)
+        { SnapshotDays = snapshotDays };
     }
 }

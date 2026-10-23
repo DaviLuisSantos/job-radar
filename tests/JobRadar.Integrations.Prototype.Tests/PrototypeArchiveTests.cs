@@ -80,7 +80,7 @@ public sealed class PrototypeArchiveTests : IDisposable
     public async Task Reads_market_snapshots_counts_and_listing_ranges()
     {
         Create(CurrentSchema, """
-            INSERT INTO market_runs VALUES ('2026-10-01', 'ok', 30, 30, 400, NULL, '2026-10-01'), ('2026-10-02', 'partial', 30, 28, 0, 'contagem falhou: X
+            INSERT INTO market_runs VALUES ('2026-10-01', 'ok', 30, 30, 400, NULL, '2026-10-01 21:33:23'), ('2026-10-02', 'partial', 30, 28, 0, 'contagem falhou: X
             listagem incompleta: Y', '2026-10-02');
             INSERT INTO market_counts VALUES ('2026-10-01', 'HVAC-R', 'Perth WA', '', 72), ('2026-10-01', 'HVAC-R', 'Perth WA', '482', 1),
                                              ('2026-10-01', 'HVAC-R', 'Perth WA', 'citizen', NULL);
@@ -93,6 +93,7 @@ public sealed class PrototypeArchiveTests : IDisposable
         Assert.Equal(2, data.Snapshots.Count);
         var ok = data.Snapshots[0];
         Assert.Equal((new DateOnly(2026, 10, 1), SnapshotStatus.Ok, 400), (ok.Snapshot.Date, ok.Snapshot.Status, ok.Snapshot.Listings));
+        Assert.Equal(new DateTimeOffset(2026, 10, 1, 21, 33, 23, TimeSpan.Zero), ok.TakenAt);   // SQLite's datetime('now'): UTC
         Assert.Equal([(null, 72), ("482", 1)], ok.Counts.OrderBy(c => c.Term).Select(c => (c.Term, c.Total!.Value)));
         Assert.Equal(["contagem falhou: X", "listagem incompleta: Y"], data.Snapshots[1].Snapshot.Issues.Select(i => i.Trim()));
 

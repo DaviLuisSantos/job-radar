@@ -1,10 +1,12 @@
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Collection;
 using JobRadar.Application.Import;
 using JobRadar.Application.Tests.Collection;
 using JobRadar.Domain.Import;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
 using JobRadar.Domain.Tracking;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace JobRadar.Application.Tests.Import;
@@ -54,7 +56,8 @@ public class PrototypeImportServiceTests
     private PrototypeImportService Service(params PrototypeJob[] jobs) => Service(new PrototypeData(jobs, [], []));
 
     private PrototypeImportService Service(PrototypeData data) =>
-        new(new FixedArchive(data), _listings, _terms, _tracking, _market, new FakeTimeProvider(June.AddMonths(4)));
+        new(new FixedArchive(data), _listings, _terms, _tracking, _market, Options.Create(new CollectionOptions()),
+            new FakeTimeProvider(June.AddMonths(4)));
 
     [Fact]
     public async Task Listings_keep_the_prototype_first_sighting_and_attach_to_their_profiles()
@@ -114,6 +117,27 @@ public class PrototypeImportServiceTests
         Assert.Equal(2, _terms.Marks.Count);
         Assert.Equal((1, 1), (report.SnapshotsAdded, report.SnapshotsSkipped));
         Assert.Single(_market.Listings);
+    }
+
+    [Fact]
+    public async Task Market_days_are_named_by_the_perth_date_they_were_taken()
+    {
+        // The prototype's 21 Oct was taken on the Brazilian evening, 22 Oct in Perth: this system's 22 Oct.
+        var snapshot = new MarketSnapshot("seek", new DateOnly(2026, 10, 21), SnapshotStatus.Ok, 30, 30, 454, []);
+        _market.Days.Add(new DateOnly(2026, 10, 22));
+        var data = new PrototypeData([],
+            [
+                new PrototypeSnapshot(snapshot with { Date = new DateOnly(2026, 10, 20) }, [], new DateTimeOffset(2026, 10, 21, 0, 7, 0, TimeSpan.Zero)),
+                new PrototypeSnapshot(snapshot, [], new DateTimeOffset(2026, 10, 21, 21, 33, 23, TimeSpan.Zero)),
+            ],
+            [new ImportedMarketListing(new MarketListing("HVAC-R", "Perth WA", Listings.Of("seek", "9").Listing), new DateOnly(2026, 10, 20), new DateOnly(2026, 10, 21))]);
+
+        var report = await Service(data).ImportAsync("jobs.db", false, Ct);
+
+        Assert.Equal([new DateOnly(2026, 10, 21), new DateOnly(2026, 10, 22)], report.SnapshotDays);
+        Assert.Equal((1, 1), (report.SnapshotsAdded, report.SnapshotsSkipped));
+        var listing = Assert.Single(_market.Listings);
+        Assert.Equal((new DateOnly(2026, 10, 21), new DateOnly(2026, 10, 22)), (listing.FirstSeen, listing.LastSeen));
     }
 
     [Fact]

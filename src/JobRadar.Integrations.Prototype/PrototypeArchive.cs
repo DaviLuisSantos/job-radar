@@ -139,8 +139,9 @@ internal sealed class PrototypeArchive : IPrototypeArchive
             }
         }
 
+        var ranAt = (await ColumnsAsync(db, "market_runs", ct)).Contains("ran_at") ? "ran_at" : "NULL AS ran_at";
         var snapshots = new List<PrototypeSnapshot>();
-        await using var cmd = new SqliteCommand("SELECT snapshot_date, status, expected, saved, listings, issues FROM market_runs ORDER BY snapshot_date", db);
+        await using var cmd = new SqliteCommand($"SELECT snapshot_date, status, expected, saved, listings, issues, {ranAt} FROM market_runs ORDER BY snapshot_date", db);
         await using var r = await cmd.ExecuteReaderAsync(ct);
         while (await r.ReadAsync(ct))
         {
@@ -158,7 +159,8 @@ internal sealed class PrototypeArchive : IPrototypeArchive
             var issues = Text(r, 5)?.Split('\n', StringSplitOptions.RemoveEmptyEntries) ?? [];
             snapshots.Add(new PrototypeSnapshot(
                 new MarketSnapshot("seek", day, s, Int(r, 2), Int(r, 3), Int(r, 4), issues),
-                counts.GetValueOrDefault(r.GetString(0)) ?? []));
+                counts.GetValueOrDefault(r.GetString(0)) ?? [],
+                Instant(Text(r, 6))));
         }
         return snapshots;
     }
