@@ -101,9 +101,13 @@ Da outra máquina só a página de status é alcançável (Tailscale, firewall s
 buscas falharam nem qual versão estava rodando: a conferência dos termos "+ contexto" virou dedução pela
 contagem. Agora a página mostra a linha do `deployed.txt` (commit e hora; o commit do build quando não há
 registro) e a última passada com cada busca ou termo que falhou ou parou no teto, com o erro. Sem id de passada
-em `collection_runs`: a passada são as execuções seguidas, sem pausa de mais de 1 h (`CollectionPass`). Porta
-nova `ICollectionRunRepository.ListStartedSinceAsync`. O `deployed.txt` é lido a cada visita: o script o grava
-depois de subir os serviços.
+em `collection_runs`: a passada começa na primeira execução que sai mais de 15 min depois do **fim** de todas as anteriores
+(`CollectionPass`). A primeira versão media 1 h entre inícios e juntou as duas passadas de hoje (18:04, recuperada
+depois da implantação, e 19:01): as descrições seguem a última execução por minutos. Medido em `collection_runs`
+desde 2026-10-22: nenhuma pausa interna passa de 2 min; entre passadas, de 54 min a 23 h. Porta nova
+`ICollectionRunRepository.ListStartedSinceAsync`. O `deployed.txt` é lido a cada visita: o script o grava
+depois de subir os serviços. Implantado pelo `ssh segmix` (alias desta máquina para o trabalhopc, chave no
+`ssh-agent`).
 
 ### 2026-10-23 — Etapa 10 fechada: protótipo desligado
 Na outra máquina (CASAPC), a tarefa `JobTracker Daily` (`run.ps1 --daily`, 08:00 de Brasília) foi

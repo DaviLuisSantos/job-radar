@@ -28,16 +28,18 @@ public sealed record DailyRunSummary(DateOnly Day, int Runs, int Failed, int Inc
 public sealed record CollectionSummary(int Runs, int Failed, int Incomplete, int Found, int New);
 
 /// <summary>
-/// The runs of one daily pass, searches and terms together. Runs carry no pass id: a pass is the runs
-/// that started one after another with no pause longer than <see cref="Gap"/>.
+/// The runs of one daily pass, searches and terms together. Runs carry no pass id: a pass ends when no
+/// run starts within <see cref="Gap"/> of the end of every run before it.
 /// </summary>
 public sealed record CollectionPass(IReadOnlyList<CollectionRun> Runs)
 {
     /// <summary>
-    /// Inside a pass runs start seconds apart, in parallel; between passes there are hours. The steps that
-    /// record no run (descriptions, scores, snapshot) come after the last one, so they open no gap.
+    /// Inside a pass a run starts as soon as a slot frees, and the terms right after the last search ends.
+    /// Measured from the <b>end</b> of the runs before: the start of the last one is no guide, since the steps
+    /// that record no run (descriptions, scores, snapshot) follow it for minutes. A pass recovered after a
+    /// restart can be under an hour from the scheduled one (seen 2026-10-23: 18:04 and 19:01).
     /// </summary>
-    public static readonly TimeSpan Gap = TimeSpan.FromHours(1);
+    public static readonly TimeSpan Gap = TimeSpan.FromMinutes(15);
 
     public DateTimeOffset StartedAt => Runs.Min(r => r.StartedAt);
 
@@ -54,12 +56,18 @@ public sealed record CollectionPass(IReadOnlyList<CollectionRun> Runs)
     /// <summary>The most recent pass among <paramref name="runs"/>; null when there are none.</summary>
     public static CollectionPass? Last(IEnumerable<CollectionRun> runs)
     {
-        var newestFirst = runs.OrderByDescending(r => r.StartedAt).ToList();
-        if (newestFirst.Count == 0)
+        var ordered = runs.OrderBy(r => r.StartedAt).ToList();
+        if (ordered.Count == 0)
             return null;
-        var count = 1;
-        while (count < newestFirst.Count && newestFirst[count - 1].StartedAt - newestFirst[count].StartedAt <= Gap)
-            count++;
-        return new CollectionPass(newestFirst.Take(count).Reverse().ToList());
+        var first = 0;
+        var finished = ordered[0].FinishedAt;
+        for (var i = 1; i < ordered.Count; i++)
+        {
+            if (ordered[i].StartedAt - finished > Gap)
+                first = i;
+            if (ordered[i].FinishedAt > finished)
+                finished = ordered[i].FinishedAt;
+        }
+        return new CollectionPass(ordered.Skip(first).ToList());
     }
 }

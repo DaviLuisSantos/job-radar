@@ -13,17 +13,29 @@ public class CollectionPassTests
     public void No_runs_no_pass() => Assert.Null(CollectionPass.Last([]));
 
     [Fact]
-    public void The_last_pass_stops_at_the_first_long_pause()
+    public void The_last_pass_starts_after_the_first_long_pause_since_every_run_before_ended()
     {
-        var yesterday = Run(Morning.AddDays(-1));
-        var earlierToday = Run(Morning.AddHours(-1).AddMinutes(-1));   // a recovered pass, an hour before
-        var pass = new[] { Run(Morning), Run(Morning.AddMinutes(2), "term: backpackers"), Run(Morning.AddMinutes(50)) };
+        // As on 2026-10-23: a pass recovered at 18:04 (last run started 18:10) and the scheduled one at 19:01.
+        var recovered = new[] { Run(Morning.AddMinutes(-57)), Run(Morning.AddMinutes(-51), "term: backpackers") };
+        var pass = new[] { Run(Morning), Run(Morning.AddMinutes(2), "term: backpackers"), Run(Morning.AddMinutes(14)) };
 
-        var last = CollectionPass.Last([.. pass.Reverse(), yesterday, earlierToday])!;
+        var last = CollectionPass.Last([.. pass.Reverse(), Run(Morning.AddDays(-1)), .. recovered])!;
 
         Assert.Equal(pass, last.Runs);
         Assert.Equal(Morning, last.StartedAt);
-        Assert.Equal(Morning.AddMinutes(50).AddSeconds(20), last.FinishedAt);
+        Assert.Equal(Morning.AddMinutes(14).AddSeconds(20), last.FinishedAt);
+    }
+
+    [Fact]
+    public void A_long_run_keeps_the_pass_open_until_it_ends()
+    {
+        // One search retrying for 20 minutes; the terms start only when it ends.
+        var slow = Run(Morning) with { FinishedAt = Morning.AddMinutes(20) };
+        var terms = Run(Morning.AddMinutes(21), "term: backpackers");
+
+        var last = CollectionPass.Last([Run(Morning.AddSeconds(-5)), slow, terms])!;
+
+        Assert.Equal(3, last.Runs.Count);
     }
 
     [Fact]
