@@ -11,11 +11,18 @@ Two products share one core:
   the share that accepts working holiday makers, and the share that requires citizenship or PR.
   It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
 
-> **Status:** v1 in progress. Daily collection from Seek, full-text clause detection, scoring per
-> profile, application tracking, a triage UI and the monthly market snapshot work end to end; the
-> scorer matches the Python prototype on 5,388 real listings. Next: importing the prototype history
-> and going to production.
+> **Status:** v1 running in production since October 2026. Daily collection from Seek, full-text clause
+> detection, full ad text for the listings that matter, scoring per profile, application tracking, a
+> triage UI and the monthly market snapshot work end to end; the scorer matches the Python prototype on
+> 5,388 real listings. Left for v1: importing the prototype history.
 > Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
+
+![Triage: new listings for a profile, best first, with one-key labelling](docs/img/triage.png)
+
+![A listing: the score explained step by step, labelling and application status](docs/img/listing.png)
+
+<sub>Screenshots use fictitious listings and the example profile from
+`src/JobRadar.Worker/appsettings.Local.example.json`.</sub>
 
 ## Architecture
 

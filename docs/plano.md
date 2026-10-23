@@ -33,8 +33,6 @@ Pendências conhecidas, com a etapa onde entram:
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
-- **README/portfólio:** falta um print da triagem, gerado com dados fictícios (prints reais mostram anúncios
-  reais, que não se republicam).
 - **Termos de cidadania e direito de trabalho:** corrigido em 2026-10-22 com a palavra de contexto; tech e
   regional ganharam as suas em 2026-10-23 (ver Diário). A busca do termo sozinho segue incompleta todo dia, sem
   efeito: todo perfil agora tem contexto. Conferir na passada de 2026-10-24 que os termos "+ contexto" novos
@@ -96,6 +94,13 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Prints do README com dados fictícios
+`docs/img/triage.png` e `listing.png`: banco descartável `jobradar_demo` com 12 vagas inventadas (empresas
+fictícias, links para example.com) ligadas às buscas do perfil de exemplo versionado; a passada do Worker com o
+Seek apontado para um endereço inválido (coleta, termos e Raio-X falham, o score roda: etapas isoladas);
+site da publicação numa porta à parte; Playwright a 2×. Banco descartável apagado depois. Para refazer: o
+mesmo caminho; nada de anúncio real nem do perfil real em print.
 
 ### 2026-10-23 — Palavras de contexto de tech e regional
 Medido no Seek (31 dias, Austrália toda, os 4 termos de cidadania e "full working rights") e na cobertura das
