@@ -35,10 +35,10 @@ Pendências conhecidas, com a etapa onde entram:
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
 - **README/portfólio:** falta um print da triagem, gerado com dados fictícios (prints reais mostram anúncios
   reais, que não se republicam).
-- **Termos de cidadania e direito de trabalho:** corrigido em 2026-10-22 com a palavra de contexto (ver
-  Diário). A busca do termo sozinho continua incompleta todo dia (ela segue rodando para tech e regional,
-  que não têm palavra de contexto); para esses dois perfis, falta escolher palavras de contexto.
-  `collection_runs` com `term:%` e `complete = false` mostra quais.
+- **Termos de cidadania e direito de trabalho:** corrigido em 2026-10-22 com a palavra de contexto; tech e
+  regional ganharam as suas em 2026-10-23 (ver Diário). A busca do termo sozinho segue incompleta todo dia, sem
+  efeito: todo perfil agora tem contexto. Conferir na passada de 2026-10-24 que os termos "+ contexto" novos
+  vieram completos (`collection_runs` com `term:%` e `complete = false`).
 - **Etapa 10:** com páginas completas, as buscas dos 5 perfis (256 desde 2026-10-21; eram 311) fazem até
   ~1.300 requisições numa passada sem janela. Depois, a janela incremental reduz muito.
 - **Acerto do score (decidido 2026-10-21, nesta ordem):** (1) rotular: meta de 50 julgadas por perfil, com
@@ -96,6 +96,17 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Palavras de contexto de tech e regional
+Medido no Seek (31 dias, Austrália toda, os 4 termos de cidadania e "full working rights") e na cobertura das
+descrições já gravadas de cada perfil. **tech**: software, engineer, microsoft, network, technology: 98% das
+272 vagas com texto têm ao menos uma; o maior total é 595 (Austrália), abaixo de 500 por estado. "developer"
+cobre o mesmo e chega a 448 em NSW, perto do teto: ficou de fora. "support" passa de 2.000 ("support worker").
+**regional**: farm, harvest, horticulture, picking, packing: 51% das 274, mas o que fica de fora é jardinagem e
+estoque, não o foco do perfil; todos ≤ 258. "fruit", "agriculture", "seasonal" somavam só 7 pontos.
+Na configuração local (`Requirements` só com `Contexts`, sem frases de requisito: nenhuma penalidade nova).
++40 buscas de termo por passada. Uma marca "termo + contexto" vale como o termo para qualquer perfil, então
+uma palavra ampla não cria significado errado; só custa buscas.
 
 ### 2026-10-23 — Implantar sem admin
 O `deploy.ps1` pedia admin inteiro, mas só criar e configurar serviço, registro e firewall precisam. Separado em

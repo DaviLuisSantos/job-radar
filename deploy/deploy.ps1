@@ -43,7 +43,7 @@ if (-not $Force -and $perth -ge $PassAt.Subtract([timespan]'00:05') -and $perth 
 }
 
 $commit = (& git -C $repo rev-parse --short HEAD)
-$dirty = [bool](& git -C $repo status --porcelain)
+$dirty = [bool](& git -C $repo status --porcelain --untracked-files=no)
 if ($dirty) { Write-Warning 'The working tree has uncommitted changes: they go to production too.' }
 
 Write-Host '== Publishing' -ForegroundColor Cyan
