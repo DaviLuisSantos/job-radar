@@ -12,7 +12,8 @@
 | Worker | serviço do Windows `JobRadarWorker` (automático, início atrasado, reinicia em falha) | `C:\JobRadar\worker` |
 | Site | serviço do Windows `JobRadarWeb` | `C:\JobRadar\web` → `http://localhost:5380` e `http://<IP Tailscale>:5380` |
 | Migrations | pacote `migrate.exe`, aplicado a cada implantação | `C:\JobRadar\migrate.exe` |
-| Versão | commit e hora da última implantação | `C:\JobRadar\deployed.txt` |
+| Versão | commit e hora da última implantação; a anterior, para voltar | `C:\JobRadar\deployed.txt`, `C:\JobRadar\previous` |
+| Implantação automática | tarefa `JobRadar Auto-deploy`, a cada 15 min: main com CI verde | `C:\JobRadaruto-deploy.log` |
 
 - Conexão com o banco e ambiente (`Production`) ficam nas variáveis do serviço, no registro
   (`HKLM\SYSTEM\CurrentControlSet\Services\<serviço>\Environment`), não em arquivo.
@@ -57,7 +58,33 @@ cd D:\Desenvolvimento\job-radar-au
 Publica o repositório (o checkout ou worktree de onde roda; os perfis vêm do `appsettings.Local.json` do checkout
 principal se o worktree não tiver), para os serviços, copia, aplica migrations (conexão lida do registro do
 serviço), inicia e espera a página de status responder. Grava o commit implantado em `C:\JobRadar\deployed.txt`.
-**Recusa rodar entre 05:55 e 06:45 de Perth** (a passada diária seria cortada); `-Force` passa por cima.
+**Recusa rodar entre 05:55 e 06:45 de Perth**, e também se houve execução gravada em `collection_runs` nos últimos
+30 min (passada recuperada fora de hora): cortaria a passada. `-Force` passa por cima.
+
+### Automático (main com CI verde)
+
+Tarefa `JobRadar Auto-deploy` (**a cada 15 min**, com o usuário do autor logado, sem janela): roda
+`deploy\auto-deploy.ps1`, que busca `origin/main` e, se o commit não é o do `deployed.txt` e o CI dele no GitHub
+passou, avança o checkout (`--ff-only`) e chama o `deploy.ps1`. Basta dar push em main, de qualquer máquina. Não
+implanta com o checkout fora da main, com mudança local em arquivo versionado ou com commit local que não está no
+`origin/main`; CI falho fica registrado uma vez e o commit é ignorado até main andar. Log em
+`C:\JobRadar\auto-deploy.log` (só ação e problema). Conferir sem mudar nada: `.\deploy\auto-deploy.ps1 -DryRun`.
+Instalar ou mudar o intervalo: `.\deploy\schedule-auto-deploy.ps1 -EveryMinutes 15`. Pausar:
+`Disable-ScheduledTask -TaskName 'JobRadar Auto-deploy'`.
+
+**Perfis não viajam:** o `appsettings.Local.json` não está no git. Mudança de perfil se faz no trabalhopc, e só
+entra em produção na próxima implantação (`.\deploy\deploy.ps1` à mão, ou o próximo commit em main).
+
+### Voltar a versão anterior
+
+```powershell
+.\deploy\deploy.ps1 -Rollback
+```
+
+Cada implantação guarda a que estava rodando em `C:\JobRadar\previous`. O `-Rollback` troca as duas (rodar de
+novo desfaz), sem publicar nada, e grava em `C:\JobRadar\rollback-skip.txt` o commit desfeito: a implantação
+automática não o reinstala; volta a implantar quando main andar ou numa implantação à mão. **Migrations não são
+desfeitas**: uma versão anterior a uma migration pode não rodar no schema novo (aí, restaurar o backup).
 
 ## Acompanhar
 

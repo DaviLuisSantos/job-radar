@@ -94,6 +94,17 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Implantação automática e volta de versão
+Até aqui implantar era `git pull` + `deploy.ps1` no trabalhopc, à mão. Agora a tarefa `JobRadar Auto-deploy` (a
+cada 15 min, sessão do autor, `conhost --headless` para não piscar janela) roda `deploy/auto-deploy.ps1`:
+`origin/main` diferente do `deployed.txt` e CI do commit verde na API pública do GitHub → `merge --ff-only` +
+`deploy.ps1`. A produção puxa: runner self-hosted foi descartado porque o repositório é público (PR de fork
+rodaria código nesta máquina). O `deploy.ps1` passou a guardar a versão anterior em `C:\JobRadar\previous`, ganhou
+`-Rollback` (troca as duas e marca o commit desfeito para a automática não reinstalar) e recusa implantar com
+execução gravada nos últimos 30 min, além da janela fixa: hoje uma passada recuperada rodou às 18:04. O
+`global.json` pede 10.0.400 com `latestFeature`: qualquer SDK 10.0.4xx serve (esta máquina tem 401, a de produção
+402).
+
 ### 2026-10-23 — Etapa 9 fechada: histórico do protótipo importado (v1 completa)
 Pelo `ssh segmix` (o trabalhopc, a partir da outra máquina): cópia `jobs-2026-10-23.db` com o hash conferido,
 backup `jobradar_2026-10-23_201115.dump` (10,7 MB), dry-run e importação com `bd9c21b`. Resultado: **9.593 vagas

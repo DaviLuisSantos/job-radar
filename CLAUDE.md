@@ -6,7 +6,8 @@ explica o score, acompanha candidaturas) e **Raio-X** (público: só números ag
 da newsletter Raio-X WHV em português). Reescrita em .NET de um protótipo Python
 (`D:\Desenvolvimento\job-tracker`), que é a especificação das regras de negócio.
 
-Produção (onde roda, instalar, atualizar, logs, backup): [docs/producao.md](docs/producao.md).
+Produção (onde roda, instalar, atualizar, logs, backup): [docs/producao.md](docs/producao.md). Push em main com CI
+verde é implantado sozinho em até 15 min (`deploy/auto-deploy.ps1`); voltar: `deploy.ps1 -Rollback`.
 
 Escopo, públicos, não-objetivos e fases: [docs/visao.md](docs/visao.md). Fontes de vagas: [docs/fontes.md](docs/fontes.md).
 

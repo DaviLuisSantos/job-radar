@@ -9,7 +9,11 @@
     2. Stops the services, copies the new build to -Target, applies pending migrations (connection string
        read from the worker service's registry key, where install.ps1 put it), starts them again.
     3. Waits for the status page and records what was deployed in -Target\deployed.txt.
-    Refuses to run during the daily pass (stopping the worker would cut it short) unless -Force.
+    The build it replaces is kept in -Target\previous. -Rollback swaps the two back, without publishing:
+    run it again to undo. A rollback does not undo migrations, and it tells auto-deploy.ps1 to leave the
+    rolled-back commit alone (-Target\rollback-skip.txt) until a newer one reaches main.
+    Refuses to run during the daily pass, or while runs are still being recorded (a pass recovered at another
+    hour), unless -Force: stopping the worker would cut the pass short.
     See docs/producao.md.
 #>
 param(
@@ -17,7 +21,8 @@ param(
     [int] $WebPort = 5380,
     # Collection:DailyAt in Australia/Perth; the pass takes ~15 min, so the window below is generous.
     [timespan] $PassAt = '06:00',
-    [switch] $Force
+    [switch] $Force,
+    [switch] $Rollback
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +32,29 @@ $services = @(
     @{ Name = 'JobRadarWorker'; Project = 'src\JobRadar.Worker'; Dir = 'worker' },
     @{ Name = 'JobRadarWeb'; Project = 'src\JobRadar.Web'; Dir = 'web' }
 )
+$previous = Join-Path $Target 'previous'
+$record = Join-Path $Target 'deployed.txt'
+$skip = Join-Path $Target 'rollback-skip.txt'
+
+function Copy-Tree([string] $From, [string] $To) {
+    # A stopped service can hold its files for a moment: retry instead of failing.
+    robocopy $From $To /MIR /R:10 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "Copying $From to $To failed (robocopy $LASTEXITCODE). The services are stopped." }
+}
+
+function Start-AndWait {
+    Write-Host '== Starting' -ForegroundColor Cyan
+    foreach ($s in $services) { Start-Service $s.Name }
+    $status = "http://localhost:$WebPort/status"
+    $up = $false
+    foreach ($i in 1..30) {
+        try { $up = (Invoke-WebRequest $status -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200 } catch { }
+        if ($up) { break }
+        Start-Sleep -Seconds 2
+    }
+    Get-Service ($services | ForEach-Object { $_.Name }) | Format-Table Name, Status, StartType -AutoSize
+    if (-not $up) { throw "The status page did not answer at $status. See the Application event log." }
+}
 
 foreach ($s in $services) {
     if (-not (Get-Service $s.Name -ErrorAction SilentlyContinue)) {
@@ -40,6 +68,44 @@ if (-not $connection) { throw 'No connection string in the JobRadarWorker servic
 $perth = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'W. Australia Standard Time').TimeOfDay
 if (-not $Force -and $perth -ge $PassAt.Subtract([timespan]'00:05') -and $perth -le $PassAt.Add([timespan]'00:45')) {
     throw "It is $($perth.ToString('hh\:mm')) in Perth: the daily pass ($PassAt) may be running. Wait, or use -Force."
+}
+if (-not $Force) {
+    # A pass recovered after a restart runs at any hour. The steps after the last run (descriptions, scores,
+    # snapshot) take ~15 min, so 30 min of quiet means it is over. Fixed project name: it works from a worktree.
+    $recent = $null
+    try {
+        $recent = & docker compose -p job-radar-au -f (Join-Path $repo 'docker-compose.yml') exec -T postgres `
+            psql -U jobradar -d jobradar -Atc "select count(*) from collection_runs where started_at > now() - interval '30 minutes'" 2>$null
+    }
+    catch { }
+    if ($null -eq $recent) { Write-Warning 'Could not ask the database whether a pass is running.' }
+    elseif ([int]$recent -gt 0) { throw "$recent runs recorded in the last 30 minutes: a pass may be running. Wait, or use -Force." }
+}
+
+if ($Rollback) {
+    if (-not (Test-Path (Join-Path $previous 'deployed.txt'))) { throw "Nothing to roll back to: $previous is filled by the next deploy." }
+    $current = Get-Content $record -ErrorAction SilentlyContinue | Select-Object -First 1
+    $back = Get-Content (Join-Path $previous 'deployed.txt') | Select-Object -First 1
+    Write-Host "== Rolling back to: $back" -ForegroundColor Cyan
+    Write-Warning 'Migrations are not undone: an older build may not run on a newer schema.'
+    foreach ($s in $services) { Stop-Service $s.Name -Force }
+    $swap = Join-Path $Target 'rollback-swap'
+    foreach ($s in $services) {
+        Copy-Tree (Join-Path $Target $s.Dir) (Join-Path $swap $s.Dir)
+        Copy-Tree (Join-Path $previous $s.Dir) (Join-Path $Target $s.Dir)
+        Copy-Tree (Join-Path $swap $s.Dir) (Join-Path $previous $s.Dir)
+    }
+    Copy-Item (Join-Path $Target 'migrate.exe') $swap -Force
+    Copy-Item (Join-Path $previous 'migrate.exe') $Target -Force
+    Copy-Item (Join-Path $swap 'migrate.exe') $previous -Force
+    Start-AndWait
+    $from = ($current -split ' ')[0]
+    $current | Set-Content (Join-Path $previous 'deployed.txt') -Encoding utf8
+    "$back (rolled back from $from on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'))" | Set-Content $record -Encoding utf8
+    $from | Set-Content $skip -Encoding utf8
+    Remove-Item $swap -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "Rolled back. auto-deploy.ps1 skips $from until main moves past it." -ForegroundColor Green
+    return
 }
 
 $commit = (& git -C $repo rev-parse --short HEAD)
@@ -86,33 +152,24 @@ Write-Host "Site: $($urls -join ', ')"
 Write-Host '== Stopping services' -ForegroundColor Cyan
 foreach ($s in $services) { Stop-Service $s.Name -Force }
 
-Write-Host "== Copying to $Target" -ForegroundColor Cyan
-foreach ($s in $services) {
-    $dest = Join-Path $Target $s.Dir
-    # A stopped service can hold its files for a moment: retry instead of failing.
-    robocopy (Join-Path $staging $s.Dir) $dest /MIR /R:10 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-    if ($LASTEXITCODE -ge 8) { throw "Copying to $dest failed (robocopy $LASTEXITCODE). The services are stopped." }
+if (Test-Path $record) {
+    Write-Host "== Keeping the running build in $previous" -ForegroundColor Cyan
+    foreach ($s in $services) { Copy-Tree (Join-Path $Target $s.Dir) (Join-Path $previous $s.Dir) }
+    Copy-Item (Join-Path $Target 'migrate.exe'), $record $previous -Force
 }
+
+Write-Host "== Copying to $Target" -ForegroundColor Cyan
+foreach ($s in $services) { Copy-Tree (Join-Path $staging $s.Dir) (Join-Path $Target $s.Dir) }
 Copy-Item (Join-Path $staging 'migrate.exe') $Target -Force
 
 Write-Host '== Applying migrations' -ForegroundColor Cyan
 & (Join-Path $Target 'migrate.exe') --connection $connection
 if ($LASTEXITCODE) { throw 'Migrations failed: is the database up (docker compose up -d)? The services are stopped.' }
 
-Write-Host '== Starting' -ForegroundColor Cyan
-foreach ($s in $services) { Start-Service $s.Name }
-
-$status = "http://localhost:$WebPort/status"
-$up = $false
-foreach ($i in 1..30) {
-    try { $up = (Invoke-WebRequest $status -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200 } catch { }
-    if ($up) { break }
-    Start-Sleep -Seconds 2
-}
-Get-Service ($services | ForEach-Object { $_.Name }) | Format-Table Name, Status, StartType -AutoSize
-if (-not $up) { throw "The status page did not answer at $status. See the Application event log." }
+Start-AndWait
 
 "$commit$(if ($dirty) { ' (with uncommitted changes)' }) deployed $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')" |
-    Set-Content (Join-Path $Target 'deployed.txt') -Encoding utf8
+    Set-Content $record -Encoding utf8
+Remove-Item $skip -Force -ErrorAction SilentlyContinue   # a deploy by hand overrides an earlier rollback
 Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "Done: $commit. Status page: $status" -ForegroundColor Green
+Write-Host "Done: $commit. Status page: http://localhost:$WebPort/status" -ForegroundColor Green
