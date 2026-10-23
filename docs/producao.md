@@ -117,6 +117,10 @@ O banco de produção está **neste PC**: traga o `jobs.db` da outra máquina pa
 
 1. Na outra máquina, **desative a tarefa agendada** do protótipo (para o histórico não continuar crescendo lá)
    e copie `job-tracker\data\jobs.db` para este PC (ex.: `C:\Users\davil\Downloads\jobs.db`).
+   **Feito em 2026-10-23:** tarefa desativada e cópia final (backup do SQLite, `integrity_check` ok) em
+   `D:\Projetos\job-tracker\data\export\jobs-2026-10-23.db` na outra máquina (CASAPC): 14.607 vagas, 5 rótulos,
+   150 `market_counts`, 10.244.096 bytes, SHA-256 `818A04C5…7281F53`. Confira o hash depois de copiar
+   (`Get-FileHash`).
 2. Veja o que há no arquivo, sem gravar nada:
    ```powershell
    cd D:\Desenvolvimento\job-radar-au
@@ -134,6 +138,7 @@ candidatura → `Declined`, sem → `Dismissed`), notas, retratos do Raio-X com 
 
 ## Desligar o protótipo Python
 
-Neste PC não há tarefa agendada do protótipo. Ele rodava em **outra máquina do autor** (Agendador de
-Tarefas chamando `job-tracker\run.ps1 --daily`): desative a tarefa lá depois de importar o histórico
-(etapa 9).
+Neste PC não há tarefa agendada do protótipo. Ele rodava em **outra máquina do autor** (CASAPC, tarefa
+`JobTracker Daily` chamando `D:\Projetos\job-tracker\run.ps1 --daily` às 08:00 de Brasília). **Desativada em
+2026-10-23** (última execução 18:35, resultado 0); não foi apagada: `Enable-ScheduledTask -TaskName
+'JobTracker Daily'` lá a reativa.

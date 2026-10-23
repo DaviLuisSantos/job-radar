@@ -17,18 +17,17 @@
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
-| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 comando pronto 2026-10-21; falta rodar com o `jobs.db` da outra máquina |
-| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | 🔨 instalado 2026-10-21; 1ª passada agendada acompanhada 2026-10-22 (ok); falta desligar o protótipo na outra máquina |
+| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 comando pronto 2026-10-21; cópia final do `jobs.db` gerada 2026-10-23; falta levar ao PC de produção e rodar |
+| 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ✅ 2026-10-23 |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 9 (para fechar):** trazer o `jobs.db` da outra máquina e rodar `import-prototype` aqui (o banco de
-  produção está neste PC). Passo a passo em `docs/producao.md`. O `jobs.db` desta máquina só tem 5.388 vagas
-  de 1–2/jun, sem rótulos, candidaturas ou Raio-X: não foi importado no banco de produção.
+- **Etapa 9 (para fechar):** levar a cópia final `jobs-2026-10-23.db` (gerada na outra máquina, ver Diário) ao
+  PC de produção, conferir o hash e rodar `import-prototype` lá (`--dry-run` antes, backup antes). Passo a passo
+  em `docs/producao.md`. O `jobs.db` do PC de produção só tem 5.388 vagas de 1–2/jun, sem rótulos, candidaturas
+  ou Raio-X: não foi importado no banco de produção.
 - **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
-- **Etapa 10 (para fechar):** desligar a tarefa do protótipo na outra máquina. A 1ª passada agendada foi
-  acompanhada em 2026-10-22 (ver Diário). Backup agendado diariamente às 23:00 desde 2026-10-21.
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
@@ -94,6 +93,14 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Etapa 10 fechada: protótipo desligado
+Na outra máquina (CASAPC), a tarefa `JobTracker Daily` (`run.ps1 --daily`, 08:00 de Brasília) foi
+**desativada**, não apagada; a última execução foi às 18:35, com resultado 0. O Worker já roda sozinho em
+produção desde 2026-10-21, com backup diário às 23:00. Para a etapa 9 ficou pronta a cópia final do histórico,
+`D:\Projetos\job-tracker\data\export\jobs-2026-10-23.db` (backup pela API do SQLite, `integrity_check` ok,
+fora do git): 14.607 vagas, 5 rótulos, 1.417 termos, 150 `market_counts`, 5 execuções do Raio-X, 2.595
+execuções de coleta. SHA-256 `818A04C53CC082660417AE36E857C61FB383CBD7E0A0F424A546BB0717281F53`.
 
 ### 2026-10-23 — Prints do README com dados fictícios
 `docs/img/triage.png` e `listing.png`: banco descartável `jobradar_demo` com 12 vagas inventadas (empresas
