@@ -104,6 +104,13 @@ rodaria código nesta máquina). O `deploy.ps1` passou a guardar a versão anter
 execução gravada nos últimos 30 min, além da janela fixa: hoje uma passada recuperada rodou às 18:04. O
 `global.json` pede 10.0.400 com `latestFeature`: qualquer SDK 10.0.4xx serve (esta máquina tem 401, a de produção
 402).
+Dois tropeços na instalação, ambos corrigidos: pelo SSH `USERDOMAIN` é `WORKGROUP` (a tarefa agora usa a identidade
+do processo); e no `auto-deploy.ps1` a variável do commit (`$target`) sobrescrevia o parâmetro `-Target`, porque o
+PowerShell não diferencia maiúsculas: os dois primeiros ciclos "implantaram" numa pasta com o nome do commit dentro
+do checkout (apagadas; a produção seguiu na mesma versão). Agora o ciclo só vale se o `deployed.txt` passar a ter o
+commit, e o `deploy.ps1` recusa `-Target` relativo. Testado pela tarefa em produção: `ccc74a2` implantado em 38 s,
+ciclo seguinte sem nada a fazer; `-Rollback` para `05eec04` (a automática esperou), `-Rollback` de novo de volta a
+`ccc74a2`.
 
 ### 2026-10-23 — Etapa 9 fechada: histórico do protótipo importado (v1 completa)
 Pelo `ssh segmix` (o trabalhopc, a partir da outra máquina): cópia `jobs-2026-10-23.db` com o hash conferido,
