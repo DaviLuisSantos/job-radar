@@ -91,8 +91,9 @@ src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRad
 
 ## Fluxo principal
 
-`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda quatro etapas isoladas
-(uma falha não impede a seguinte): coleta → termos do texto completo → score → retrato do Raio-X.
+`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda cinco etapas isoladas
+(uma falha não impede a seguinte): coleta → termos do texto completo → descrições completas → score → retrato
+do Raio-X.
 
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
 1. para cada fonte e busca, calcula a janela incremental pelo último sucesso;
@@ -114,9 +115,12 @@ vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma 
 com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score, e no fim
 apaga os scores que a passada não gravou (vaga que as buscas do perfil não acham mais, perfil removido).
 
-**Descrição completa** — o autor captura o texto do anúncio que ele mesmo abriu (favorito da página
-`/capture` ou colar na página da vaga); `DescriptionService` grava em `listing_descriptions` e repontua na
-hora (`ScoreOneAsync`). O `FitScorer` lê a descrição **só** nas regras de requisito e de direito de trabalho;
+**Descrição completa** — `DescriptionFetchService`, na passada, busca o texto pelo GraphQL `jobDetails` do Seek
+(`SeekJobDetailsClient`, mesmo orçamento da busca): primeiro as vagas rotuladas ou com status, qualquer score ou
+idade; depois as de melhor score ≥ `Descriptions:MinScore`, publicadas há até `MaxAgeDays`, até `MaxPerPass`.
+Recusa do Seek (`SourceBlockedException`) para a etapa, não a passada. Além disso, o autor pode capturar o texto
+do anúncio que ele mesmo abriu (favorito da página `/capture` ou colar na página da vaga); `DescriptionService`
+grava em `listing_descriptions` e repontua na hora (`ScoreOneAsync`). O `FitScorer` lê a descrição **só** nas regras de requisito e de direito de trabalho;
 sinais do perfil ficam em título e resumo. O site lê os perfis do worker (`profiles.json`, copiado pelo build).
 Texto de uso pessoal: nunca no Raio-X, no repo ou em fixture.
 

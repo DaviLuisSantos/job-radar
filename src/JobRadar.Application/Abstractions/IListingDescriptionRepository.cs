@@ -16,7 +16,9 @@ public interface IListingDescriptionRepository
     /// <summary>
     /// Listings of <paramref name="source"/> with no text yet, posted (or first seen, when the date is
     /// unknown) since <paramref name="postedSince"/>, whose best score in any profile is at least
-    /// <paramref name="minScore"/>: best score first, then most recent. At most <paramref name="limit"/>.
+    /// <paramref name="minScore"/>: best score first, then most recent. Before them, whatever their age
+    /// or score, the listings the candidate labelled or tracked: calibration reads those, and a good one
+    /// the score undervalues is exactly the case the full text should explain. At most <paramref name="limit"/>.
     /// </summary>
     Task<IReadOnlyList<ListingId>> ListToFetchAsync(
         string source, int minScore, DateTimeOffset postedSince, int limit, CancellationToken ct = default);

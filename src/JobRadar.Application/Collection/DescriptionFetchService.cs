@@ -9,7 +9,8 @@ namespace JobRadar.Application.Collection;
 public sealed record DescriptionFetchSummary(int Asked, int Saved, int Gone, int Failed, bool Blocked);
 
 /// <summary>
-/// Fetches the full text of the listings that matter (good enough score, recent, no text yet), so
+/// Fetches the full text of the listings that matter (labelled or tracked; or good enough score and
+/// recent; no text yet), so
 /// the scoring stage reads the whole ad. Runs after collection and before scoring. Requests go in
 /// parallel through the source's own budget; storage is used one call at a time. The first refusal
 /// stops the stage: every further request would be refused too.

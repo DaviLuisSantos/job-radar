@@ -65,11 +65,13 @@ internal sealed class PostgresListingDescriptionRepository(JobRadarDbContext db)
         var since = postedSince.ToUniversalTime();
         var rows = await (
                 from l in db.Listings
-                where l.Source == source && (l.PostedAt ?? l.FirstSeenAt) >= since
+                where l.Source == source
                 where !db.ListingDescriptions.Any(d => d.Source == l.Source && d.SourceId == l.SourceId)
+                let handled = db.ListingLabels.Any(x => x.Source == l.Source && x.SourceId == l.SourceId)
+                              || db.Applications.Any(x => x.Source == l.Source && x.SourceId == l.SourceId)
                 let best = db.ListingScores.Where(s => s.Source == l.Source && s.SourceId == l.SourceId).Max(s => (int?)s.Score)
-                where best >= minScore
-                orderby best descending, l.PostedAt descending, l.SourceId
+                where handled || ((l.PostedAt ?? l.FirstSeenAt) >= since && best >= minScore)
+                orderby handled descending, best descending, l.PostedAt descending, l.SourceId
                 select l.SourceId)
             .Take(limit)
             .ToListAsync(ct);

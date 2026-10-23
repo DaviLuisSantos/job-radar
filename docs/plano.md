@@ -97,6 +97,15 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Descrições em produção; rotuladas primeiro
+Instalado às 18:03 (Brasília). A passada seguinte gravou **2.989 descrições** em ~10 min (21:05–21:15 UTC), sem
+recusa do Seek. Calibragem (73 julgadas; a de 2026-10-22, com menos rótulos, entre parênteses): construction **95%** (79%),
+fifo **88%** (81%), trades 97% (97%). Mas 38 das 73 vagas julgadas ficaram sem texto: 37 tinham melhor score < 40 (só
+1 passava dos 31 dias). Justamente as boas que o score subestima, e as ruins que ele acerta, ficavam medidas
+sem a descrição. Agora `ListToFetchAsync` traz primeiro as vagas com rótulo ou status (`listing_labels`,
+`applications`), qualquer score ou idade; depois o critério de antes. Anúncio que saiu do ar volta a ser pedido
+a cada passada (`Gone`); são dezenas, aceito.
+
 ### 2026-10-23 — Descrição completa automática (GraphQL do Seek)
 O autor pediu para não depender de captura manual. Pesquisa: Adzuna devolve só trecho; Workforce
 Australia sem API pública; Google Jobs (SerpApi/DataForSEO) pago e sem garantia de texto completo; a API

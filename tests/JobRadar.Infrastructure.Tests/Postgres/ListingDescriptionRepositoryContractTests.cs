@@ -90,6 +90,43 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
     }
 
     [DatabaseFact]
+    public async Task Labelled_or_tracked_listings_come_first_whatever_their_score_or_age()
+    {
+        await db.ResetAsync();
+        var posted = ListingMapperTests.Sample("1").PostedAt!.Value;
+        await using (var ctx = db.NewContext())
+        {
+            await new PostgresListingRepository(ctx).RecordObservationsAsync(
+            [
+                .. new[] { "1", "2", "3" }.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")),
+                new SourcedListing(ListingMapperTests.Sample("4") with { PostedAt = posted.AddDays(-60) }, """{"id":"4"}"""),
+            ], "labourer @ perth wa", Monday, Ct);
+        }
+        await using (var ctx = db.NewContext())
+        {
+            static Domain.Matching.ListingScore Score(string id, int final) =>
+                new(new ListingId("seek", id), "fifo", new Domain.Matching.FitScore(final, []), "aaaa", Monday);
+            await new Infrastructure.Postgres.Matching.PostgresListingScoreRepository(ctx).SaveAsync(
+                [Score("1", 90), Score("2", 10), Score("4", 95)], Ct);   // 3 has no score at all
+        }
+        await using (var ctx = db.NewContext())
+        {
+            var tracking = new Infrastructure.Postgres.Tracking.PostgresTrackingRepository(ctx);
+            await tracking.SetLabelAsync(new ListingId("seek", "2"),
+                new Domain.Tracking.ListingLabel(new ListingId("seek", "2"), Domain.Tracking.Verdict.Good, null, Monday), Ct);
+            await tracking.SaveApplicationAsync(
+                Domain.Tracking.JobApplication.Start(new ListingId("seek", "4"), Domain.Tracking.ApplicationStatus.Dismissed, Monday), Ct);
+        }
+
+        await using var read = db.NewContext();
+        var ids = await Repo(read).ListToFetchAsync("seek", 40, posted.AddDays(-31), 10, Ct);
+        var limited = await Repo(read).ListToFetchAsync("seek", 40, posted.AddDays(-31), 2, Ct);
+
+        Assert.Equal(["4", "2", "1"], ids.Select(i => i.SourceId));   // handled by best score, then the rest
+        Assert.Equal(["4", "2"], limited.Select(i => i.SourceId));
+    }
+
+    [DatabaseFact]
     public async Task The_search_keys_of_a_listing_are_the_searches_that_found_it()
     {
         await db.ResetAsync();
