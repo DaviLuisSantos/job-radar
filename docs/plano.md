@@ -97,6 +97,13 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Implantar sem admin
+O `deploy.ps1` pedia admin inteiro, mas só criar e configurar serviço, registro e firewall precisam. Separado em
+`install.ps1` (admin, uma vez: isso tudo + escrita em `C:\JobRadar` + entrada na ACL de cada serviço para o
+usuário iniciar e parar) e `deploy.ps1` (sem admin, a cada versão: publica, para, copia, migra com a conexão lida
+do registro do serviço, inicia, espera o `/status`, grava `deployed.txt`). O `deploy.ps1` recusa a janela da
+passada diária (05:55–06:45 Perth) sem `-Force`. Assim o Claude implanta sozinho.
+
 ### 2026-10-23 — Descrições em produção; rotuladas primeiro
 Instalado às 18:03 (Brasília). A passada seguinte gravou **2.989 descrições** em ~10 min (21:05–21:15 UTC), sem
 recusa do Seek. Calibragem (73 julgadas; a de 2026-10-22, com menos rótulos, entre parênteses): construction **95%** (79%),

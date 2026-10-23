@@ -12,6 +12,7 @@
 | Worker | serviço do Windows `JobRadarWorker` (automático, início atrasado, reinicia em falha) | `C:\JobRadar\worker` |
 | Site | serviço do Windows `JobRadarWeb` | `C:\JobRadar\web` → `http://localhost:5380` e `http://<IP Tailscale>:5380` |
 | Migrations | pacote `migrate.exe`, aplicado a cada implantação | `C:\JobRadar\migrate.exe` |
+| Versão | commit e hora da última implantação | `C:\JobRadar\deployed.txt` |
 
 - Conexão com o banco e ambiente (`Production`) ficam nas variáveis do serviço, no registro
   (`HKLM\SYSTEM\CurrentControlSet\Services\<serviço>\Environment`), não em arquivo.
@@ -29,17 +30,34 @@ banco antes de começar.
 A **primeira passada completa** (sem histórico, até 5 páginas por busca) faz até ~1.500 requisições ao
 Seek e leva dezenas de minutos. Depois, a janela incremental reduz muito.
 
-## Instalar ou atualizar
+## Instalar (uma vez, admin)
 
-Com o Docker Desktop aberto e o banco de pé (`docker compose up -d`), num PowerShell **como administrador**:
+Num PowerShell **como administrador**:
+
+```powershell
+cd D:\Desenvolvimento\job-radar-au
+.\deploy\install.ps1
+```
+
+Cria ou atualiza os serviços (início atrasado, reinício em falha, ambiente e conexão no registro), a regra de
+firewall da Tailscale, e dá ao usuário que rodou (`-User` para outro) direito de escrita em `C:\JobRadar` e de
+consultar, iniciar e parar os dois serviços (uma entrada na ACL de cada serviço: `sc.exe sdshow JobRadarWorker`
+mostra). Não publica nem inicia nada. Só precisa rodar de novo se mudar o que ele define: conexão, porta,
+serviço novo, outro usuário.
+
+## Atualizar (sem admin)
+
+Com o Docker Desktop aberto e o banco de pé (`docker compose up -d`), num PowerShell comum (o Claude também roda):
 
 ```powershell
 cd D:\Desenvolvimento\job-radar-au
 .\deploy\deploy.ps1
 ```
 
-O script publica, para os serviços, copia, aplica migrations, cria ou atualiza os serviços, libera o
-firewall para a Tailscale e inicia tudo. Rodar de novo = implantar a versão atual do repositório.
+Publica o repositório (o checkout ou worktree de onde roda; os perfis vêm do `appsettings.Local.json` do checkout
+principal se o worktree não tiver), para os serviços, copia, aplica migrations (conexão lida do registro do
+serviço), inicia e espera a página de status responder. Grava o commit implantado em `C:\JobRadar\deployed.txt`.
+**Recusa rodar entre 05:55 e 06:45 de Perth** (a passada diária seria cortada); `-Force` passa por cima.
 
 ## Acompanhar
 
@@ -67,6 +85,8 @@ que puder. Recriar ou mudar o horário: `.\deploy\schedule-backup.ps1 -At 23:00`
 Restaurar: `docker compose exec -T postgres pg_restore -U jobradar -d jobradar --clean < <arquivo>`.
 
 ## Parar ou remover
+
+Parar e iniciar não pedem admin depois do `install.ps1`; remover pede:
 
 ```powershell
 Stop-Service JobRadarWorker, JobRadarWeb
