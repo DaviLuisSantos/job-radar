@@ -81,6 +81,25 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
     }
 
     [DatabaseFact]
+    public async Task Runs_since_a_moment_come_back_whole_and_oldest_first()
+    {
+        await db.ResetAsync();
+        await RecordAsync(Run(Monday.AddMinutes(-1)));
+        await RecordAsync(Run(Monday.AddMinutes(5), key: "term: australian citizen") with { Complete = false });
+        await RecordAsync(Run(Monday, error: "HttpRequestException: 503") with { Source = "adzuna" });
+
+        await using var ctx = db.NewContext();
+        var runs = await new PostgresCollectionRunRepository(ctx).ListStartedSinceAsync(Monday, Ct);
+
+        Assert.Equal(
+            [
+                Run(Monday, error: "HttpRequestException: 503") with { Source = "adzuna" },
+                Run(Monday.AddMinutes(5), key: "term: australian citizen") with { Complete = false },
+            ],
+            runs);   // DateTimeOffset equality is by instant: the UTC offset read back does not matter
+    }
+
+    [DatabaseFact]
     public async Task Runs_are_stored_as_they_happened()
     {
         await db.ResetAsync();

@@ -98,6 +98,13 @@ public static class Wording
     /// <summary>A stored instant (UTC) in the local time of the machine running the site.</summary>
     public static string When(DateTimeOffset at) => at.ToLocalTime().ToString("d MMM yyyy HH:mm", CultureInfo.InvariantCulture);
 
+    /// <summary>First line of <paramref name="text"/>, cut at <paramref name="max"/> characters; a stack trace stays out of a table cell.</summary>
+    public static string Shorten(string? text, int max)
+    {
+        var line = text?.Split('\n', 2)[0].TrimEnd() ?? "";
+        return line.Length <= max ? line : string.Concat(line.AsSpan(0, max - 1).TrimEnd(), "…");
+    }
+
     /// <summary>"today", "3d", "5w": short enough for a table column.</summary>
     public static string Age(DateTimeOffset? posted, DateTimeOffset now)
     {

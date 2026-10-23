@@ -13,6 +13,9 @@ public interface ICollectionRunRepository
     /// <summary>Totals per local day of the most recent <paramref name="days"/> days with runs, newest first.</summary>
     Task<IReadOnlyList<DailyRunSummary>> SummariseRecentDaysAsync(int days, TimeZoneInfo zone, CancellationToken ct = default);
 
+    /// <summary>Every run started at or after <paramref name="since"/>, of any search or source, oldest first.</summary>
+    Task<IReadOnlyList<CollectionRun>> ListStartedSinceAsync(DateTimeOffset since, CancellationToken ct = default);
+
     /// <summary>
     /// When the last run of this search on this source that succeeded <b>and saw its whole window</b>
     /// started; null if never. A run cut at the source cap does not count: the next one must cover

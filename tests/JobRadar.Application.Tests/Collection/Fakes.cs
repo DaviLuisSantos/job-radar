@@ -128,6 +128,9 @@ internal sealed class InMemoryRuns : ICollectionRunRepository
     public Task<IReadOnlyList<DailyRunSummary>> SummariseRecentDaysAsync(int days, TimeZoneInfo zone, CancellationToken ct = default) =>
         throw new NotSupportedException();
 
+    public Task<IReadOnlyList<CollectionRun>> ListStartedSinceAsync(DateTimeOffset since, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CollectionRun>>(Runs.Where(r => r.StartedAt >= since).OrderBy(r => r.StartedAt).ToList());
+
     public Task<DateTimeOffset?> GetLastCompleteStartAsync(string source, string searchKey, CancellationToken ct = default) =>
         Task.FromResult(Runs.Where(r => r.Source == source && r.SearchKey == searchKey && r.Succeeded && r.Complete)
             .Select(r => (DateTimeOffset?)r.StartedAt).Max());

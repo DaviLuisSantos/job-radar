@@ -2,6 +2,7 @@
 @using JobRadar.Application.Operations
 @using JobRadar.Domain.Market
 @inject Backend Backend
+@inject IWebHostEnvironment Environment
 
 <PageTitle>Status · JobRadar AU</PageTitle>
 
@@ -22,8 +23,46 @@
             <dd>@s.NextRun.ToString("ddd d MMM, HH:mm") (schedule time zone) · @Wording.When(s.NextRun) here</dd>
             <dt>Last start</dt>
             <dd>@(s.LastStart is { } last ? Wording.When(last) : "never")</dd>
+            <dt>Deployed</dt>
+            <dd>@(_deployment?.Deployed ?? "no deploy record (not installed by deploy.ps1)")@(_deployment?.Build is { } build ? $" · this build {build}" : "")</dd>
         </dl>
     </section>
+
+    @if (s.LastPass is { } pass)
+    {
+        var problems = pass.Problems;
+        <h2>Last pass</h2>
+        <p class="muted">
+            @Wording.When(pass.StartedAt) to @Wording.When(pass.FinishedAt) · @pass.Runs.Count runs (searches and terms) ·
+            @(problems.Count == 0 ? "every one succeeded and saw its whole window." : $"{problems.Count} failed or incomplete:")
+        </p>
+        @if (problems.Count > 0)
+        {
+            <table class="grid">
+                <thead>
+                    <tr>
+                        <th>Search or term</th>
+                        <th>Source</th>
+                        <th>Outcome</th>
+                        <th class="num">Found</th>
+                        <th>Error</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in problems)
+                    {
+                        <tr class="@(r.Succeeded ? "" : "warn")">
+                            <td>@r.SearchKey</td>
+                            <td>@r.Source</td>
+                            <td>@(r.Succeeded ? "Incomplete" : "Failed")</td>
+                            <td class="num">@r.Found.ToString("N0")</td>
+                            <td title="@r.Error">@Wording.Shorten(r.Error, 160)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
 
     <h2>Collection, by day</h2>
     @if (s.Days.Count == 0)
@@ -98,7 +137,11 @@ else
 
 @code {
     private PipelineStatus? _status;
+    private Deployment? _deployment;
 
-    protected override async Task OnInitializedAsync() =>
+    protected override async Task OnInitializedAsync()
+    {
+        _deployment = Deployment.Read(Environment.ContentRootPath);
         _status = await Backend.RunAsync<StatusService, PipelineStatus>(s => s.GetAsync());
+    }
 }

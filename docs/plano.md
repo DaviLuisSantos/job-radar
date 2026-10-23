@@ -34,8 +34,10 @@ Pendências conhecidas, com a etapa onde entram:
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
 - **Termos de cidadania e direito de trabalho:** corrigido em 2026-10-22 com a palavra de contexto; tech e
   regional ganharam as suas em 2026-10-23 (ver Diário). A busca do termo sozinho segue incompleta todo dia, sem
-  efeito: todo perfil agora tem contexto. Conferir na passada de 2026-10-24 que os termos "+ contexto" novos
-  vieram completos (`collection_runs` com `term:%` e `complete = false`).
+  efeito: todo perfil agora tem contexto. A passada de 2026-10-24 (Perth) **ainda não tinha** os novos: 412
+  execuções, o mesmo de antes (seriam ~452), e as palavras entraram às 19:14 de Brasília, depois do início
+  dela. Elas moram no `appsettings.Local.json`, que só chega à produção pelo `deploy.ps1`. Depois de implantar,
+  conferir na `/status` ("Last pass") que nenhum termo "+ contexto" aparece como incompleto.
 - **Etapa 10:** com páginas completas, as buscas dos 5 perfis (256 desde 2026-10-21; eram 311) fazem até
   ~1.300 requisições numa passada sem janela. Depois, a janela incremental reduz muito.
 - **Acerto do score (decidido 2026-10-21, nesta ordem):** (1) rotular: meta de 50 julgadas por perfil, com
@@ -93,6 +95,15 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — `/status` mostra a última passada e o que está implantado
+Da outra máquina só a página de status é alcançável (Tailscale, firewall só na 5380), e ela não dizia quais
+buscas falharam nem qual versão estava rodando: a conferência dos termos "+ contexto" virou dedução pela
+contagem. Agora a página mostra a linha do `deployed.txt` (commit e hora; o commit do build quando não há
+registro) e a última passada com cada busca ou termo que falhou ou parou no teto, com o erro. Sem id de passada
+em `collection_runs`: a passada são as execuções seguidas, sem pausa de mais de 1 h (`CollectionPass`). Porta
+nova `ICollectionRunRepository.ListStartedSinceAsync`. O `deployed.txt` é lido a cada visita: o script o grava
+depois de subir os serviços.
 
 ### 2026-10-23 — Etapa 10 fechada: protótipo desligado
 Na outra máquina (CASAPC), a tarefa `JobTracker Daily` (`run.ps1 --daily`, 08:00 de Brasília) foi

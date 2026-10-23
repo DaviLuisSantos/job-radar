@@ -61,8 +61,11 @@ serviço), inicia e espera a página de status responder. Grava o commit implant
 
 ## Acompanhar
 
-- **Página de status:** `http://localhost:5380/status` (ou pelo IP da Tailscale). Passadas por dia, falhas,
-  buscas incompletas e os retratos do Raio-X com o status de qualidade.
+- **Página de status:** `http://localhost:5380/status` (ou pelo IP da Tailscale, de qualquer máquina). A linha
+  do `deployed.txt` (commit e hora; a hora diz se a mudança de perfil, que não é commit, já foi implantada), a
+  **última passada** com cada busca ou termo que falhou ou parou no teto (com o erro), passadas por dia e os
+  retratos do Raio-X com o status de qualidade. A última passada são as execuções seguidas, sem pausa de mais
+  de 1 h (`CollectionPass.Gap`).
 - **Logs:** Visualizador de Eventos → Logs do Windows → Aplicativo, fontes `JobRadarWorker` e `JobRadarWeb`.
   Só **avisos e erros** vão para lá (padrão do log de eventos); um log com apenas "Service started" é normal.
   O andamento de cada passada está na página de status e em `collection_runs`.

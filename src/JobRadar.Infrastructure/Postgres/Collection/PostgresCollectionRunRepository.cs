@@ -35,6 +35,17 @@ internal sealed class PostgresCollectionRunRepository(JobRadarDbContext db) : IC
             .ToList();
     }
 
+    public async Task<IReadOnlyList<CollectionRun>> ListStartedSinceAsync(DateTimeOffset since, CancellationToken ct = default)
+    {
+        var utc = since.ToUniversalTime();
+        var rows = await db.CollectionRuns
+            .Where(r => r.StartedAt >= utc)
+            .OrderBy(r => r.StartedAt)
+            .ThenBy(r => r.Id)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
     public Task<DateTimeOffset?> GetLastCompleteStartAsync(string source, string searchKey, CancellationToken ct = default) =>
         db.CollectionRuns
             .Where(r => r.Source == source && r.SearchKey == searchKey && r.Error == null && r.Complete)
@@ -52,4 +63,7 @@ internal sealed class PostgresCollectionRunRepository(JobRadarDbContext db) : IC
         Complete = run.Complete,
         Error = run.Error is { Length: > MaxErrorLength } e ? e[..MaxErrorLength] : run.Error,
     };
+
+    internal static CollectionRun ToDomain(CollectionRunEntity e) =>
+        new(e.Source, e.SearchKey, e.PostedWithinDays, e.StartedAt, e.FinishedAt, e.Found, e.New, e.Complete, e.Error);
 }

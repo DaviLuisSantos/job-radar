@@ -92,4 +92,42 @@ public class WordingTests
 
         Assert.Equal(expected, Wording.Age(now.AddDays(-days), now));
     }
+
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("HttpRequestException: 503", "HttpRequestException: 503")]
+    [InlineData("TaskCanceledException: timeout\n   at Polly...", "TaskCanceledException: timeout")]
+    [InlineData("SourceBlockedException: Seek answered 403 with a challenge", "SourceBlockedException: Seek…")]
+    public void Errors_are_shortened_to_their_first_line(string? error, string expected) =>
+        Assert.Equal(expected, Wording.Shorten(error, 30));
+}
+
+public class DeploymentTests
+{
+    [Fact]
+    public void Reads_the_deploy_record_next_to_the_site_folder()
+    {
+        var root = Directory.CreateTempSubdirectory("jobradar-deploy-");
+        try
+        {
+            var web = root.CreateSubdirectory("web");
+            File.WriteAllText(Path.Combine(root.FullName, Deployment.FileName),
+                "dab938e deployed 2026-10-23 19:20:00 -03:00\r\n", System.Text.Encoding.UTF8);   // with a BOM, like Set-Content -Encoding utf8
+
+            Assert.Equal("dab938e deployed 2026-10-23 19:20:00 -03:00", Deployment.Read(web.FullName + Path.DirectorySeparatorChar).Deployed);
+            Assert.Null(Deployment.Read(root.FullName).Deployed);
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void The_build_commit_comes_from_the_informational_version()
+    {
+        var commit = Deployment.BuildCommit(typeof(Deployment).Assembly);
+
+        Assert.Matches("^[0-9a-f]{7}$", commit);
+    }
 }
