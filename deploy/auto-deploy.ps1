@@ -40,21 +40,21 @@ function Invoke-Git([string] $arguments) {
 
 try {
     Invoke-Git 'fetch --quiet origin main' | Out-Null
-    $target = (Invoke-Git 'rev-parse origin/main').Trim()
-    $short = $target.Substring(0, 7)
+    $head = (Invoke-Git 'rev-parse origin/main').Trim()
+    $short = $head.Substring(0, 7)
 
     $deployed = (Get-Content (Join-Path $Target 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
-    if ($deployed -and $target.StartsWith($deployed)) {
+    if ($deployed -and $head.StartsWith($deployed)) {
         if ($DryRun) { Write-Log "$short is already deployed: nothing to do." }
         return
     }
     $skipped = Get-Content (Join-Path $Target 'rollback-skip.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($skipped -and $target.StartsWith($skipped.Trim())) {
+    if ($skipped -and $head.StartsWith($skipped.Trim())) {
         if ($DryRun) { Write-Log "$short was rolled back: waiting for a newer commit on main." }
         return
     }
 
-    $runs = Invoke-RestMethod "https://api.github.com/repos/$Repository/actions/runs?head_sha=$target&branch=main&event=push&per_page=20" `
+    $runs = Invoke-RestMethod "https://api.github.com/repos/$Repository/actions/runs?head_sha=$head&branch=main&event=push&per_page=20" `
         -Headers @{ 'User-Agent' = 'jobradar-auto-deploy'; 'Accept' = 'application/vnd.github+json' } -TimeoutSec 30
     $run = $runs.workflow_runs | Where-Object { $_.name -eq $Workflow } | Sort-Object run_attempt -Descending | Select-Object -First 1
     if (-not $run -or $run.status -ne 'completed') {
@@ -81,7 +81,7 @@ try {
     $output = & (Join-Path $PSScriptRoot 'deploy.ps1') -Target $Target *>&1 | Out-String
     # Trust the record, not a quiet exit: deploy.ps1 writes it only after the site answered.
     $now = (Get-Content (Join-Path $Target 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
-    if (-not ($now -and $target.StartsWith($now))) { throw "deploy.ps1 ended without recording $short (still $now)." }
+    if (-not ($now -and $head.StartsWith($now))) { throw "deploy.ps1 ended without recording $short (still $now)." }
     Write-Log "Deployed $short."
 }
 catch {

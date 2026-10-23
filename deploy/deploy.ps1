@@ -26,6 +26,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not [IO.Path]::IsPathRooted($Target)) { throw "-Target must be an absolute path, not '$Target'." }
 $repo = Split-Path $PSScriptRoot -Parent
 $staging = Join-Path $env:TEMP "jobradar-publish-$(Get-Date -Format yyyyMMddHHmmss)"
 $services = @(
@@ -99,12 +100,12 @@ if ($Rollback) {
     Copy-Item (Join-Path $previous 'migrate.exe') $Target -Force
     Copy-Item (Join-Path $swap 'migrate.exe') $previous -Force
     Start-AndWait
-    $from = ($current -split ' ')[0]
+    $undone = ($current -split ' ')[0]
     $current | Set-Content (Join-Path $previous 'deployed.txt') -Encoding utf8
-    "$back (rolled back from $from on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'))" | Set-Content $record -Encoding utf8
-    $from | Set-Content $skip -Encoding utf8
+    "$back (rolled back from $undone on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'))" | Set-Content $record -Encoding utf8
+    $undone | Set-Content $skip -Encoding utf8
     Remove-Item $swap -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "Rolled back. auto-deploy.ps1 skips $from until main moves past it." -ForegroundColor Green
+    Write-Host "Rolled back. auto-deploy.ps1 skips $undone until main moves past it." -ForegroundColor Green
     return
 }
 
