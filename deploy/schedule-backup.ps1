@@ -21,7 +21,7 @@ $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
 $trigger = New-ScheduledTaskTrigger -Daily -At $At
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
-$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+$principal = New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal `
     -Description 'Dumps the JobRadar database (deploy\backup.ps1); keeps the latest 30.' -Force | Out-Null
