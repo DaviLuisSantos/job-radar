@@ -17,14 +17,12 @@
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
-| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | 🔨 comando pronto 2026-10-21; cópia final do `jobs.db` gerada 2026-10-23; falta levar ao PC de produção e rodar |
+| 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ✅ 2026-10-23 |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ✅ 2026-10-23 |
 
 Pendências conhecidas, com a etapa onde entram:
-- **Etapa 9 (para fechar):** levar a cópia final `jobs-2026-10-23.db` (gerada na outra máquina, ver Diário) ao
-  PC de produção, conferir o hash e rodar `import-prototype` lá (`--dry-run` antes, backup antes). Passo a passo
-  em `docs/producao.md`. O `jobs.db` do PC de produção só tem 5.388 vagas de 1–2/jun, sem rótulos, candidaturas
-  ou Raio-X: não foi importado no banco de produção.
+- **Etapa 9:** as 9.593 vagas importadas ganham score na passada de 2026-10-24 (19:00 de Brasília). Conferir na
+  triagem que aparecem nos 5 perfis.
 - **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
@@ -95,6 +93,14 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Etapa 9 fechada: histórico do protótipo importado (v1 completa)
+Pelo `ssh segmix` (o trabalhopc, a partir da outra máquina): cópia `jobs-2026-10-23.db` com o hash conferido,
+backup `jobradar_2026-10-23_201115.dump` (10,7 MB), dry-run e importação com `bd9c21b`. Resultado: **9.593 vagas
+novas** e 5.014 já conhecidas (só juntaram datas; o banco foi de 16.167 para 25.760), 653 termos novos dos 1.417,
+**5 rótulos** (nenhum conflito; 73 → 78), nenhuma candidatura (o protótipo só tinha `new`), Raio-X com **13/out e
+21/out** novos (os outros 3 dias já estavam aqui) e 642 vagas do Raio-X juntadas. As vagas ficaram ligadas aos 5
+perfis atuais (`profile: <nome>`); o score delas sai na próxima passada. Com as etapas 9 e 10, a v1 está fechada.
 
 ### 2026-10-23 — Importador: dias do Raio-X pela data de Perth
 No cruzamento antes de importar, os 5 dias do Raio-X do `jobs.db` final estavam um dia atrás dos daqui: o
