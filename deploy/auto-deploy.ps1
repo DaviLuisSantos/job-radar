@@ -23,6 +23,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $log = Join-Path $Target 'auto-deploy.log'
+$lastOutput = Join-Path $Target 'auto-deploy-last.txt'   # everything deploy.ps1 printed, last time it ran
+$output = $null
 
 function Write-Log([string] $message) {
     $line = "{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $message
@@ -77,10 +79,15 @@ try {
     Invoke-Git 'merge --ff-only --quiet origin/main' | Out-Null
     Write-Log "Deploying $short (CI: $($run.html_url))."
     $output = & (Join-Path $PSScriptRoot 'deploy.ps1') -Target $Target *>&1 | Out-String
+    # Trust the record, not a quiet exit: deploy.ps1 writes it only after the site answered.
+    $now = (Get-Content (Join-Path $Target 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
+    if (-not ($now -and $target.StartsWith($now))) { throw "deploy.ps1 ended without recording $short (still $now)." }
     Write-Log "Deployed $short."
 }
 catch {
-    Write-Log "FAILED $($_.Exception.Message)"
-    if ($output) { Add-Content -Path $log -Value $output -Encoding utf8 }
+    Write-Log "FAILED $($_.Exception.Message)$(if ($output) { " Output: $lastOutput" })"
     exit 1
+}
+finally {
+    if ($output) { Set-Content -Path $lastOutput -Value $output -Encoding utf8 }
 }

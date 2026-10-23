@@ -68,7 +68,8 @@ Tarefa `JobRadar Auto-deploy` (**a cada 15 min**, com o usuário do autor logado
 passou, avança o checkout (`--ff-only`) e chama o `deploy.ps1`. Basta dar push em main, de qualquer máquina. Não
 implanta com o checkout fora da main, com mudança local em arquivo versionado ou com commit local que não está no
 `origin/main`; CI falho fica registrado uma vez e o commit é ignorado até main andar. Log em
-`C:\JobRadar\auto-deploy.log` (só ação e problema). Conferir sem mudar nada: `.\deploy\auto-deploy.ps1 -DryRun`.
+`C:\JobRadar\auto-deploy.log` (só ação e problema); a saída inteira do último deploy fica em
+`C:\JobRadar\auto-deploy-last.txt`, e só vale como implantado se o `deployed.txt` passar a ter o commit. Conferir sem mudar nada: `.\deploy\auto-deploy.ps1 -DryRun`.
 Instalar ou mudar o intervalo: `.\deploy\schedule-auto-deploy.ps1 -EveryMinutes 15`. Pausar:
 `Disable-ScheduledTask -TaskName 'JobRadar Auto-deploy'`.
 
