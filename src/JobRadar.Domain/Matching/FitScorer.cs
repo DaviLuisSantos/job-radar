@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 7;
+    public const int RulesVersion = 8;
 
     private const int ExclusionPoints = -50;
 
@@ -29,6 +29,21 @@ public static class FitScorer
     /// "cert III an advantage" matches as well as "cert III essential".
     /// </summary>
     private const int RequirementPenalty = 20;
+
+    /// <summary>
+    /// A truck licence class (HR/HC/MR/MC) the ad asks for: it takes years of holding a car licence, so
+    /// a newcomer cannot get one for the job. Told by the candidate (2026-10-23): these ads are bad.
+    /// </summary>
+    private const int TruckLicencePenalty = 40;
+
+    /// <summary>A truck licence the ad calls desirable ("MR licence highly regarded"): not a condition.</summary>
+    private const int DesirableTruckLicencePenalty = 10;
+
+    /// <summary>
+    /// A ticket earned with a short course (HRWL, VOC): the candidate would get one for the job. Lower
+    /// than <see cref="RequirementPenalty"/>, which stands for years of experience or a trade.
+    /// </summary>
+    private const int TicketPenalty = 10;
 
     public static FitScore Score(ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today)
     {
@@ -175,8 +190,10 @@ public static class FitScorer
         {
             if (!groups.TryGetValue(group, out var hits))
                 continue;
-            // The work-rights phrases are read from a captured ad instead (below).
-            if (described && group is FullTextGroup.Citizen or FullTextGroup.Ambiguous or FullTextGroup.Rights12Months or FullTextGroup.WhvWithResidency)
+            // The work-rights phrases and the truck licence are read from a captured ad instead (below):
+            // the search gives no context ("HR licence desirable"), the ad does.
+            if (described && group is FullTextGroup.Citizen or FullTextGroup.Ambiguous or FullTextGroup.Rights12Months
+                    or FullTextGroup.WhvWithResidency or FullTextGroup.Licence)
                 continue;
             if (whv && group is FullTextGroup.Citizen or FullTextGroup.Rights12Months or FullTextGroup.WhvWithResidency)
                 continue;
@@ -194,32 +211,35 @@ public static class FitScorer
                 Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -10);
         }
 
-        // Requirements of the profile found in the full ad: once per kind. A truck licence already
-        // counted (local text or the policy's licence group) is not counted again; a training title
-        // is where the trade certificate is earned. The context word only narrows the search: a phrase
-        // found with any context ("HC licence + FIFO", searched for another profile) is in the ad.
-        // In a captured ad the phrase counts when not negated just before it ("no HR licence needed").
+        // Requirements of the profile found in the full ad: once per kind, a truck licence apart from a
+        // ticket. A truck licence already counted (local text or the policy's licence group) is not counted
+        // again; a training title is where the trade certificate is earned. The context word only narrows
+        // the search: a phrase found with any context ("HC licence + FIFO", searched for another profile) is
+        // in the ad. A captured ad is read instead of the search, which also matches what the ad does not
+        // say; there the phrase counts when not negated just before it ("no HR licence needed").
         var found = job.FullTextTerms.Select(t => new FullTextTerm(t).Phrases[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var truckCounted = groups.ContainsKey(FullTextGroup.Licence) || TruckLicence.IsMatch(fullAndDesc);
+        var truckAsked = TruckLicenceAsked(fullAndDesc);
+        var truckCounted = (!described && groups.ContainsKey(FullTextGroup.Licence)) || truckAsked is not null;
         var requirements = profile.Requirements.Terms()
-            .Select(r => (r.Kind, r.Phrase, Where: described && MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description
-                : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
+            .Select(r => (r.Kind, Truck: r.Kind == RequirementKind.Licence && TruckLicence.IsMatch(r.Phrase), r.Phrase,
+                Where: described ? (MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description : ScoreWhere.None)
+                    : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
             .Where(r => r.Where != ScoreWhere.None)
-            .OrderBy(r => r.Where == ScoreWhere.Description ? 0 : 1)
-            .DistinctBy(r => r.Kind);
+            .DistinctBy(r => (r.Kind, r.Truck));
         foreach (var requirement in requirements)
         {
-            if (requirement.Kind == RequirementKind.Licence && truckCounted)
+            if (requirement.Truck && truckCounted)
                 continue;
             if (requirement.Kind == RequirementKind.Qualification && trainingTitle)
                 continue;
-            var rule = requirement.Kind switch
+            var (rule, points) = requirement switch
             {
-                RequirementKind.Experience => ScoreRule.FullTextExperience,
-                RequirementKind.Qualification => ScoreRule.FullTextQualification,
-                _ => ScoreRule.FullTextLicence,
+                { Truck: true } => (ScoreRule.FullTextTruckLicence, TruckLicencePenalty),
+                { Kind: RequirementKind.Licence } => (ScoreRule.FullTextLicence, TicketPenalty),
+                { Kind: RequirementKind.Experience } => (ScoreRule.FullTextExperience, RequirementPenalty),
+                _ => (ScoreRule.FullTextQualification, RequirementPenalty),
             };
-            Add(rule, requirement.Phrase, requirement.Where, -RequirementPenalty);
+            Add(rule, requirement.Phrase, requirement.Where, -points);
         }
 
         if (policy.ApprenticeshipPenalty > 0 && trainingTitle)
@@ -230,8 +250,13 @@ public static class FitScorer
 
         if (CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
             Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -30);
-        if (TruckLicence.Match(fullAndDesc) is { Success: true } truck && !groups.ContainsKey(FullTextGroup.Licence))
-            Add(ScoreRule.TruckLicence, truck.Value, ScoreWhere.Text, -20);
+        if (truckAsked is { } truck && (described || !groups.ContainsKey(FullTextGroup.Licence)))
+        {
+            if (truck.Desirable)
+                Add(ScoreRule.TruckLicence, $"{truck.Value} (desirable)", ScoreWhere.Text, -DesirableTruckLicencePenalty);
+            else
+                Add(ScoreRule.TruckLicence, truck.Value, ScoreWhere.Text, -TruckLicencePenalty);
+        }
 
         if (policy.VisaRequired && !sponsorConfirmed)
             Add(ScoreRule.NoSponsorship, "sponsor", ScoreWhere.None, -(sponsorDenied ? 15 : policy.NoSponsorPenalty));
@@ -264,7 +289,7 @@ public static class FitScorer
         (FullTextGroup.Ambiguous, ScoreRule.FullTextAmbiguousRights, -10),
         (FullTextGroup.Rights12Months, ScoreRule.FullTextTwelveMonthRights, -40),
         (FullTextGroup.Commission, ScoreRule.FullTextCommission, -30),
-        (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -20),
+        (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -TruckLicencePenalty),
     ];
 
     /// <summary>

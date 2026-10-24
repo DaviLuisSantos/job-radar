@@ -79,10 +79,14 @@ internal static class ListingPatterns
 
     public static readonly Regex CommissionOnly = R(@"(?<!not\s)(?<!no\s)\bcommission[\s-]+(?:only|based)\b");
 
-    /// <summary>Truck licence classes (HR/HC/MR/MC).</summary>
+    /// <summary>
+    /// Truck licence classes (HR/HC/MR/MC): years of holding a car licence away for a newcomer, not a
+    /// course. Also "HR truck driver's licence", "HC class licence", "heavy combination".
+    /// </summary>
     public static readonly Regex TruckLicence = R(
-        @"\b(?:HR|HC|MR|MC)\s+(?:licen[cs]e|driver)|\b(?:HR|HC|MR|MC)\s*/\s*(?:HR|HC|MR|MC)\b"
-        + @"|\bheavy\s+rigid\b");
+        @"\b(?:HR|HC|MR|MC)(?:[\s-]+(?:class|truck|rigid|combination))?[\s-]+(?:driver['’]?s?[\s-]+)?(?:licen[cs]e|driver)"
+        + @"|\b(?:HR|HC|MR|MC)\s*/\s*(?:HR|HC|MR|MC)\b"
+        + @"|\bheavy\s+(?:rigid|combination)\b");
 
     public static readonly Regex FlexibleWorkType = R("contract|temp|casual");
 
@@ -141,6 +145,46 @@ internal static class ListingPatterns
     /// <summary>Like <see cref="Signal"/>, accepting a plural ("Plumbers").</summary>
     public static Regex QualifiedTitle(string title) =>
         Titles.GetOrAdd(title, t => R(@"(?<!\w)" + Regex.Escape(t) + @"s?(?!\w)"));
+
+    /// <summary>Said of a requirement right after it: nice to have, not a condition ("HR licence highly regarded").</summary>
+    private static readonly Regex Desirable = R(
+        @"\b(?:desirable|advantage(?:ous)?|preferred|highly\s+regarded|well\s+regarded|bonus|not\s+(?:essential|mandatory|required))\b");
+
+    private const int ClauseWindow = 40;
+
+    /// <summary>
+    /// The truck licence the text asks for: the first one not negated in its own clause before it ("no HR
+    /// licence needed"), preferring one that is a condition over one said to be desirable right after it.
+    /// Null when the text asks for none. The clause, not <see cref="NegationWindow"/>: in a list of
+    /// requirements a "no" on the line above ("no experience needed") says nothing about the licence.
+    /// </summary>
+    public static (string Value, bool Desirable)? TruckLicenceAsked(string text)
+    {
+        (string Value, bool Desirable)? optional = null;
+        for (var m = TruckLicence.Match(text); m.Success; m = m.NextMatch())
+        {
+            if (Negation.IsMatch(Clause(text.AsSpan(Math.Max(0, m.Index - ClauseWindow), Math.Min(ClauseWindow, m.Index)), fromEnd: true)))
+                continue;
+            var end = m.Index + m.Length;
+            if (!Desirable.IsMatch(Clause(text.AsSpan(end, Math.Min(ClauseWindow, text.Length - end)), fromEnd: false)))
+                return (m.Value, false);
+            optional ??= (m.Value, true);
+        }
+        return optional;
+    }
+
+    /// <summary>The part of <paramref name="text"/> in the same clause as the match next to it.</summary>
+    private static ReadOnlySpan<char> Clause(ReadOnlySpan<char> text, bool fromEnd)
+    {
+        ReadOnlySpan<char> breaks = ['\n', '.', ';', '•', '·'];
+        if (fromEnd)
+        {
+            var cut = text.LastIndexOfAny(breaks);
+            return cut < 0 ? text : text[(cut + 1)..];
+        }
+        var stop = text.IndexOfAny(breaks);
+        return stop < 0 ? text : text[..stop];
+    }
 
     /// <summary>True when the signal appears at least once without a negation in the 80 characters before it.</summary>
     public static bool MatchesUnnegated(string signal, string text)

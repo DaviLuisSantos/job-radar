@@ -303,7 +303,7 @@ public class FitScorerTests
     };
 
     [Fact]
-    public void Requirements_found_in_the_full_ad_cost_twenty_once_per_kind()
+    public void Requirements_found_in_the_full_ad_count_once_per_kind_and_a_ticket_costs_less()
     {
         var score = Score(Job("Labourer", fullText: ["years experience + FIFO", "minimum 2 years + fifo", "cert III + FIFO", "HRWL + FIFO"]),
             FifoWithRequirements);
@@ -311,7 +311,7 @@ public class FitScorerTests
         Assert.Equal(-20, Item(score, ScoreRule.FullTextExperience).Points);
         Assert.Equal("years experience", Item(score, ScoreRule.FullTextExperience).Detail);
         Assert.Equal(-20, Item(score, ScoreRule.FullTextQualification).Points);
-        Assert.Equal(-20, Item(score, ScoreRule.FullTextLicence).Points);
+        Assert.Equal(-10, Item(score, ScoreRule.FullTextLicence).Points);   // a ticket is a short course away
         Assert.Equal(3, score.Items.Count(i => i.Where == ScoreWhere.FullText));   // two experience phrases, one penalty
     }
 
@@ -367,8 +367,19 @@ public class FitScorerTests
         var waives = Score(Described("Labourer", "No HRWL needed, and no minimum 2 years either: we train you from day one."), FifoWithRequirements);
 
         Assert.Equal(ScoreWhere.Description, Item(asks, ScoreRule.FullTextExperience).Where);
-        Assert.Equal(-20, Item(asks, ScoreRule.TruckLicence).Points);   // "HR licence" read locally counts once
+        Assert.Equal(-40, Item(asks, ScoreRule.TruckLicence).Points);   // "HR licence" read locally counts once
         Assert.DoesNotContain(waives.Items, i => i.Rule is ScoreRule.FullTextExperience or ScoreRule.FullTextLicence);
+    }
+
+    [Fact]
+    public void A_captured_ad_is_read_instead_of_the_search_for_requirements_and_truck_licences()
+    {
+        // The search matched "HRWL" and "HR licence" somewhere; the ad only asks for a car licence.
+        var score = Score(Described("Labourer", "Holds a current Australian driver's license. Fit for work.",
+            "HRWL + labourer", "HR licence", "years experience + FIFO"), FifoWithRequirements);
+
+        Assert.DoesNotContain(score.Items, i => i.Rule is ScoreRule.FullTextLicence or ScoreRule.FullTextTruckLicence
+            or ScoreRule.TruckLicence or ScoreRule.FullTextExperience);
     }
 
     [Fact]
@@ -416,7 +427,7 @@ public class FitScorerTests
 
         // One licence penalty, whichever rule carries it ("HR licence + FIFO" is also the policy's "HR licence").
         var licence = Assert.Single(truck.Items, i => i.Rule is ScoreRule.TruckLicence or ScoreRule.FullTextTruckLicence or ScoreRule.FullTextLicence);
-        Assert.Equal(-20, licence.Points);
+        Assert.Equal(-40, licence.Points);
         Assert.DoesNotContain(apprentice.Items, i => i.Rule == ScoreRule.FullTextQualification);
     }
 
@@ -427,7 +438,45 @@ public class FitScorerTests
         var both = Score(Job("Sales", "Commission only role", fullText: "commission only"));
         Assert.DoesNotContain(both.Items, i => i.Rule == ScoreRule.CommissionOnly);
         Assert.Equal(-30, Item(both, ScoreRule.FullTextCommission).Points);
-        Assert.Equal(-20, Item(Score(Job("Driver", "HR licence required")), ScoreRule.TruckLicence).Points);
+        Assert.Equal(-40, Item(Score(Job("Driver", "HR licence required")), ScoreRule.TruckLicence).Points);
+    }
+
+    [Theory]
+    [InlineData("Current HR truck driver's licence - mandatory", "HR truck driver's licence")]
+    [InlineData("Current HR Driver’s Licence and police clearance", "HR Driver’s Licence")]
+    [InlineData("HC class licence essential", "HC class licence")]
+    [InlineData("Must hold an MR/HR", "MR/HR")]
+    [InlineData("Heavy combination experience", "Heavy combination")]
+    public void Truck_licences_are_told_however_the_ad_spells_them(string text, string found)
+    {
+        var item = Item(Score(Job("Offsider", text)), ScoreRule.TruckLicence);
+
+        Assert.Equal((found.ToLowerInvariant(), -40), (item.Detail, item.Points));
+    }
+
+    [Theory]
+    [InlineData("Report to our HR team")]
+    [InlineData("HR manager will contact you")]
+    [InlineData("No HR licence needed, we train")]
+    public void A_truck_licence_is_not_read_into_other_hr_or_a_waived_one(string text) =>
+        Assert.DoesNotContain(Score(Job("Labourer", text)).Items, i => i.Rule == ScoreRule.TruckLicence);
+
+    [Fact]
+    public void A_truck_licence_the_ad_calls_desirable_costs_little_unless_another_is_a_condition()
+    {
+        var desirable = Item(Score(Job("Labourer", "MR licence highly regarded")), ScoreRule.TruckLicence);
+        var both = Item(Score(Job("Labourer", "MR licence (desirable). Current HC licence")), ScoreRule.TruckLicence);
+
+        Assert.Equal(("mr licence (desirable)", -10), (desirable.Detail, desirable.Points));
+        Assert.Equal(("hc licence", -40), (both.Detail, both.Points));
+    }
+
+    [Fact]
+    public void A_no_on_the_line_above_does_not_waive_a_truck_licence()
+    {
+        var ad = Described("Driller Offsider", "Requirements\n- No experience needed\n- Current HR licence\n- Police clearance");
+
+        Assert.Equal(-40, Item(Score(ad), ScoreRule.TruckLicence).Points);
     }
 
     [Fact]
