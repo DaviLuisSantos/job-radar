@@ -12,7 +12,8 @@ public abstract record CliCommand
           status    <id> reviewed|dismissed|applied|interview|offer|declined
           notes     <id> <text...>
           label     <id> good|bad|clear [note...]
-          calibrate [--rescore]           how scores agree with your labels (--rescore: this build's rules, nothing saved)
+          calibrate [--rescore [--assume <item>=<state>,...]]  how scores agree with your labels (--rescore: this
+                                          build's rules, nothing saved; --assume: as if you set those requirement states)
           requirements                    the requirement catalog and where you stand on each item
           requirement <item> have|obtainable|missing|out-of-reach|default
           import-candidate <candidate.json> [--dry-run]  requirement states from your candidate facts
@@ -26,7 +27,8 @@ public abstract record CliCommand
     public sealed record SetStatus(ListingId Id, ApplicationStatus Status) : CliCommand;
     public sealed record SetNotes(ListingId Id, string? Notes) : CliCommand;
     public sealed record SetLabel(ListingId Id, Verdict? Verdict, string? Note) : CliCommand;
-    public sealed record Calibrate(bool Rescore = false) : CliCommand;
+    /// <param name="Assume">Requirement states to measure as if set (null state: the default); only with a rescore.</param>
+    public sealed record Calibrate(bool Rescore = false, IReadOnlyDictionary<string, RequirementState?>? Assume = null) : CliCommand;
     public sealed record TakeMarketSnapshot : CliCommand;
     public sealed record Collect(bool FullHistory) : CliCommand;
     public sealed record MarketReport(string? Month, string? OutputFile) : CliCommand;
@@ -57,6 +59,8 @@ public abstract record CliCommand
                 "label" when args.Length >= 3 => new SetLabel(ParseId(args[1]), ParseLabel(args[2]), Rest(args, 3)),
                 "calibrate" when args.Length == 1 => new Calibrate(),
                 "calibrate" when args.Length == 2 && args[1] == "--rescore" => new Calibrate(Rescore: true),
+                "calibrate" when args.Length == 4 && args[1] == "--rescore" && args[2] == "--assume" =>
+                    new Calibrate(Rescore: true, ParseAssume(args[3])),
                 "market" when args.Length == 1 => new TakeMarketSnapshot(),
                 "collect" when args.Length == 1 => new Collect(FullHistory: false),
                 "collect" when args.Length == 2 && args[1] == "--full" => new Collect(FullHistory: true),
@@ -108,6 +112,19 @@ public abstract record CliCommand
         "default" => null,
         _ => throw new FormatException($"State must be have, obtainable, missing, out-of-reach or default, not '{value}'."),
     };
+
+    private static Dictionary<string, RequirementState?> ParseAssume(string value)
+    {
+        var states = new Dictionary<string, RequirementState?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = pair.Split('=', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length != 2 || parts[0].Length == 0)
+                throw new FormatException($"--assume takes item=state pairs separated by commas, not '{pair}'.");
+            states[parts[0]] = ParseRequirementState(parts[1]);
+        }
+        return states.Count > 0 ? states : throw new FormatException("--assume needs at least one item=state.");
+    }
 
     private static string ParseMonth(string value) =>
         DateOnly.TryParseExact(value + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,

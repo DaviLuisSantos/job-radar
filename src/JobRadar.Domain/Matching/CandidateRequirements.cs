@@ -35,15 +35,45 @@ public sealed record CandidateRequirements(IReadOnlyDictionary<string, Requireme
         _ => RequirementState.Missing,
     };
 
-    /// <summary>The state of a requirement phrase: its catalog item's, else the default of its kind.</summary>
+    /// <summary>
+    /// The state of a requirement phrase: its catalog item's, else the default of its kind. A truck licence the
+    /// candidate covers (<see cref="CoversTruck"/>) is had, whatever the state of its own item.
+    /// </summary>
     public RequirementState Of(RequirementKind kind, string phrase, ScoringPolicy policy)
     {
+        if (kind == RequirementKind.Licence && TruckLicence.IsMatch(phrase) && CoversTruck(phrase))
+            return RequirementState.Have;
         if (States.Count > 0
             && policy.Requirements.FirstOrDefault(i => i.Phrases.Contains(phrase, StringComparer.OrdinalIgnoreCase)) is { } item
             && States.TryGetValue(item.Id, out var state))
             return state;
         return Default(kind, phrase);
     }
+
+    /// <summary>
+    /// Whether a truck licence the candidate holds (catalog items <c>truck-mr</c> to <c>truck-mc</c> set to
+    /// have) allows driving the class <paramref name="asked"/> names: in Australia each class includes the lower
+    /// ones (MR, HR, HC, MC). An ad naming two ("HR/HC licence") takes either, so the lower one counts.
+    /// </summary>
+    public bool CoversTruck(string asked)
+    {
+        var held = States
+            .Where(s => s.Value == RequirementState.Have && s.Key.StartsWith("truck-", StringComparison.OrdinalIgnoreCase))
+            .Select(s => TruckRank(s.Key["truck-".Length..]))
+            .DefaultIfEmpty(0)
+            .Max();
+        var asks = TruckClass.Matches(asked).Select(m => TruckRank(m.Value)).Where(r => r > 0).ToList();
+        return held > 0 && asks.Count > 0 && held >= asks.Min();
+    }
+
+    private static int TruckRank(string truckClass) => string.Join(' ', truckClass.ToLowerInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)) switch
+    {
+        "mr" => 1,
+        "hr" or "heavy rigid" => 2,
+        "hc" or "heavy combination" => 3,
+        "mc" => 4,
+        _ => 0,
+    };
 
     /// <summary>
     /// The states that differ from the default for the items <paramref name="profile"/> searches, in id

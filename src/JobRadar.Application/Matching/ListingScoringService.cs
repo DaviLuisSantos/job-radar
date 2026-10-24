@@ -76,9 +76,12 @@ public sealed class ListingScoringService(
     /// <summary>
     /// The judged listings scored again with the rules of this build, nothing saved: measures a rule
     /// change against the labels before it ships (<c>calibrate --rescore</c>). A listing whose profile left
-    /// the configuration, or that was never collected, is left out.
+    /// the configuration, or that was never collected, is left out. <paramref name="assume"/> replaces the
+    /// candidate's stored state on those catalog items (null: the default), to measure a state before setting it.
     /// </summary>
-    public async Task<IReadOnlyList<JudgedScore>> RescoreAsync(IReadOnlyList<JudgedScore> judged, TimeZoneInfo zone, CancellationToken ct)
+    public async Task<IReadOnlyList<JudgedScore>> RescoreAsync(
+        IReadOnlyList<JudgedScore> judged, TimeZoneInfo zone, CancellationToken ct,
+        IReadOnlyDictionary<string, RequirementState?>? assume = null)
     {
         var now = time.GetUtcNow();
         var today = Today(now, zone);
@@ -86,7 +89,7 @@ public sealed class ListingScoringService(
         var termsById = await terms.GetTermsAsync(ids, ct);
         var textsById = await descriptions.GetTextsAsync(ids, ct);
         var profiles = catalog.Profiles.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-        var candidate = await requirements.GetAsync(ct);
+        var candidate = Assume(await requirements.GetAsync(ct), assume ?? new Dictionary<string, RequirementState?>());
 
         var rescored = new List<JudgedScore>();
         foreach (var j in judged)
@@ -97,6 +100,23 @@ public sealed class ListingScoringService(
             rescored.Add(j with { Score = FitScorer.Score(input, profile.Profile, catalog.Policy, today, candidate) });
         }
         return rescored;
+    }
+
+    private CandidateRequirements Assume(CandidateRequirements stored, IReadOnlyDictionary<string, RequirementState?> assume)
+    {
+        if (assume.Count == 0)
+            return stored;
+        var states = new Dictionary<string, RequirementState>(stored.States, StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, state) in assume)
+        {
+            var item = catalog.Policy.Requirements.FirstOrDefault(i => string.Equals(i.Id, id.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? throw new UnknownRequirementException(id, catalog.Policy.Requirements.Select(i => i.Id));
+            if (state is { } s)
+                states[item.Id] = s;
+            else
+                states.Remove(item.Id);
+        }
+        return new CandidateRequirements(states);
     }
 
     private ListingScore Score(

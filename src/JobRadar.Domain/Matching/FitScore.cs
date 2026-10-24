@@ -58,6 +58,7 @@ public enum ScoreRule
     WorkingHolidayFriendly,
     FlexibleWorkType,
     PreferredLocation,
+    RequirementHeld,
     Compression,
 
     // Restrictions applied after compression

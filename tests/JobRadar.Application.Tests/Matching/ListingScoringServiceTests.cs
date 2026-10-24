@@ -183,6 +183,28 @@ public class ListingScoringServiceTests
         Assert.Equal((profile.RulesHash, before.Score.Final), (unrelated.RulesHash, unrelated.Score.Final));
         Assert.NotEqual(profile.RulesHash, after.RulesHash);
         Assert.Equal(-10, Assert.Single(before.Score.Items, i => i.Rule == ScoreRule.FullTextLicence).Points);
-        Assert.Equal(before.Score.Final + 10, after.Score.Final);
+        Assert.Equal(before.Score.Final + 20, after.Score.Final);   // no −10 for the ticket, +10 for having it
+    }
+
+    [Fact]
+    public async Task A_rescore_can_assume_requirement_states_without_storing_them()
+    {
+        var tech = ProfileCatalogTests.Dotnet();
+        tech.Requirements = new RequirementOptions { Items = ["hrwl"] };
+        var catalog = ProfileCatalogTests.Catalog(("tech", tech));
+        await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
+        var id = new ListingId("seek", "1");
+        _terms.Marks.Add((id, "HRWL"));
+        _requirements.States["hrwl"] = RequirementState.Have;
+        JudgedScore[] judged = [new(id, "C# Developer", "tech", new FitScore(0, []), Verdict.Good)];
+
+        var stored = Assert.Single(await Service(catalog).RescoreAsync(judged, Perth, Ct));
+        var assumed = Assert.Single(await Service(catalog).RescoreAsync(judged, Perth, Ct,
+            new Dictionary<string, RequirementState?> { ["HRWL"] = null }));
+
+        Assert.Equal(stored.Score.Final - 20, assumed.Score.Final);
+        Assert.Equal(RequirementState.Have, _requirements.States["hrwl"]);
+        await Assert.ThrowsAsync<UnknownRequirementException>(() => Service(catalog).RescoreAsync(judged, Perth, Ct,
+            new Dictionary<string, RequirementState?> { ["forklift"] = RequirementState.Have }));
     }
 }

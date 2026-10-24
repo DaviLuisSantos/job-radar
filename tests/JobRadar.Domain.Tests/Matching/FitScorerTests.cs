@@ -670,6 +670,7 @@ public class FitScorerTests
         var score = Score(job, Candidate(("hrwl", RequirementState.Have), ("trade-qualification", RequirementState.OutOfReach)));
 
         Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextLicence);
+        Assert.Equal(("HRWL", 10), (Item(score, ScoreRule.RequirementHeld).Detail, Item(score, ScoreRule.RequirementHeld).Points));
         Assert.Equal(-40, Item(score, ScoreRule.FullTextQualification).Points);
         Assert.Equal(-20, Item(score, ScoreRule.FullTextExperience).Points);
     }
@@ -684,6 +685,50 @@ public class FitScorerTests
 
         Assert.Equal(("verification of competency", -10), (hasHrwl.Detail, hasHrwl.Points));
         Assert.Equal(("HRWL", -40), (hrwlOutOfReach.Detail, hrwlOutOfReach.Points));
+    }
+
+    [Fact]
+    public void Having_what_the_ad_asks_for_is_a_fit_point_once_per_kind_before_the_compression()
+    {
+        // 50 + 16 offsider + 15 FIFO + 10 remote + 5 casual + 10 WA + 10 held = 116: compressed to 80 + 12.
+        var both = Job("FIFO Offsider", "Remote site", "Perth WA", "Casual/Vacation", fullText: ["HRWL", "verification of competency"]);
+        var candidate = Candidate(("hrwl", RequirementState.Have), ("voc", RequirementState.Have));
+
+        var score = Score(both, candidate);
+        var rules = score.Items.Select(i => i.Rule).ToList();
+
+        Assert.Equal(10, Item(score, ScoreRule.RequirementHeld).Points);
+        Assert.True(rules.IndexOf(ScoreRule.RequirementHeld) < rules.IndexOf(ScoreRule.Compression));
+        Assert.Equal(92, score.Final);
+        Assert.DoesNotContain(Score(both, CandidateRequirements.None).Items, i => i.Rule == ScoreRule.RequirementHeld);
+    }
+
+    [Theory]
+    [InlineData("truck-hc", "HR licence required", true)]       // HC includes HR
+    [InlineData("truck-hr", "HC licence required", false)]
+    [InlineData("truck-mr", "MR/HR licence", true)]             // either class: the lower one counts
+    [InlineData("truck-hr", "heavy rigid licence", true)]
+    public void A_truck_licence_class_includes_the_lower_ones(string held, string ad, bool covered)
+    {
+        var candidate = Candidate((held, RequirementState.Have));
+        var score = FitScorer.Score(Job("Labourer", ad), Trades, ScoringPolicy.Default, Today, candidate);
+
+        Assert.Equal(covered, candidate.CoversTruck(ad));
+        Assert.Equal(covered, !score.Items.Any(i => i.Rule == ScoreRule.TruckLicence));
+        Assert.Equal(covered, score.Items.Any(i => i.Rule == ScoreRule.RequirementHeld));
+    }
+
+    [Fact]
+    public void A_held_truck_class_also_clears_the_searched_licence_phrases()
+    {
+        var job = Job("Offsider", fullText: ["HR licence", "MR licence"]);
+        var profile = Fifo with { Requirements = Fifo.Requirements with { Licence = ["HR licence", "MR licence"] } };
+        var candidate = Candidate(("truck-hr", RequirementState.Have));
+
+        var score = FitScorer.Score(job, profile, ScoringPolicy.Default, Today, candidate);
+
+        Assert.DoesNotContain(score.Items, i => i.Rule is ScoreRule.FullTextTruckLicence or ScoreRule.TruckLicence);
+        Assert.Equal(10, Item(score, ScoreRule.RequirementHeld).Points);
     }
 
     [Fact]

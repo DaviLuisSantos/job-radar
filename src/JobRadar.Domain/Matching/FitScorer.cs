@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 9;
+    public const int RulesVersion = 10;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
@@ -163,6 +163,33 @@ public static class FitScorer
         if (profile.PreferredLocations.FirstOrDefault(l => Signal(l).IsMatch(location)) is { } preferred)
             Add(ScoreRule.PreferredLocation, preferred, ScoreWhere.Location, policy.PreferredLocationBonus);
 
+        // The profile's requirements the ad asks for, with the candidate's state on each. The context word only
+        // narrows the search: a phrase found with any context ("HC licence + FIFO", searched for another
+        // profile) is in the ad. A captured ad is read instead of the search, which also matches what the ad does
+        // not say; there the phrase counts when not negated just before it ("no HR licence needed").
+        var found = job.FullTextTerms.Select(t => new FullTextTerm(t).Phrases[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var asked = profile.Requirements.Terms()
+            .Select(r => (r.Kind, Truck: r.Kind == RequirementKind.Licence && TruckLicence.IsMatch(r.Phrase), r.Phrase,
+                Where: described ? (MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description : ScoreWhere.None)
+                    : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
+            .Where(r => r.Where != ScoreWhere.None)
+            .Select(r => (r.Kind, r.Truck, r.Phrase, r.Where, State: candidate.Of(r.Kind, r.Phrase, policy)))
+            .ToList();
+        var truckAsked = TruckLicenceAsked(fullAndDesc);
+        var truckHeld = truckAsked is { } asksTruck && candidate.CoversTruck(asksTruck.Value);
+        var truckGroupHit = !described && groups.TryGetValue(FullTextGroup.Licence, out var truckHits) ? truckHits[0] : null;
+        var truckGroupHeld = truckGroupHit is not null && candidate.CoversTruck(truckGroupHit);
+
+        // An ad that asks for what the candidate has: a fit point, once per kind (a truck licence apart from a
+        // ticket), before the compression like the other points.
+        var held = asked.Where(r => r.State == RequirementState.Have).Select(r => (r.Kind, r.Truck, r.Phrase, r.Where)).ToList();
+        if (truckHeld)
+            held.Add((RequirementKind.Licence, true, truckAsked!.Value.Value, ScoreWhere.Text));
+        if (truckGroupHeld)
+            held.Add((RequirementKind.Licence, true, truckGroupHit!, ScoreWhere.FullText));
+        foreach (var requirement in held.DistinctBy(r => (r.Kind, r.Truck)))
+            Add(ScoreRule.RequirementHeld, requirement.Phrase, requirement.Where, policy.HaveRequirementBonus);
+
         // ── 3. Compression ────────────────────────────────────────────────
         if (score > policy.CompressAbove)
         {
@@ -186,6 +213,8 @@ public static class FitScorer
             // Same reason, counted once.
             if (group == FullTextGroup.WhvWithResidency && groups.ContainsKey(FullTextGroup.Citizen))
                 continue;
+            if (group == FullTextGroup.Licence && truckGroupHeld && (truckAsked is null || truckHeld))
+                continue;
             Add(rule, hits[0], ScoreWhere.FullText, points);
         }
 
@@ -201,20 +230,10 @@ public static class FitScorer
         // ticket, at the penalty of the candidate's state on it (the worst, when the ad asks for several of a
         // kind; one the candidate has costs nothing). A truck licence already counted (local text or the
         // policy's licence group) is not counted again; a training title is where the trade certificate is
-        // earned. The context word only narrows
-        // the search: a phrase found with any context ("HC licence + FIFO", searched for another profile) is
-        // in the ad. A captured ad is read instead of the search, which also matches what the ad does not
-        // say; there the phrase counts when not negated just before it ("no HR licence needed").
-        var found = job.FullTextTerms.Select(t => new FullTextTerm(t).Phrases[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var truckAsked = TruckLicenceAsked(fullAndDesc);
+        // earned.
         var truckCounted = (!described && groups.ContainsKey(FullTextGroup.Licence)) || truckAsked is not null;
-        var requirements = profile.Requirements.Terms()
-            .Select(r => (r.Kind, Truck: r.Kind == RequirementKind.Licence && TruckLicence.IsMatch(r.Phrase), r.Phrase,
-                Where: described ? (MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description : ScoreWhere.None)
-                    : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
-            .Where(r => r.Where != ScoreWhere.None)
-            .Select(r => (r.Kind, r.Truck, r.Phrase, r.Where,
-                Points: RequirementPenalty(candidate.Of(r.Kind, r.Phrase, policy), policy)))
+        var requirements = asked
+            .Select(r => (r.Kind, r.Truck, r.Phrase, r.Where, Points: RequirementPenalty(r.State, policy)))
             .Where(r => r.Points > 0)
             .GroupBy(r => (r.Kind, r.Truck))
             .Select(g => g.MaxBy(r => r.Points));
@@ -242,7 +261,7 @@ public static class FitScorer
 
         if (CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
             Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -policy.CommissionOnlyPenalty);
-        if (truckAsked is { } truck && (described || !groups.ContainsKey(FullTextGroup.Licence)))
+        if (truckAsked is { } truck && !truckHeld && (described || !groups.ContainsKey(FullTextGroup.Licence)))
         {
             if (truck.Desirable)
                 Add(ScoreRule.TruckLicence, $"{truck.Value} (desirable)", ScoreWhere.Text, -policy.DesirableTruckLicencePenalty);

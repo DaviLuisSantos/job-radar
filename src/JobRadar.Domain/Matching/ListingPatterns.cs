@@ -88,6 +88,9 @@ internal static class ListingPatterns
         + @"|\b(?:HR|HC|MR|MC)\s*/\s*(?:HR|HC|MR|MC)\b"
         + @"|\bheavy\s+(?:rigid|combination)\b");
 
+    /// <summary>The truck licence classes a text names, to compare with the ones the candidate holds.</summary>
+    public static readonly Regex TruckClass = R(@"\b(?:MR|HR|HC|MC)\b|\bheavy\s+(?:rigid|combination)\b");
+
     public static readonly Regex FlexibleWorkType = R("contract|temp|casual");
 
     // ── Seniority and entry level ─────────────────────────────────────────────

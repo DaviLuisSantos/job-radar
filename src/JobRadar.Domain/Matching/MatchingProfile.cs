@@ -99,6 +99,13 @@ public sealed record ScoringPolicy
     // (CandidateRequirements); a requirement the candidate has costs nothing. Moderate below out of reach:
     // the search gives no context, and "cert III an advantage" matches as well as "cert III essential".
 
+    /// <summary>
+    /// An ad asking for something the candidate has: fewer applicants can meet it. A fit point, once per
+    /// kind, counted before the compression. 10 is a first guess, as large as the penalty of a ticket the
+    /// candidate would still have to get; calibrate it once labels cover listings that ask for what they have.
+    /// </summary>
+    public int HaveRequirementBonus { get; init; } = 10;
+
     /// <summary>A ticket the candidate would get for the job with a short course (HRWL, VOC).</summary>
     public int ObtainableRequirementPenalty { get; init; } = 10;
 

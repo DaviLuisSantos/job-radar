@@ -42,8 +42,10 @@ public static class CliRunner
                 case CliCommand.Calibrate c:
                     var calibration = sp.GetRequiredService<CalibrationService>();
                     if (c.Rescore)
-                        await output.WriteLineAsync($"Scored again with this build's rules (version {FitScorer.RulesVersion}); nothing saved.");
-                    WriteCalibration(c.Rescore ? await calibration.MeasureRescoredAsync(LocalZone(sp), ct) : await calibration.MeasureAsync(ct), output);
+                        await output.WriteLineAsync($"Scored again with this build's rules (version {FitScorer.RulesVersion})"
+                            + (c.Assume is { } assumed ? ", assuming " + string.Join(", ", assumed.Select(a => $"{a.Key}={(a.Value is { } v ? StateWord(v) : "default")}")) : "")
+                            + "; nothing saved.");
+                    WriteCalibration(c.Rescore ? await calibration.MeasureRescoredAsync(LocalZone(sp), ct, c.Assume) : await calibration.MeasureAsync(ct), output);
                     break;
                 case CliCommand.ListRequirements:
                     WriteRequirements(await sp.GetRequiredService<CandidateRequirementService>().ListAsync(ct), output);

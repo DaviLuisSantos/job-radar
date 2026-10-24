@@ -36,6 +36,11 @@ public class CliCommandTests
         Assert.Equal(new CliCommand.Calibrate(), Parse("calibrate"));
         Assert.Equal(new CliCommand.Calibrate(Rescore: true), Parse("calibrate", "--rescore"));
         Assert.Null(Parse("calibrate", "--other"));
+
+        var assume = Assert.IsType<CliCommand.Calibrate>(Parse("calibrate", "--rescore", "--assume", "hrwl=have, truck-hr = default"));
+        Assert.True(assume.Rescore);
+        Assert.Equal([("hrwl", (RequirementState?)RequirementState.Have), ("truck-hr", null)],
+            assume.Assume!.Select(a => (a.Key, a.Value)));
     }
 
     [Fact]
@@ -67,6 +72,9 @@ public class CliCommandTests
 
     [Theory]
     [InlineData("requirement", "hrwl", "maybe")]
+    [InlineData("calibrate", "--assume", "hrwl=have")]
+    [InlineData("calibrate", "--rescore", "--assume", "hrwl")]
+    [InlineData("calibrate", "--rescore", "--assume", "hrwl=sometimes")]
     [InlineData("requirement", "hrwl")]
     [InlineData("import-candidate", "--dry-run")]
     [InlineData("market-report", "outubro")]

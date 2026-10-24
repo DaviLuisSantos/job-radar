@@ -31,6 +31,7 @@ public static class Wording
         ScoreRule.WorkingHolidayFriendly => $"Welcomes working holiday makers: “{item.Detail}”",
         ScoreRule.FlexibleWorkType => $"{item.Detail} fits six months per employer",
         ScoreRule.PreferredLocation => $"Preferred location: {item.Detail}",
+        ScoreRule.RequirementHeld => $"Asks for something you have: “{item.Detail}”",
         ScoreRule.Compression => "Compressed above 80 to keep the best in order",
         ScoreRule.FullTextCitizenship => $"Full ad mentions “{item.Detail}”",
         ScoreRule.FullTextWhvWithResidency => $"Full ad mentions “{item.Detail.Replace(" + ", "” and “", StringComparison.Ordinal)}”: usually turning working holiday visas down",
