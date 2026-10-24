@@ -126,7 +126,7 @@ Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `
 
 | # | Passo | Muda score? | Estado |
 |---|---|---|---|
-| 1a | Constantes do `FitScorer` para a `ScoringPolicy` | não: paridade e `calibrate` iguais | ✅ 2026-10-23 (paridade a rodar no trabalhopc) |
+| 1a | Constantes do `FitScorer` para a `ScoringPolicy` | não: paridade e `calibrate` iguais | ✅ 2026-10-23 |
 | 1b | Frases de requisito dos perfis viram itens do catálogo | não | 🔨 |
 | 2 | Estado no banco + `candidate import`; estado inicial reproduz o tratamento de hoje | não | |
 | 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | |
@@ -165,7 +165,9 @@ comissão, requisito (20), ticket (10), carteira de caminhão (40, ou 10 se dese
 só o −50 de exibição das exclusões, que não muda score. Sem `RulesVersion` nova: os testes por regra continuam
 com os mesmos números, e um teste novo troca os pesos e confere que o score segue a política. O `rules_hash`
 muda (a política serializada ganhou campos), então a próxima passada regrava todos os scores, com os mesmos
-valores. **Paridade não rodou:** o arquivo das 5.388 vagas fica no trabalhopc; rodar lá antes de seguir para o 1b.
+valores. Provado no trabalhopc (clone à parte, por ssh): paridade passa (161 de 161, nenhum pulado), e o
+`calibrate --rescore` do build instalado e o desta branch saem idênticos byte a byte, com os perfis e rótulos de
+produção.
 A política ainda não é lida da configuração: só faz sentido junto do estado do candidato (passo 2).
 
 ### 2026-10-23 — Fatos do candidato separados do perfil (v1.x, passo 1)
