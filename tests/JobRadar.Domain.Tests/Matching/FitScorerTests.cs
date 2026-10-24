@@ -605,4 +605,35 @@ public class FitScorerTests
         Assert.Equal(1, awful.Final);
         Assert.False(awful.Excluded);
     }
+
+    // ── Weights ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Weights_come_from_the_policy()
+    {
+        var policy = ScoringPolicy.Default with
+        {
+            PositiveSignalTitleBonus = 20,
+            PositiveSignalBodyBonus = 4,
+            TruckLicencePenalty = 25,
+            TicketPenalty = 3,
+            CitizenshipPenalty = 30,
+            CompressAbove = 90,
+            CompressionDivisor = 5,
+        };
+        var fifo = Trades with { Requirements = new([], [], [], ["HRWL"]) };
+
+        var signals = Score(Job("C# Developer", "We build .NET services"), policy: policy);
+        var licences = Score(Job("Offsider", "HR licence required", fullText: ["HRWL", "australian citizen"]), fifo, policy);
+        // 50 + 20 × 3 + 10 remote + 5 contract type + 10 Perth = 135, compressed above 90: 90 + 45 / 5
+        var strong = Score(Job("C# .NET Contract Developer", "Remote", "Perth WA", "Contract/Temp"), policy: policy);
+
+        Assert.Equal([(ScoreWhere.Title, 20), (ScoreWhere.Body, 4)],
+            signals.Items.Where(i => i.Rule == ScoreRule.PositiveSignal).Select(i => (i.Where, i.Points)));
+        Assert.Equal(-25, Item(licences, ScoreRule.TruckLicence).Points);
+        Assert.Equal(-3, Item(licences, ScoreRule.FullTextLicence).Points);
+        Assert.Equal(-30, Item(licences, ScoreRule.FullTextCitizenship).Points);
+        Assert.Equal(99, strong.Final);
+        Assert.Equal("90", Item(strong, ScoreRule.Compression).Detail);
+    }
 }

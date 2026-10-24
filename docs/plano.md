@@ -99,6 +99,45 @@ contexto, sinais achados rotulando), que só os números confirmam. As duas cama
 O progresso de calibragem não se perde: os rótulos são por vaga (`listing_labels`, sem perfil), as regras
 não mudam, os nomes de perfil se mantêm e todo perfil gerado passa por `calibrate` / `calibrate --rescore`
 antes de entrar. Upload do currículo pelo site, com extração por API, só na v3 (outros usuários).
+O passo 2 mudou de forma com o catálogo de requisitos (abaixo): o que ele derivaria dos fatos (carteira,
+formação, tickets) vira o **estado** de cada item do catálogo, e o `candidate.json` é importado para o banco.
+
+### v1.x — Requisitos e pesos configuráveis (decidido 2026-10-23)
+
+Os controles do score estão em quatro lugares: constantes no `FitScorer` (−40 carteira de caminhão, −10 ticket,
+−20 requisito, −55 cidadania, ±16/8 sinais…), a `ScoringPolicy` (só padrões do código), frases repetidas em cada
+perfil (`Requirements`, `QualifiedTitles`, `DisqualifySignals`) e regex em `ListingPatterns`. E nada sabe o que o
+candidato **tem**: que tiraria o HRWL e que o ARCtick está fora de alcance mora na cabeça dele. O Seek não filtra
+por isso. Três camadas:
+
+1. **Catálogo de requisitos** (repo, conhecimento de mercado, igual para todos): item com `id` (`white-card`,
+   `hrwl`, `forklift`, `truck-hr`, `arctick`, `trade-qualified`, `degree`, `experience-years`, `citizenship`…),
+   tipo, frases como os anúncios escrevem, custo de obter (curso curto, anos, certificado), e se é buscado no
+   Seek (custa uma busca por palavra de contexto em cada passada) ou só lido nas descrições. Itens com leitura
+   especial (carteira com "desirable", cidadania com negação) apontam para o detector que já existe.
+2. **Estado do candidato em cada item** (banco, editado no site): `tenho` (bônus quando o anúncio pede),
+   `tiraria` (leve, o −10 de hoje), `não tenho` (o −20), `fora de alcance` (forte ou teto, o −40). Mudou o
+   estado, repontua na hora. No banco porque o site já grava rótulos lá e porque perfis não viajam entre o
+   trabalhopc e a produção; o `candidate.json` vira formato de importação (`candidate import`).
+3. **Pesos na política**, com os valores de hoje como padrão, no `rules_hash`.
+
+Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `priority` da linha) e dizem só
+**quais itens do catálogo importam** para eles.
+
+| # | Passo | Muda score? | Estado |
+|---|---|---|---|
+| 1a | Constantes do `FitScorer` para a `ScoringPolicy` | não: paridade e `calibrate` iguais | ✅ 2026-10-23 (paridade a rodar no trabalhopc) |
+| 1b | Frases de requisito dos perfis viram itens do catálogo | não | 🔨 |
+| 2 | Estado no banco + `candidate import`; estado inicial reproduz o tratamento de hoje | não | |
+| 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | |
+| 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | |
+| 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | |
+| 6 | Se valer: palavras-chave e sinais no banco, com o `profile preview` na mesma página | — | |
+
+A métrica de lacuna do passo 4 responde "qual ticket tirar primeiro"; agregada por categoria ("x% das vagas de
+construction pedem white card") serve ao Raio-X. Limites: orçamento de buscas (a página mostra quantas o catálogo
+custa) e a busca por frase sem contexto ("white card an advantage" casa como "essential"): o peso fica moderado
+fora das vagas com descrição.
 
 ### v2/v3 — Modelo de ML para o fit
 
@@ -117,6 +156,17 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Pesos do score na política (requisitos configuráveis, passo 1a)
+Todo número que o `FitScorer` somava ou subtraía virou propriedade da `ScoringPolicy`, com o valor de antes como
+padrão: sinais (16/8, 30/15), sênior, remoto/híbrido, FIFO, entrada, WHV, tipo de trabalho, local preferido, a
+compressão (acima de 80, dividido por 3), cidadania, WHV com residência, direitos ambíguos e de 12 meses,
+comissão, requisito (20), ticket (10), carteira de caminhão (40, ou 10 se desejável) e sponsor recusado (15). Sobrou
+só o −50 de exibição das exclusões, que não muda score. Sem `RulesVersion` nova: os testes por regra continuam
+com os mesmos números, e um teste novo troca os pesos e confere que o score segue a política. O `rules_hash`
+muda (a política serializada ganhou campos), então a próxima passada regrava todos os scores, com os mesmos
+valores. **Paridade não rodou:** o arquivo das 5.388 vagas fica no trabalhopc; rodar lá antes de seguir para o 1b.
+A política ainda não é lida da configuração: só faz sentido junto do estado do candidato (passo 2).
 
 ### 2026-10-23 — Fatos do candidato separados do perfil (v1.x, passo 1)
 Primeiro passo do perfil a partir do currículo: `candidate/` com o esquema (`candidate.schema.json`, JSON Schema

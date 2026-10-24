@@ -202,7 +202,8 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer
   que uma vaga saiu do ar.
 - Score: `FitScorer` é a **única** implementação; a ordem das fases faz parte da regra (ver o comentário
-  da classe). Os padrões de texto ficam em `ListingPatterns`. `".NET"` não casa dentro de `"ASP.NET"`
+  da classe). Os padrões de texto ficam em `ListingPatterns`; os pesos, todos na `ScoringPolicy` (número solto
+  no `FitScorer` é regressão: peso novo entra na política, que está no `rules_hash`). `".NET"` não casa dentro de `"ASP.NET"`
   (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
   vêm do protótipo, e a paridade depende delas. Desde a `RulesVersion` 8 a carteira de caminhão diverge do
   protótipo de propósito (−40, não −20), e desde a 9 "Assistant … Manager" é liderança: o teste de paridade conta

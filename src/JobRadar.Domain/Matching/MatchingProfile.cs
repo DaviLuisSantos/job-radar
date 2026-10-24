@@ -4,13 +4,13 @@ namespace JobRadar.Domain.Matching;
 /// What a candidate is looking for in one line of work. Data, not code: profiles come from
 /// configuration, so the same rules serve anyone.
 /// </summary>
-/// <param name="PositiveSignals">+16 in the title, +8 in the body; ignored when negated nearby.</param>
-/// <param name="NegativeSignals">−30 in the title, −15 in the body.</param>
+/// <param name="PositiveSignals">Bonus in the title, half in the body (<see cref="ScoringPolicy"/>); ignored when negated nearby.</param>
+/// <param name="NegativeSignals">Penalty in the title, half in the body.</param>
 /// <param name="DisqualifySignals">Formal qualification the candidate lacks: caps the score.</param>
 /// <param name="QualifiedTitles">Qualified trade in the title (e.g. "electrician"): caps the score.</param>
-/// <param name="EntryLevelBoost">+12 per "no experience required"-style phrase.</param>
+/// <param name="EntryLevelBoost"><see cref="ScoringPolicy.EntryLevelBonus"/> per "no experience required"-style phrase.</param>
 /// <param name="AllowSenior">"Senior" in the title subtracts instead of excluding.</param>
-/// <param name="PreferredLocations">+10 when the location matches one of these.</param>
+/// <param name="PreferredLocations"><see cref="ScoringPolicy.PreferredLocationBonus"/> when the location matches one of these.</param>
 public sealed record MatchingProfile(
     string Name,
     IReadOnlyList<string> PositiveSignals,
@@ -21,11 +21,11 @@ public sealed record MatchingProfile(
     bool AllowSenior,
     IReadOnlyList<string> PreferredLocations)
 {
-    /// <summary>−20 per kind found in the full ad (see <see cref="ProfileRequirements"/>).</summary>
+    /// <summary>Penalised per kind found in the full ad (see <see cref="ProfileRequirements"/>).</summary>
     public ProfileRequirements Requirements { get; init; } = ProfileRequirements.None;
 
     /// <summary>
-    /// +10 remote, +5 hybrid. Off for site work: there, "remote" is where the site is (Seek's work
+    /// Remote and hybrid bonuses. Off for site work: there, "remote" is where the site is (Seek's work
     /// arrangement field says "Remote" for a remote mine), not working from home.
     /// </summary>
     public bool RewardRemote { get; init; } = true;
@@ -39,7 +39,9 @@ public sealed record MatchingProfile(
 
 /// <summary>
 /// Weights shared by every profile. Defaults are the values calibrated in the prototype for a
-/// Working Holiday visa holder: sponsorship is a bonus, not a requirement.
+/// Working Holiday visa holder: sponsorship is a bonus, not a requirement, and the weights added after
+/// (truck licence, tickets, work rights) are the ones calibrated against the candidate's labels since.
+/// Bonuses and penalties are magnitudes: the scorer adds the first and subtracts the second.
 /// </summary>
 public sealed record ScoringPolicy
 {
@@ -47,6 +49,9 @@ public sealed record ScoringPolicy
     public bool VisaRequired { get; init; }
     public int SponsorBonus { get; init; } = 10;
     public int NoSponsorPenalty { get; init; } = 10;
+
+    /// <summary>When the visa is required and the ad turns sponsorship down.</summary>
+    public int SponsorDeniedPenalty { get; init; } = 15;
     public int DisqualifyMaxScore { get; init; } = 35;
     public int ApprenticeshipPenalty { get; init; } = 25;
     public int LongContractPenalty { get; init; } = 10;
@@ -54,6 +59,63 @@ public sealed record ScoringPolicy
     public int AgingPenalty { get; init; } = 5;
     public int StaleAfterDays { get; init; } = 30;
     public int StalePenalty { get; init; } = 30;
+
+    /// <summary>"Senior" in the title of a profile that allows senior roles.</summary>
+    public int SeniorPenalty { get; init; } = 15;
+
+    // Profile signals: the title is worth twice the body.
+    public int PositiveSignalTitleBonus { get; init; } = 16;
+    public int PositiveSignalBodyBonus { get; init; } = 8;
+    public int NegativeSignalTitlePenalty { get; init; } = 30;
+    public int NegativeSignalBodyPenalty { get; init; } = 15;
+
+    public int RemoteBonus { get; init; } = 10;
+    public int HybridBonus { get; init; } = 5;
+    public int FifoBonus { get; init; } = 15;
+
+    /// <summary>Per "no experience required"-style phrase, for profiles with an entry-level boost.</summary>
+    public int EntryLevelBonus { get; init; } = 12;
+    public int WorkingHolidayBonus { get; init; } = 15;
+
+    /// <summary>Contract, temp and casual: they fit the six months per employer.</summary>
+    public int FlexibleWorkTypeBonus { get; init; } = 5;
+    public int PreferredLocationBonus { get; init; } = 10;
+
+    /// <summary>
+    /// Points above this are divided by <see cref="CompressionDivisor"/>, so the best listings keep their
+    /// order instead of tying at 100.
+    /// </summary>
+    public int CompressAbove { get; init; } = 80;
+    public int CompressionDivisor { get; init; } = 3;
+
+    // Work rights and pay, from the full-text phrases (FullTextGroup) or a captured ad.
+    public int CitizenshipPenalty { get; init; } = 55;
+    public int WhvWithResidencyPenalty { get; init; } = 55;
+    public int AmbiguousRightsPenalty { get; init; } = 10;
+    public int TwelveMonthRightsPenalty { get; init; } = 40;
+    public int CommissionOnlyPenalty { get; init; } = 30;
+
+    /// <summary>
+    /// Per requirement kind of the profile found in the full ad (years of experience, a trade or a
+    /// degree). Moderate: the search gives no context, and "cert III an advantage" matches as well as
+    /// "cert III essential".
+    /// </summary>
+    public int RequirementPenalty { get; init; } = 20;
+
+    /// <summary>
+    /// A ticket earned with a short course (HRWL, VOC): the candidate would get one for the job. Lower
+    /// than <see cref="RequirementPenalty"/>, which stands for years of experience or a trade.
+    /// </summary>
+    public int TicketPenalty { get; init; } = 10;
+
+    /// <summary>
+    /// A truck licence class (HR/HC/MR/MC) the ad asks for: it takes years of holding a car licence, so
+    /// a newcomer cannot get one for the job. Told by the candidate (2026-10-23): these ads are bad.
+    /// </summary>
+    public int TruckLicencePenalty { get; init; } = 40;
+
+    /// <summary>A truck licence the ad calls desirable ("MR licence highly regarded"): not a condition.</summary>
+    public int DesirableTruckLicencePenalty { get; init; } = 10;
 
     /// <summary>
     /// Phrases searched in the full ad text, by group (<see cref="FullTextGroup"/>). A listing
@@ -76,24 +138,24 @@ public static class FullTextGroup
 {
     /// <summary>Work rights a Working Holiday visa cannot give: excludes.</summary>
     public const string Exclude = "exclude";
-    /// <summary>−55, unless the ad also mentions working holidays.</summary>
+    /// <summary><see cref="ScoringPolicy.CitizenshipPenalty"/>, unless the ad also mentions working holidays.</summary>
     public const string Citizen = "citizen";
-    /// <summary>−10: "full working rights" may or may not include a WHV.</summary>
+    /// <summary><see cref="ScoringPolicy.AmbiguousRightsPenalty"/>: "full working rights" may or may not include a WHV.</summary>
     public const string Ambiguous = "ambiguous";
-    /// <summary>+15, unless the same ad also names citizenship or residency (<see cref="WhvWithResidency"/>).</summary>
+    /// <summary><see cref="ScoringPolicy.WorkingHolidayBonus"/>, unless the same ad also names citizenship or residency (<see cref="WhvWithResidency"/>).</summary>
     public const string Whv = "whv";
     /// <summary>
-    /// −55: working holidays and citizenship or residency in the same ad. In practice that is mostly
+    /// <see cref="ScoringPolicy.WhvWithResidencyPenalty"/>: working holidays and citizenship or residency in the same ad. In practice that is mostly
     /// turning working holiday visas down ("citizens or PR only, no WHV"), so the mention neither
     /// earns the WHV bonus nor cancels the citizenship penalties. Seek matches citizen/citizens and
     /// resident/residents alike, but not citizenship or residency: those are terms of their own.
     /// </summary>
     public const string WhvWithResidency = "whv_residency";
-    /// <summary>−30.</summary>
+    /// <summary><see cref="ScoringPolicy.CommissionOnlyPenalty"/>.</summary>
     public const string Commission = "commission";
-    /// <summary>−20 (truck licence).</summary>
+    /// <summary><see cref="ScoringPolicy.TruckLicencePenalty"/>.</summary>
     public const string Licence = "licence";
-    /// <summary>−40: 12 months of work rights, unless the ad also mentions working holidays.</summary>
+    /// <summary><see cref="ScoringPolicy.TwelveMonthRightsPenalty"/>: 12 months of work rights, unless the ad also mentions working holidays.</summary>
     public const string Rights12Months = "rights_12m";
 
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Defaults { get; } =

@@ -10,7 +10,7 @@ namespace JobRadar.Domain.Matching;
 ///    the profile rules out, leadership and (for most profiles) senior titles.
 /// 2. Points from base 50: profile signals (title worth twice the body), sponsorship, remote,
 ///    FIFO, entry level, WHV-friendly, flexible work type, preferred location.
-/// 3. Compression above 80, so the best listings keep their order instead of tying at 100.
+/// 3. Compression above a threshold, so the best listings keep their order instead of tying at 100.
 /// 4. Restrictions and penalties after compression, so a listing with points to spare cannot
 ///    absorb them: full-text phrases, apprenticeships, long contracts, commission only, truck
 ///    licence, no sponsorship (when required), age.
@@ -22,28 +22,8 @@ public static class FitScorer
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
     public const int RulesVersion = 9;
 
+    /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
-
-    /// <summary>
-    /// Per requirement kind found in the full ad. Moderate: the search gives no context, and
-    /// "cert III an advantage" matches as well as "cert III essential".
-    /// </summary>
-    private const int RequirementPenalty = 20;
-
-    /// <summary>
-    /// A truck licence class (HR/HC/MR/MC) the ad asks for: it takes years of holding a car licence, so
-    /// a newcomer cannot get one for the job. Told by the candidate (2026-10-23): these ads are bad.
-    /// </summary>
-    private const int TruckLicencePenalty = 40;
-
-    /// <summary>A truck licence the ad calls desirable ("MR licence highly regarded"): not a condition.</summary>
-    private const int DesirableTruckLicencePenalty = 10;
-
-    /// <summary>
-    /// A ticket earned with a short course (HRWL, VOC): the candidate would get one for the job. Lower
-    /// than <see cref="RequirementPenalty"/>, which stands for years of experience or a trade.
-    /// </summary>
-    private const int TicketPenalty = 10;
 
     public static FitScore Score(ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today)
     {
@@ -102,15 +82,15 @@ public static class FitScorer
 
         // "Senior" subtracts for profiles that allow it; "Mid to Senior" does not.
         if (profile.AllowSenior && !juniorTitle && SeniorRank.IsMatch(title) && !MidTitle.IsMatch(title))
-            Add(ScoreRule.SeniorPenalty, "senior", ScoreWhere.Title, -15);
+            Add(ScoreRule.SeniorPenalty, "senior", ScoreWhere.Title, -policy.SeniorPenalty);
 
         // ── 2. Points ─────────────────────────────────────────────────────
         foreach (var signal in profile.PositiveSignals)
         {
             if (MatchesUnnegated(signal, title))
-                Add(ScoreRule.PositiveSignal, signal, ScoreWhere.Title, 16);
+                Add(ScoreRule.PositiveSignal, signal, ScoreWhere.Title, policy.PositiveSignalTitleBonus);
             else if (MatchesUnnegated(signal, body))
-                Add(ScoreRule.PositiveSignal, signal, ScoreWhere.Body, 8);
+                Add(ScoreRule.PositiveSignal, signal, ScoreWhere.Body, policy.PositiveSignalBodyBonus);
         }
 
         foreach (var signal in profile.NegativeSignals)
@@ -118,9 +98,9 @@ public static class FitScorer
             if (trainingTitle && QualificationWords.Any(w => signal.Contains(w, StringComparison.OrdinalIgnoreCase)))
                 continue;
             if (Signal(signal).IsMatch(title))
-                Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Title, -30);
+                Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Title, -policy.NegativeSignalTitlePenalty);
             else if (Signal(signal).IsMatch(body))
-                Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Body, -15);
+                Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Body, -policy.NegativeSignalBodyPenalty);
         }
 
         // "sponsor" as a substring also covers "sponsorship", "sponsored"; the offered phrases
@@ -134,22 +114,22 @@ public static class FitScorer
             Add(ScoreRule.SponsorshipDenied, "sponsor", ScoreWhere.Text, 0);
 
         if (profile.RewardRemote && Signal("remote").IsMatch(full))
-            Add(ScoreRule.Remote, "remote", ScoreWhere.Text, 10);
+            Add(ScoreRule.Remote, "remote", ScoreWhere.Text, policy.RemoteBonus);
         else if (profile.RewardRemote && Signal("hybrid").IsMatch(full))
-            Add(ScoreRule.Hybrid, "hybrid", ScoreWhere.Text, 5);
+            Add(ScoreRule.Hybrid, "hybrid", ScoreWhere.Text, policy.HybridBonus);
 
         // Not twice when the profile already rewards FIFO as a signal.
         var fifoInProfile = profile.PositiveSignals.Any(s =>
             s.Contains("fifo", StringComparison.OrdinalIgnoreCase) || s.Contains("fly-in", StringComparison.OrdinalIgnoreCase));
         if (!fifoInProfile && (Signal("fifo").IsMatch(full) || Signal("fly-in fly-out").IsMatch(full)))
-            Add(ScoreRule.Fifo, "fifo", ScoreWhere.Text, 15);
+            Add(ScoreRule.Fifo, "fifo", ScoreWhere.Text, policy.FifoBonus);
 
         if (profile.EntryLevelBoost)
         {
             foreach (var phrase in NoExperience)
             {
                 if (MatchesUnnegated(phrase, full))
-                    Add(ScoreRule.EntryLevel, phrase, ScoreWhere.Text, 12);
+                    Add(ScoreRule.EntryLevel, phrase, ScoreWhere.Text, policy.EntryLevelBonus);
             }
         }
 
@@ -166,29 +146,30 @@ public static class FitScorer
         var whvHits = described || whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Whv);
         var whv = whvLocal.Success || whvDescribed is not null || whvHits is not null;
         if (whvLocal.Success)
-            Add(ScoreRule.WorkingHolidayFriendly, whvLocal.Value, ScoreWhere.Text, 15);
+            Add(ScoreRule.WorkingHolidayFriendly, whvLocal.Value, ScoreWhere.Text, policy.WorkingHolidayBonus);
         else if (whvDescribed is not null)
-            Add(ScoreRule.WorkingHolidayFriendly, whvDescribed, ScoreWhere.Description, 15);
+            Add(ScoreRule.WorkingHolidayFriendly, whvDescribed, ScoreWhere.Description, policy.WorkingHolidayBonus);
         else if (whvHits is not null)
-            Add(ScoreRule.WorkingHolidayFriendly, whvHits[0], ScoreWhere.FullText, 15);
+            Add(ScoreRule.WorkingHolidayFriendly, whvHits[0], ScoreWhere.FullText, policy.WorkingHolidayBonus);
 
         // Contract, temp and casual fit the six months per employer.
         if (job.WorkTypeLabel is { } workType && FlexibleWorkType.IsMatch(workType))
-            Add(ScoreRule.FlexibleWorkType, workType, ScoreWhere.WorkType, 5);
+            Add(ScoreRule.FlexibleWorkType, workType, ScoreWhere.WorkType, policy.FlexibleWorkTypeBonus);
 
         var location = job.LocationLabel ?? "";
         if (profile.PreferredLocations.FirstOrDefault(l => Signal(l).IsMatch(location)) is { } preferred)
-            Add(ScoreRule.PreferredLocation, preferred, ScoreWhere.Location, 10);
+            Add(ScoreRule.PreferredLocation, preferred, ScoreWhere.Location, policy.PreferredLocationBonus);
 
-        // ── 3. Compression above 80 ───────────────────────────────────────
-        if (score > 80)
+        // ── 3. Compression ────────────────────────────────────────────────
+        if (score > policy.CompressAbove)
         {
-            var compressed = Math.Min(100, 80 + (int)Math.Round((score - 80) / 3.0, MidpointRounding.ToEven));
-            Add(ScoreRule.Compression, "80", ScoreWhere.None, compressed - score);
+            var above = policy.CompressAbove;
+            var compressed = Math.Min(100, above + (int)Math.Round((score - above) / (double)policy.CompressionDivisor, MidpointRounding.ToEven));
+            Add(ScoreRule.Compression, above.ToString(System.Globalization.CultureInfo.InvariantCulture), ScoreWhere.None, compressed - score);
         }
 
         // ── 4. Restrictions and penalties ─────────────────────────────────
-        foreach (var (group, rule, points) in FullTextRestrictions)
+        foreach (var (group, rule, points) in FullTextRestrictions(policy))
         {
             if (!groups.TryGetValue(group, out var hits))
                 continue;
@@ -208,9 +189,9 @@ public static class FitScorer
         if (described)
         {
             if (!whv && CitizenshipRequired.Match(desc) is { Success: true } descCitizen)
-                Add(ScoreRule.FullTextCitizenship, descCitizen.Value, ScoreWhere.Description, -55);
+                Add(ScoreRule.FullTextCitizenship, descCitizen.Value, ScoreWhere.Description, -policy.CitizenshipPenalty);
             if (policy.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => Signal(p).IsMatch(desc)) is { } ambiguous)
-                Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -10);
+                Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -policy.AmbiguousRightsPenalty);
         }
 
         // Requirements of the profile found in the full ad: once per kind, a truck licence apart from a
@@ -236,10 +217,10 @@ public static class FitScorer
                 continue;
             var (rule, points) = requirement switch
             {
-                { Truck: true } => (ScoreRule.FullTextTruckLicence, TruckLicencePenalty),
-                { Kind: RequirementKind.Licence } => (ScoreRule.FullTextLicence, TicketPenalty),
-                { Kind: RequirementKind.Experience } => (ScoreRule.FullTextExperience, RequirementPenalty),
-                _ => (ScoreRule.FullTextQualification, RequirementPenalty),
+                { Truck: true } => (ScoreRule.FullTextTruckLicence, policy.TruckLicencePenalty),
+                { Kind: RequirementKind.Licence } => (ScoreRule.FullTextLicence, policy.TicketPenalty),
+                { Kind: RequirementKind.Experience } => (ScoreRule.FullTextExperience, policy.RequirementPenalty),
+                _ => (ScoreRule.FullTextQualification, policy.RequirementPenalty),
             };
             Add(rule, requirement.Phrase, requirement.Where, -points);
         }
@@ -251,17 +232,17 @@ public static class FitScorer
             Add(ScoreRule.LongContract, longContract.Value, ScoreWhere.Text, -policy.LongContractPenalty);
 
         if (CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
-            Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -30);
+            Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -policy.CommissionOnlyPenalty);
         if (truckAsked is { } truck && (described || !groups.ContainsKey(FullTextGroup.Licence)))
         {
             if (truck.Desirable)
-                Add(ScoreRule.TruckLicence, $"{truck.Value} (desirable)", ScoreWhere.Text, -DesirableTruckLicencePenalty);
+                Add(ScoreRule.TruckLicence, $"{truck.Value} (desirable)", ScoreWhere.Text, -policy.DesirableTruckLicencePenalty);
             else
-                Add(ScoreRule.TruckLicence, truck.Value, ScoreWhere.Text, -TruckLicencePenalty);
+                Add(ScoreRule.TruckLicence, truck.Value, ScoreWhere.Text, -policy.TruckLicencePenalty);
         }
 
         if (policy.VisaRequired && !sponsorConfirmed)
-            Add(ScoreRule.NoSponsorship, "sponsor", ScoreWhere.None, -(sponsorDenied ? 15 : policy.NoSponsorPenalty));
+            Add(ScoreRule.NoSponsorship, "sponsor", ScoreWhere.None, -(sponsorDenied ? policy.SponsorDeniedPenalty : policy.NoSponsorPenalty));
 
         if (job.PostedAt is { } posted)
         {
@@ -284,14 +265,14 @@ public static class FitScorer
         return new FitScore(Math.Clamp(score, 1, 100), items);
     }
 
-    private static readonly (string Group, ScoreRule Rule, int Points)[] FullTextRestrictions =
+    private static (string Group, ScoreRule Rule, int Points)[] FullTextRestrictions(ScoringPolicy policy) =>
     [
-        (FullTextGroup.Citizen, ScoreRule.FullTextCitizenship, -55),
-        (FullTextGroup.WhvWithResidency, ScoreRule.FullTextWhvWithResidency, -55),
-        (FullTextGroup.Ambiguous, ScoreRule.FullTextAmbiguousRights, -10),
-        (FullTextGroup.Rights12Months, ScoreRule.FullTextTwelveMonthRights, -40),
-        (FullTextGroup.Commission, ScoreRule.FullTextCommission, -30),
-        (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -TruckLicencePenalty),
+        (FullTextGroup.Citizen, ScoreRule.FullTextCitizenship, -policy.CitizenshipPenalty),
+        (FullTextGroup.WhvWithResidency, ScoreRule.FullTextWhvWithResidency, -policy.WhvWithResidencyPenalty),
+        (FullTextGroup.Ambiguous, ScoreRule.FullTextAmbiguousRights, -policy.AmbiguousRightsPenalty),
+        (FullTextGroup.Rights12Months, ScoreRule.FullTextTwelveMonthRights, -policy.TwelveMonthRightsPenalty),
+        (FullTextGroup.Commission, ScoreRule.FullTextCommission, -policy.CommissionOnlyPenalty),
+        (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -policy.TruckLicencePenalty),
     ];
 
     /// <summary>
