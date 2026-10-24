@@ -616,7 +616,7 @@ public class FitScorerTests
             PositiveSignalTitleBonus = 20,
             PositiveSignalBodyBonus = 4,
             TruckLicencePenalty = 25,
-            TicketPenalty = 3,
+            ObtainableRequirementPenalty = 3,
             CitizenshipPenalty = 30,
             CompressAbove = 90,
             CompressionDivisor = 5,
@@ -635,5 +635,75 @@ public class FitScorerTests
         Assert.Equal(-30, Item(licences, ScoreRule.FullTextCitizenship).Points);
         Assert.Equal(99, strong.Final);
         Assert.Equal("90", Item(strong, ScoreRule.Compression).Detail);
+    }
+
+    // ── Candidate requirements ────────────────────────────────────────────
+
+    private static readonly MatchingProfile Fifo = Trades with
+    {
+        Requirements = new([], ["years experience"], ["trade qualified"], ["HRWL", "verification of competency", "white card"]),
+    };
+
+    private static CandidateRequirements Candidate(params (string Id, RequirementState State)[] states) =>
+        new(states.ToDictionary(s => s.Id, s => s.State));
+
+    private static FitScore Score(ScoringInput job, CandidateRequirements candidate) =>
+        FitScorer.Score(job, Fifo, ScoringPolicy.Default, Today, candidate);
+
+    [Fact]
+    public void Without_states_requirements_weigh_the_default_of_their_kind()
+    {
+        var score = Score(Job("Offsider", fullText: ["years experience", "trade qualified", "HRWL", "MR licence"]),
+            Fifo with { Requirements = Fifo.Requirements with { Licence = ["HRWL", "MR licence"] } });
+
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextExperience).Points);
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextQualification).Points);
+        Assert.Equal(-10, Item(score, ScoreRule.FullTextLicence).Points);
+        Assert.Equal(-40, Item(score, ScoreRule.FullTextTruckLicence).Points);
+    }
+
+    [Fact]
+    public void The_candidate_state_sets_the_penalty_and_a_requirement_they_have_costs_nothing()
+    {
+        var job = Job("Offsider", fullText: ["years experience", "trade qualified", "HRWL"]);
+
+        var score = Score(job, Candidate(("hrwl", RequirementState.Have), ("trade-qualification", RequirementState.OutOfReach)));
+
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextLicence);
+        Assert.Equal(-40, Item(score, ScoreRule.FullTextQualification).Points);
+        Assert.Equal(-20, Item(score, ScoreRule.FullTextExperience).Points);
+    }
+
+    [Fact]
+    public void The_worst_requirement_of_a_kind_counts_and_one_the_candidate_has_hides_no_other()
+    {
+        var job = Job("Offsider", fullText: ["HRWL", "verification of competency"]);
+
+        var hasHrwl = Item(Score(job, Candidate(("hrwl", RequirementState.Have))), ScoreRule.FullTextLicence);
+        var hrwlOutOfReach = Item(Score(job, Candidate(("hrwl", RequirementState.OutOfReach))), ScoreRule.FullTextLicence);
+
+        Assert.Equal(("verification of competency", -10), (hasHrwl.Detail, hasHrwl.Points));
+        Assert.Equal(("HRWL", -40), (hrwlOutOfReach.Detail, hrwlOutOfReach.Points));
+    }
+
+    [Fact]
+    public void A_phrase_outside_the_catalog_keeps_the_default_of_its_kind()
+    {
+        var score = Score(Job("Offsider", fullText: ["white card"]), Candidate(("hrwl", RequirementState.Have)));
+
+        Assert.Equal(("white card", -10), (Item(score, ScoreRule.FullTextLicence).Detail, Item(score, ScoreRule.FullTextLicence).Points));
+    }
+
+    [Fact]
+    public void Only_states_that_change_what_a_profile_searches_are_relevant_to_it()
+    {
+        var candidate = Candidate(
+            ("hrwl", RequirementState.Obtainable),             // the default of a ticket
+            ("trade-qualification", RequirementState.OutOfReach),
+            ("degree", RequirementState.Have));                // the profile does not look for a degree
+
+        Assert.Equal([KeyValuePair.Create("trade-qualification", RequirementState.OutOfReach)],
+            candidate.Relevant(Fifo, ScoringPolicy.Default));
+        Assert.Empty(CandidateRequirements.None.Relevant(Fifo, ScoringPolicy.Default));
     }
 }

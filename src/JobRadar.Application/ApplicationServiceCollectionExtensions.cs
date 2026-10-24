@@ -41,6 +41,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<TrackingService>();
         services.AddScoped<DescriptionService>();
         services.AddScoped<CalibrationService>();
+        services.AddScoped<CandidateRequirementService>();
         services.AddScoped<TriageService>();
 
         services.AddOptions<MarketOptions>().Bind(configuration.GetSection(MarketOptions.Section));

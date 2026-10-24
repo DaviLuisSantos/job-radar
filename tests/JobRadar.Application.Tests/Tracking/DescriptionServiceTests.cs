@@ -44,7 +44,7 @@ public class DescriptionServiceTests
     private DescriptionService Service()
     {
         var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()));
-        var scoring = new ListingScoringService(catalog, _listings, new InMemoryTerms(), _descriptions, _scores, _time,
+        var scoring = new ListingScoringService(catalog, _listings, new InMemoryTerms(), _descriptions, _scores, new InMemoryCandidateRequirements(), _time,
             NullLogger<ListingScoringService>.Instance);
         return new DescriptionService(_listings, _descriptions, scoring, Options.Create(new CollectionOptions()), _time);
     }

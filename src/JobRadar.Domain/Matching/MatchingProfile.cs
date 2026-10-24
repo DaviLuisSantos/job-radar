@@ -95,22 +95,23 @@ public sealed record ScoringPolicy
     public int TwelveMonthRightsPenalty { get; init; } = 40;
     public int CommissionOnlyPenalty { get; init; } = 30;
 
-    /// <summary>
-    /// Per requirement kind of the profile found in the full ad (years of experience, a trade or a
-    /// degree). Moderate: the search gives no context, and "cert III an advantage" matches as well as
-    /// "cert III essential".
-    /// </summary>
-    public int RequirementPenalty { get; init; } = 20;
+    // A requirement of the profile found in the full ad, by the candidate's state on it
+    // (CandidateRequirements); a requirement the candidate has costs nothing. Moderate below out of reach:
+    // the search gives no context, and "cert III an advantage" matches as well as "cert III essential".
+
+    /// <summary>A ticket the candidate would get for the job with a short course (HRWL, VOC).</summary>
+    public int ObtainableRequirementPenalty { get; init; } = 10;
+
+    /// <summary>Something the candidate lacks: years of experience, a trade, a degree.</summary>
+    public int MissingRequirementPenalty { get; init; } = 20;
+
+    /// <summary>Something the candidate cannot get for the job: a truck licence class.</summary>
+    public int OutOfReachRequirementPenalty { get; init; } = 40;
 
     /// <summary>
-    /// A ticket earned with a short course (HRWL, VOC): the candidate would get one for the job. Lower
-    /// than <see cref="RequirementPenalty"/>, which stands for years of experience or a trade.
-    /// </summary>
-    public int TicketPenalty { get; init; } = 10;
-
-    /// <summary>
-    /// A truck licence class (HR/HC/MR/MC) the ad asks for: it takes years of holding a car licence, so
-    /// a newcomer cannot get one for the job. Told by the candidate (2026-10-23): these ads are bad.
+    /// A truck licence class (HR/HC/MR/MC) the ad asks for, read by the pattern in the ad's own text or the
+    /// policy's licence group: it takes years of holding a car licence, so a newcomer cannot get one for the
+    /// job. Told by the candidate (2026-10-23): these ads are bad.
     /// </summary>
     public int TruckLicencePenalty { get; init; } = 40;
 

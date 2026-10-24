@@ -1,4 +1,5 @@
 using JobRadar.Domain.Listings;
+using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
 
 namespace JobRadar.Worker.Cli;
@@ -12,6 +13,9 @@ public abstract record CliCommand
           notes     <id> <text...>
           label     <id> good|bad|clear [note...]
           calibrate [--rescore]           how scores agree with your labels (--rescore: this build's rules, nothing saved)
+          requirements                    the requirement catalog and where you stand on each item
+          requirement <item> have|obtainable|missing|out-of-reach|default
+          import-candidate <candidate.json> [--dry-run]  requirement states from your candidate facts
           collect [--full]                run the daily pass now (--full: ignore the incremental windows)
           market                          take the market snapshot (Raio-X) now
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
@@ -27,9 +31,14 @@ public abstract record CliCommand
     public sealed record Collect(bool FullHistory) : CliCommand;
     public sealed record MarketReport(string? Month, string? OutputFile) : CliCommand;
     public sealed record ImportPrototype(string Path, bool DryRun) : CliCommand;
+    public sealed record ListRequirements : CliCommand;
+    /// <param name="State">Null puts the item back to the default of its kind.</param>
+    public sealed record SetRequirement(string Item, RequirementState? State) : CliCommand;
+    public sealed record ImportCandidate(string Path, bool DryRun) : CliCommand;
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
-    public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype"];
+    public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype",
+        "requirements", "requirement", "import-candidate"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -53,6 +62,10 @@ public abstract record CliCommand
                 "collect" when args.Length == 2 && args[1] == "--full" => new Collect(FullHistory: true),
                 "import-prototype" when args.Length == 2 && args[1] != "--dry-run" => new ImportPrototype(args[1], DryRun: false),
                 "import-prototype" when args.Length == 3 && args[2] == "--dry-run" => new ImportPrototype(args[1], DryRun: true),
+                "requirements" when args.Length == 1 => new ListRequirements(),
+                "requirement" when args.Length == 3 => new SetRequirement(args[1], ParseRequirementState(args[2])),
+                "import-candidate" when args.Length == 2 && args[1] != "--dry-run" => new ImportCandidate(args[1], DryRun: false),
+                "import-candidate" when args.Length == 3 && args[2] == "--dry-run" => new ImportCandidate(args[1], DryRun: true),
                 "market-report" when args.Length <= 3 => new MarketReport(
                     args.Length > 1 ? ParseMonth(args[1]) : null, args.Length > 2 ? args[2] : null),
                 _ => Fail($"Wrong arguments for '{name}'.", out error),
@@ -84,6 +97,16 @@ public abstract record CliCommand
         "bad" => Verdict.Bad,
         "clear" => null,
         _ => throw new FormatException($"Label must be good, bad or clear, not '{value}'."),
+    };
+
+    private static RequirementState? ParseRequirementState(string value) => value.ToLowerInvariant() switch
+    {
+        "have" => RequirementState.Have,
+        "obtainable" => RequirementState.Obtainable,
+        "missing" => RequirementState.Missing,
+        "out-of-reach" => RequirementState.OutOfReach,
+        "default" => null,
+        _ => throw new FormatException($"State must be have, obtainable, missing, out-of-reach or default, not '{value}'."),
     };
 
     private static string ParseMonth(string value) =>

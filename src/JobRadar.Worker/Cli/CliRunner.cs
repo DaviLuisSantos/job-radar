@@ -45,6 +45,18 @@ public static class CliRunner
                         await output.WriteLineAsync($"Scored again with this build's rules (version {FitScorer.RulesVersion}); nothing saved.");
                     WriteCalibration(c.Rescore ? await calibration.MeasureRescoredAsync(LocalZone(sp), ct) : await calibration.MeasureAsync(ct), output);
                     break;
+                case CliCommand.ListRequirements:
+                    WriteRequirements(await sp.GetRequiredService<CandidateRequirementService>().ListAsync(ct), output);
+                    break;
+                case CliCommand.SetRequirement c:
+                    var item = await sp.GetRequiredService<CandidateRequirementService>().SetAsync(c.Item, c.State, ct);
+                    await output.WriteLineAsync($"{item.Id}: {(c.State is { } state ? StateWord(state) : "back to default")}");
+                    await output.WriteLineAsync(RequirementsTakeEffect);
+                    break;
+                case CliCommand.ImportCandidate c:
+                    var facts = CandidateFacts.Parse(await File.ReadAllTextAsync(c.Path, ct));
+                    WriteCandidateImport(await sp.GetRequiredService<CandidateRequirementService>().ImportAsync(facts, c.DryRun, ct), c.DryRun, output);
+                    break;
                 case CliCommand.TakeMarketSnapshot:
                     foreach (var s in await sp.GetRequiredService<MarketSnapshotService>().TakeAsync(LocalToday(sp), ct))
                     {
@@ -92,6 +104,46 @@ public static class CliRunner
             await output.WriteLineAsync(ex.Message);
             return 1;
         }
+        catch (Exception ex) when (ex is UnknownRequirementException or FormatException)
+        {
+            await output.WriteLineAsync(ex.Message);
+            return 2;
+        }
+    }
+
+    private const string RequirementsTakeEffect =
+        "Scores change in the next daily pass; measure the change now with: calibrate --rescore";
+
+    private static string StateWord(RequirementState state) => state switch
+    {
+        RequirementState.Have => "have",
+        RequirementState.Obtainable => "obtainable",
+        RequirementState.Missing => "missing",
+        _ => "out-of-reach",
+    };
+
+    internal static void WriteRequirements(IReadOnlyList<RequirementStatus> requirements, TextWriter o)
+    {
+        o.WriteLine($"{"Item",-22} {"Kind",-14} {"State",-22} Profiles");
+        foreach (var r in requirements)
+        {
+            var state = StateWord(r.State) + (r.IsDefault ? " (default)" : "");
+            var profiles = r.Profiles.Count > 0 ? string.Join(", ", r.Profiles) : "—";
+            o.WriteLine($"{r.Item.Id,-22} {r.Item.Kind,-14} {state,-22} {profiles}");
+        }
+    }
+
+    internal static void WriteCandidateImport(CandidateImportReport r, bool dryRun, TextWriter o)
+    {
+        o.WriteLine(r.Changes.Count == 0
+            ? "Nothing to change: the states already match the facts."
+            : dryRun ? "Dry run: nothing written. Would set:" : "Set:");
+        foreach (var c in r.Changes)
+            o.WriteLine($"  {c.ItemId,-22} {(c.From is { } f ? StateWord(f) : "default"),-12} -> {StateWord(c.To),-12} ({c.Fact})");
+        if (r.NotInCatalog.Count > 0)
+            o.WriteLine("Not in the requirement catalog (no ad is weighed by them yet): " + string.Join("; ", r.NotInCatalog));
+        if (!dryRun && r.Changes.Count > 0)
+            o.WriteLine(RequirementsTakeEffect);
     }
 
     private static TimeZoneInfo LocalZone(IServiceProvider sp) =>

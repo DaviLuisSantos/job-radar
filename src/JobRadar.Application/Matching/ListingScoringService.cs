@@ -17,6 +17,7 @@ public sealed class ListingScoringService(
     IListingTermRepository terms,
     IListingDescriptionRepository descriptions,
     IListingScoreRepository scores,
+    ICandidateRequirementRepository requirements,
     TimeProvider time,
     ILogger<ListingScoringService> log)
 {
@@ -24,6 +25,7 @@ public sealed class ListingScoringService(
     {
         var now = time.GetUtcNow();
         var today = Today(now, zone);
+        var candidate = await requirements.GetAsync(ct);
 
         foreach (var profile in catalog.Profiles)
         {
@@ -34,7 +36,7 @@ public sealed class ListingScoringService(
             // Pure and thread-safe: score on every core.
             var scored = found
                 .AsParallel()
-                .Select(l => Score(l, termsById.GetValueOrDefault(l.Id), textsById.GetValueOrDefault(l.Id), profile, today, now))
+                .Select(l => Score(l, termsById.GetValueOrDefault(l.Id), textsById.GetValueOrDefault(l.Id), profile, candidate, today, now))
                 .ToList();
             await scores.SaveAsync(scored, ct);
 
@@ -62,9 +64,10 @@ public sealed class ListingScoringService(
         var now = time.GetUtcNow();
         var listingTerms = (await terms.GetTermsAsync([id], ct)).GetValueOrDefault(id);
         var text = (await descriptions.GetTextsAsync([id], ct)).GetValueOrDefault(id);
+        var candidate = await requirements.GetAsync(ct);
         var scored = catalog.Profiles
             .Where(p => keys.Any(p.SearchKeys.Contains))
-            .Select(p => Score(record.Listing, listingTerms, text, p, Today(now, zone), now))
+            .Select(p => Score(record.Listing, listingTerms, text, p, candidate, Today(now, zone), now))
             .ToList();
         await scores.SaveAsync(scored, ct);
         return scored;
@@ -83,6 +86,7 @@ public sealed class ListingScoringService(
         var termsById = await terms.GetTermsAsync(ids, ct);
         var textsById = await descriptions.GetTextsAsync(ids, ct);
         var profiles = catalog.Profiles.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+        var candidate = await requirements.GetAsync(ct);
 
         var rescored = new List<JudgedScore>();
         foreach (var j in judged)
@@ -90,16 +94,17 @@ public sealed class ListingScoringService(
             if (!profiles.TryGetValue(j.Profile, out var profile) || await listings.FindAsync(j.Id, ct) is not { } record)
                 continue;
             var input = ScoringInput.From(record.Listing, termsById.GetValueOrDefault(j.Id), textsById.GetValueOrDefault(j.Id));
-            rescored.Add(j with { Score = FitScorer.Score(input, profile.Profile, catalog.Policy, today) });
+            rescored.Add(j with { Score = FitScorer.Score(input, profile.Profile, catalog.Policy, today, candidate) });
         }
         return rescored;
     }
 
     private ListingScore Score(
-        Listing listing, IReadOnlyCollection<string>? listingTerms, string? text, ProfileDefinition profile, DateOnly today, DateTimeOffset now) =>
+        Listing listing, IReadOnlyCollection<string>? listingTerms, string? text, ProfileDefinition profile,
+        CandidateRequirements candidate, DateOnly today, DateTimeOffset now) =>
         new(listing.Id, profile.Name,
-            FitScorer.Score(ScoringInput.From(listing, listingTerms, text), profile.Profile, catalog.Policy, today),
-            profile.RulesHash, now);
+            FitScorer.Score(ScoringInput.From(listing, listingTerms, text), profile.Profile, catalog.Policy, today, candidate),
+            ProfileCatalog.RulesHash(profile, candidate, catalog.Policy), now);
 
     private static DateOnly Today(DateTimeOffset now, TimeZoneInfo zone) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);

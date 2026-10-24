@@ -39,6 +39,7 @@ public class ListingScoringServiceTests
     private readonly InMemoryScores _scores = new();
     private readonly InMemoryTerms _terms = new();
     private readonly InMemoryDescriptions _descriptions = new();
+    private readonly InMemoryCandidateRequirements _requirements = new();
 
     private static SourcedListing Ad(string id, string title, DateTimeOffset? posted = null) => new(
         new Listing(new ListingId("seek", id), title, null, ListingLocation.Unknown, WorkType.Unknown, null,
@@ -46,7 +47,7 @@ public class ListingScoringServiceTests
         "{}");
 
     private ListingScoringService Service(ProfileCatalog catalog) =>
-        new(catalog, _listings, _terms, _descriptions, _scores, _time, NullLogger<ListingScoringService>.Instance);
+        new(catalog, _listings, _terms, _descriptions, _scores, _requirements, _time, NullLogger<ListingScoringService>.Instance);
 
     [Fact]
     public async Task One_listing_is_scored_for_the_profiles_that_found_it_with_its_captured_text()
@@ -159,5 +160,29 @@ public class ListingScoringServiceTests
         Assert.Equal(11, byId["1"].Score.Final);   // 66 − 55
         Assert.Contains(byId["1"].Score.Items, i => i.Rule == ScoreRule.FullTextCitizenship);
         Assert.Equal(66, byId["2"].Score.Final);
+    }
+
+    [Fact]
+    public async Task Requirement_states_change_the_score_and_the_rules_hash_only_when_the_profile_searches_them()
+    {
+        var tech = ProfileCatalogTests.Dotnet();
+        tech.Requirements = new RequirementOptions { Items = ["hrwl"] };
+        var catalog = ProfileCatalogTests.Catalog(("tech", tech));
+        var profile = Assert.Single(catalog.Profiles);
+        await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
+        var id = new ListingId("seek", "1");
+        _terms.Marks.Add((id, "HRWL"));
+
+        var before = Assert.Single(await Service(catalog).ScoreOneAsync(id, Perth, Ct));
+        _requirements.States["degree"] = RequirementState.Have;   // the profile does not search it
+        var unrelated = Assert.Single(await Service(catalog).ScoreOneAsync(id, Perth, Ct));
+        _requirements.States["hrwl"] = RequirementState.Have;
+        var after = Assert.Single(await Service(catalog).ScoreOneAsync(id, Perth, Ct));
+
+        Assert.Equal(profile.RulesHash, before.RulesHash);
+        Assert.Equal((profile.RulesHash, before.Score.Final), (unrelated.RulesHash, unrelated.Score.Final));
+        Assert.NotEqual(profile.RulesHash, after.RulesHash);
+        Assert.Equal(-10, Assert.Single(before.Score.Items, i => i.Rule == ScoreRule.FullTextLicence).Points);
+        Assert.Equal(before.Score.Final + 10, after.Score.Final);
     }
 }

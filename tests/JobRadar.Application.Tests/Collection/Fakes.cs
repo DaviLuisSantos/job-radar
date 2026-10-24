@@ -151,6 +151,24 @@ internal sealed class InMemoryTerms : IListingTermRepository
             .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(m => m.Term).ToList()));
 }
 
+/// <summary>The candidate's states, kept as set; ids compare without case, as in Postgres.</summary>
+internal sealed class InMemoryCandidateRequirements : ICandidateRequirementRepository
+{
+    public Dictionary<string, RequirementState> States { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Task<CandidateRequirements> GetAsync(CancellationToken ct = default) =>
+        Task.FromResult(new CandidateRequirements(new Dictionary<string, RequirementState>(States, StringComparer.OrdinalIgnoreCase)));
+
+    public Task SetAsync(string itemId, RequirementState? state, DateTimeOffset at, CancellationToken ct = default)
+    {
+        if (state is { } s)
+            States[itemId] = s;
+        else
+            States.Remove(itemId);
+        return Task.CompletedTask;
+    }
+}
+
 /// <summary>Answers each term from a script; records what it was asked.</summary>
 internal sealed class FakeFullTextSearch(string source) : IFullTextSearch
 {

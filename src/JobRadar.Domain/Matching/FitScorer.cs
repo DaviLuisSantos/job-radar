@@ -25,8 +25,11 @@ public static class FitScorer
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
 
-    public static FitScore Score(ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today)
+    /// <param name="candidate">The candidate's state on each requirement; none means every requirement at its default.</param>
+    public static FitScore Score(
+        ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today, CandidateRequirements? candidate = null)
     {
+        candidate ??= CandidateRequirements.None;
         var title = job.Title.ToLowerInvariant();
         var body = string.Join(" ", job.Summary ?? "", job.LocationLabel ?? "", job.WorkTypeLabel ?? "").ToLowerInvariant();
         var full = $"{title} {body}";
@@ -195,8 +198,10 @@ public static class FitScorer
         }
 
         // Requirements of the profile found in the full ad: once per kind, a truck licence apart from a
-        // ticket. A truck licence already counted (local text or the policy's licence group) is not counted
-        // again; a training title is where the trade certificate is earned. The context word only narrows
+        // ticket, at the penalty of the candidate's state on it (the worst, when the ad asks for several of a
+        // kind; one the candidate has costs nothing). A truck licence already counted (local text or the
+        // policy's licence group) is not counted again; a training title is where the trade certificate is
+        // earned. The context word only narrows
         // the search: a phrase found with any context ("HC licence + FIFO", searched for another profile) is
         // in the ad. A captured ad is read instead of the search, which also matches what the ad does not
         // say; there the phrase counts when not negated just before it ("no HR licence needed").
@@ -208,21 +213,25 @@ public static class FitScorer
                 Where: described ? (MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description : ScoreWhere.None)
                     : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
             .Where(r => r.Where != ScoreWhere.None)
-            .DistinctBy(r => (r.Kind, r.Truck));
+            .Select(r => (r.Kind, r.Truck, r.Phrase, r.Where,
+                Points: RequirementPenalty(candidate.Of(r.Kind, r.Phrase, policy), policy)))
+            .Where(r => r.Points > 0)
+            .GroupBy(r => (r.Kind, r.Truck))
+            .Select(g => g.MaxBy(r => r.Points));
         foreach (var requirement in requirements)
         {
             if (requirement.Truck && truckCounted)
                 continue;
             if (requirement.Kind == RequirementKind.Qualification && trainingTitle)
                 continue;
-            var (rule, points) = requirement switch
+            var rule = requirement switch
             {
-                { Truck: true } => (ScoreRule.FullTextTruckLicence, policy.TruckLicencePenalty),
-                { Kind: RequirementKind.Licence } => (ScoreRule.FullTextLicence, policy.TicketPenalty),
-                { Kind: RequirementKind.Experience } => (ScoreRule.FullTextExperience, policy.RequirementPenalty),
-                _ => (ScoreRule.FullTextQualification, policy.RequirementPenalty),
+                { Truck: true } => ScoreRule.FullTextTruckLicence,
+                { Kind: RequirementKind.Licence } => ScoreRule.FullTextLicence,
+                { Kind: RequirementKind.Experience } => ScoreRule.FullTextExperience,
+                _ => ScoreRule.FullTextQualification,
             };
-            Add(rule, requirement.Phrase, requirement.Where, -points);
+            Add(rule, requirement.Phrase, requirement.Where, -requirement.Points);
         }
 
         if (policy.ApprenticeshipPenalty > 0 && trainingTitle)
@@ -264,6 +273,15 @@ public static class FitScorer
 
         return new FitScore(Math.Clamp(score, 1, 100), items);
     }
+
+    private static int RequirementPenalty(RequirementState state, ScoringPolicy policy) => state switch
+    {
+        RequirementState.Have => 0,
+        RequirementState.Obtainable => policy.ObtainableRequirementPenalty,
+        RequirementState.Missing => policy.MissingRequirementPenalty,
+        RequirementState.OutOfReach => policy.OutOfReachRequirementPenalty,
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+    };
 
     private static (string Group, ScoreRule Rule, int Points)[] FullTextRestrictions(ScoringPolicy policy) =>
     [

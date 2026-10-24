@@ -30,6 +30,7 @@ public static class PostgresServiceCollectionExtensions
         services.AddScoped<ICollectionRunRepository, PostgresCollectionRunRepository>();
         services.AddScoped<IListingScoreRepository, PostgresListingScoreRepository>();
         services.AddScoped<IListingTermRepository, PostgresListingTermRepository>();
+        services.AddScoped<ICandidateRequirementRepository, PostgresCandidateRequirementRepository>();
         services.AddScoped<ITrackingRepository, PostgresTrackingRepository>();
         services.AddScoped<IMarketRepository, PostgresMarketRepository>();
         services.AddScoped<IStorageHealth, PostgresStorageHealth>();

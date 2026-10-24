@@ -92,9 +92,18 @@ public sealed class ProfileCatalog
     /// Changes when the scorer version, a profile signal or a policy weight changes. Searches are
     /// left out: they change what is collected, not how it is scored.
     /// </summary>
-    internal static string RulesHash(MatchingProfile profile, ScoringPolicy policy)
-    {
-        var json = JsonSerializer.Serialize(new { FitScorer.RulesVersion, profile, policy });
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(json)))[..16];
-    }
+    internal static string RulesHash(MatchingProfile profile, ScoringPolicy policy) =>
+        Hash(new { FitScorer.RulesVersion, profile, policy });
+
+    /// <summary>
+    /// The profile's rules hash with the candidate's states on its requirements: the same hash while every
+    /// state the profile searches is at its default, so setting nothing changes nothing.
+    /// </summary>
+    internal static string RulesHash(ProfileDefinition profile, CandidateRequirements candidate, ScoringPolicy policy) =>
+        candidate.Relevant(profile.Profile, policy) is { Count: > 0 } states
+            ? Hash(new { profile.RulesHash, states })
+            : profile.RulesHash;
+
+    private static string Hash(object rules) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(rules))))[..16];
 }

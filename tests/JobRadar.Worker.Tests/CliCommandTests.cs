@@ -1,4 +1,5 @@
 using JobRadar.Domain.Listings;
+using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
 using JobRadar.Worker.Cli;
 
@@ -53,7 +54,21 @@ public class CliCommandTests
         Assert.Equal(new CliCommand.MarketReport("2026-10", "raio-x.md"), Parse("market-report", "2026-10", "raio-x.md"));
     }
 
+    [Fact]
+    public void Requirement_commands()
+    {
+        Assert.IsType<CliCommand.ListRequirements>(Parse("requirements"));
+        Assert.Equal(new CliCommand.SetRequirement("hrwl", RequirementState.Have), Parse("requirement", "hrwl", "have"));
+        Assert.Equal(new CliCommand.SetRequirement("truck-hr", RequirementState.OutOfReach), Parse("requirement", "truck-hr", "Out-Of-Reach"));
+        Assert.Equal(new CliCommand.SetRequirement("degree", null), Parse("requirement", "degree", "default"));
+        Assert.Equal(new CliCommand.ImportCandidate("candidate.json", false), Parse("import-candidate", "candidate.json"));
+        Assert.Equal(new CliCommand.ImportCandidate("candidate.json", true), Parse("import-candidate", "candidate.json", "--dry-run"));
+    }
+
     [Theory]
+    [InlineData("requirement", "hrwl", "maybe")]
+    [InlineData("requirement", "hrwl")]
+    [InlineData("import-candidate", "--dry-run")]
     [InlineData("market-report", "outubro")]
     [InlineData("market-report", "2026-13")]
     [InlineData("market", "now")]
