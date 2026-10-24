@@ -129,8 +129,8 @@ Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `
 | 1a | Constantes do `FitScorer` para a `ScoringPolicy` | não: paridade e `calibrate` iguais | ✅ 2026-10-23 |
 | 1b | Frases de requisito dos perfis viram itens do catálogo | não | ✅ 2026-10-23 (perfis reais migrados à parte, aguardando o autor) |
 | 2 | Estado no banco + `import-candidate`; estado inicial reproduz o tratamento de hoje | não | ✅ 2026-10-24 |
-| 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | 🔨 |
-| 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | |
+| 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | ✅ 2026-10-24 |
+| 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | 🔨 |
 | 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | |
 | 6 | Se valer: palavras-chave e sinais no banco, com o `profile preview` na mesma página | — | |
 
@@ -167,6 +167,29 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-24 — Bônus do "tenho" (`RulesVersion` 10, passo 3)
+Anúncio que pede o que o candidato tem ganha `HaveRequirementBonus` (10, uma vez por tipo, na fase de pontos,
+antes da compressão). As classes de carteira de caminhão incluem as menores (MR < HR < HC < MC): a classe que o
+candidato tem tira o −40 da regra que lê o texto do anúncio e das frases buscadas. `calibrate --rescore --assume
+item=estado,...` mede um estado sem gravá-lo. Medido no trabalhopc com os rótulos de produção (só leitura):
+paridade 175/175; com os estados gravados (nenhum "tenho") o v10 sai idêntico ao instalado. Simulado:
+
+| `--assume` | construction (acerto, ruins ≥ 50) | fifo | trades |
+|---|---|---|---|
+| nenhum | 100%, 3 | 95%, 4 | 91%, 1 |
+| `hrwl`, `voc`, `truck-mr` ou `experience-operating` = have | igual | igual | igual |
+| `truck-hr=have` | 92%, 7 | 90%, 9 | 89%, 2 |
+| `truck-hc=have` | 88%, 9 | 88%, 11 | 89%, 2 |
+| `trade-qualification=have` | igual | 93%, 4 | 86%, 1 |
+
+Leitura: as vagas rotuladas ruins **por causa** da carteira HR/HC ou do trade sobem quando o candidato passa a ter;
+é o bônus e a hierarquia funcionando, e mostra que **um rótulo vale para o estado do candidato quando foi dado**.
+Quando ele tirar uma carteira, essas ruins deixam de ser ruins, e a calibragem vai acusar "regressão" que não é:
+reavaliar os rótulos daquele requisito. HRWL e VOC não mexem nos números: quase nenhuma vaga rotulada pede. O
+valor 10 do bônus é um chute (o mesmo do ticket que falta); só se calibra quando houver itens "tenho" e rótulos de
+vagas que os pedem. Antes disso, o white card e o forklift precisam entrar no catálogo (hoje o `import-candidate`
+os aponta como ausentes).
 
 ### 2026-10-24 — Estado do candidato em cada requisito (passo 2)
 Tabela `candidate_requirements` (uma linha por item que o candidato definiu) e o estado decidindo os pontos do

@@ -140,7 +140,7 @@ mercado e ficam no perfil. Requisitos de anúncio (anos de experiência, trade, 
 no perfil, e vale para todo perfil que usa o item.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
-`label <id> good|bad|clear [nota]`, `calibrate [--rescore]`, `market`, `market-report [YYYY-MM] [arquivo]`,
+`label <id> good|bad|clear [nota]`, `calibrate [--rescore [--assume item=estado,...]]`, `market`, `market-report [YYYY-MM] [arquivo]`,
 `import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`), `requirements`,
 `requirement <item> have|obtainable|missing|out-of-reach|default`, `import-candidate <candidate.json> [--dry-run]`
 (estado do candidato em cada item do `RequirementCatalog`, em `candidate_requirements`; item sem estado fica com o
@@ -177,6 +177,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Termos: a busca do Seek não dá o contexto da frase ("no sponsorship" também contém "sponsorship"). Por isso os
   pesos dos grupos são moderados e só o grupo `exclude` elimina. A divisão por estado quando passa de 500 é
   peculiaridade do Seek e fica em `SeekFullTextSearch`, não no serviço.
+- Rótulo vale para o estado do candidato quando foi dado: uma vaga ruim porque pedia carteira HR vira boa quando
+  ele tira a carteira (`requirement truck-hr have`). Mudou um estado para "tenho"? Reveja os rótulos das vagas que
+  pedem aquele item antes de ler a calibragem como regressão. `--assume` mostra quais sobem.
 - `Dismissed` (o candidato descartou) e `Declined` (o empregador recusou) não são a mesma coisa: na calibragem
   o primeiro conta como ruim e o segundo como **boa**. Não junte os dois de novo.
 - Os argumentos de um comando não entram na configuração do host (`Program.cs`): o texto livre de `notes`
