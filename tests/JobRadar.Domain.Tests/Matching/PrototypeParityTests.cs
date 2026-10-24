@@ -45,9 +45,11 @@ public class PrototypeParityTests
 
             if (score.Final != c.Final || !points.SequenceEqual(c.Points))
             {
-                // Since RulesVersion 8 a truck licence weighs 40 (10 when desirable), not the prototype's 20,
-                // and more spellings of it are read: those cases differ on purpose. Everything else must match.
-                if (score.Items.Any(i => i.Rule is ScoreRule.TruckLicence or ScoreRule.FullTextTruckLicence))
+                // Differ on purpose; everything else must match. Since RulesVersion 8 a truck licence weighs 40
+                // (10 when desirable), not the prototype's 20, and more spellings of it are read. Since 9 an
+                // "Assistant ... Manager" title is management, excluded as leadership.
+                if (score.Items.Any(i => i.Rule is ScoreRule.TruckLicence or ScoreRule.FullTextTruckLicence)
+                    || (score.Items.Any(i => i.Rule == ScoreRule.LeadershipTitle) && c.Title.Contains("assistant", StringComparison.OrdinalIgnoreCase)))
                 {
                     byDesign++;
                     continue;
@@ -59,7 +61,7 @@ public class PrototypeParityTests
         }
 
         var report = new StringBuilder()
-            .AppendLine($"{mismatches.Count} of {file.Cases.Count} cases differ ({byDesign} more by design: truck licence). First ones:")
+            .AppendLine($"{mismatches.Count} of {file.Cases.Count} cases differ ({byDesign} more by design: truck licence, assistant manager). First ones:")
             .AppendJoin(Environment.NewLine, mismatches.Take(15))
             .ToString();
         Assert.True(mismatches.Count == 0, report);
