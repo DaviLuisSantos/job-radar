@@ -183,7 +183,8 @@ Provado no trabalhopc numa **cópia** do banco de produção (pg_dump para `jobr
 apagada depois; a produção não foi tocada): sem estados, o `calibrate --rescore` do build novo sai idêntico ao do
 instalado; gravar e voltar ao padrão também. Medido de passagem: ARCtick e licença elétrica como fora de alcance
 (o que o autor já disse que são) levam fifo de 5 a 4 ruins ≥ 50 e trades de 90% a 91% (ruins ≥ 50: 2 → 1), sem
-derrubar boa. Fica para o autor aplicar depois do deploy.
+derrubar boa. Aplicado na produção depois do deploy (2026-10-24, `requirement … out-of-reach`), com o
+mesmo efeito no `calibrate --rescore`; os scores gravados mudam na passada seguinte.
 
 ### 2026-10-23 — Catálogo de requisitos (passo 1b)
 `RequirementCatalog` (13 itens, na `ScoringPolicy` e portanto no `rules_hash`): três de experiência (anos,
