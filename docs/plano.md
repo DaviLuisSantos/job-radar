@@ -139,7 +139,7 @@ construction pedem white card") serve ao Raio-X. Limites: orçamento de buscas (
 custa) e a busca por frase sem contexto ("white card an advantage" casa como "essential"): o peso fica moderado
 fora das vagas com descrição.
 
-### v1.x — Informações da descrição (registrado 2026-10-23)
+### v1.x — Informações da descrição (registrado 2026-10-23) ✅ 2026-10-24
 
 Pedido do autor: as descrições completas trazem o que a busca não dá. Salário em vaga sem o campo de salário do
 Seek (`SalaryText`), roster (2:1, 8:6, 14:7), alojamento e voos, início ("immediate start"), turno, duração do
@@ -167,6 +167,19 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-24 — Informações da descrição como etiquetas
+O autor achou o resumo pobre. Medido: das 1.781 vagas visíveis (≥ 50), 1.755 já tinham a descrição completa no banco,
+e a triagem mostrava só título, empresa e o resumo do Seek (~195 caracteres). `ListingFacts` (domínio, puro) lê da
+descrição, ou do resumo quando não há, o que o candidato procura primeiro: pagamento com o período (só quando o campo
+do Seek não traz número: "Competitive Hourly Rate" não conta), FIFO/DIDO/BIBO, roster, alojamento, refeições, voos,
+início imediato, turno e duração; o que o anúncio diz que **não** oferece não vira etiqueta. A triagem lê só as vagas
+da página; a página da vaga também. Mostrar, não pontuar; nada disso entra no Raio-X (amostra enviesada).
+Rodado nas 1.755 descrições reais (no trabalhopc, só leitura): 815 ganham etiqueta; pagamento 305, FIFO 173, início
+imediato 265, roster 91 (2:1 ×25, 8:6 ×10…). Amostras conferidas à mão. Corrigido no caminho: "Monday to Friday" dava
+"Day shift" (×276) e diz os dias, não o turno, agora "Mon–Fri"; voos e alojamento perdiam "FIFO flights", "flights
+and accommodation provided", "shared accommodation". Visto na triagem real (site novo apontado para a produção, só
+olhando).
 
 ### 2026-10-24 — Página "About you" (`RulesVersion` 12)
 Pedido do autor: um jeito simples e rápido de dizer a própria situação. A `/requirements` é para medir (ids,

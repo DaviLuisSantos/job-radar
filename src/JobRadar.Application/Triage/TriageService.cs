@@ -32,7 +32,7 @@ public sealed class TriageService(
         // Read only for the rows shown: full texts are long, and a page is at most a couple of hundred.
         var texts = await descriptions.GetTextsAsync(page.Select(r => r.Id).ToList(), ct);
         page = page
-            .Select(r => texts.TryGetValue(r.Id, out var text) ? r with { Facts = ListingFacts.Read(text, hasPayField: r.SalaryText is not null) } : r)
+            .Select(r => texts.TryGetValue(r.Id, out var text) ? r with { Facts = ListingFacts.Read(text, hasPayField: ListingFacts.GivesPay(r.SalaryText)) } : r)
             .ToList();
         return new TriagePage(page, rows.Count);
     }

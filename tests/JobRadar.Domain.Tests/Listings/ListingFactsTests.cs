@@ -26,6 +26,14 @@ public class ListingFactsTests
         Assert.Null(Fact("$45 per hour", FactKind.Pay, hasPayField: true));
 
     [Theory]
+    [InlineData("$45 - $50 per hour", true)]
+    [InlineData("55.00 per hour", true)]
+    [InlineData("Competitive Hourly Rate", false)]
+    [InlineData(null, false)]
+    public void A_pay_field_gives_pay_only_with_an_amount(string? field, bool gives) =>
+        Assert.Equal(gives, ListingFacts.GivesPay(field));
+
+    [Theory]
     [InlineData("Working a 2:1 roster out of Perth", "2:1 roster")]
     [InlineData("8/6 swing on site", "8:6 roster")]
     [InlineData("on a roster of 14:7", "14:7 roster")]

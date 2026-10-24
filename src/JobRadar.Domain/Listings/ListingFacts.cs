@@ -77,6 +77,12 @@ public static class ListingFacts
     // "accommodation is not provided", "no flights", "unable to provide accommodation": a few words before or after.
     private static readonly Regex Negation = R(@"\b(?:no|not|without|unable|cannot|can't|isn't|aren't|won't|nor)\b");
 
+    /// <summary>
+    /// Whether the source's own pay field gives an amount: "Competitive Hourly Rate" does not, and then the pay is read
+    /// from the ad.
+    /// </summary>
+    public static bool GivesPay(string? salaryText) => salaryText is not null && salaryText.Any(char.IsAsciiDigit);
+
     /// <summary>The facts the text states, in <see cref="FactKind"/> order.</summary>
     /// <param name="text">The ad's text: the full description, or the summary when there is none.</param>
     /// <param name="hasPayField">The source already gives the pay: none is read from the text.</param>

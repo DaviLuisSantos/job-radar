@@ -71,8 +71,8 @@ public sealed record ListingDetail(
 {
     /// <summary>
     /// Pay, roster, accommodation and the like, read from the full ad, or from the summary when there is none; pay
-    /// only when the source gives none.
+    /// only when the source gives no amount.
     /// </summary>
     public IReadOnlyList<ListingFact> Facts { get; } =
-        ListingFacts.Read(Description?.Text ?? Record.Listing.Summary, hasPayField: Record.Listing.SalaryText is not null);
+        ListingFacts.Read(Description?.Text ?? Record.Listing.Summary, hasPayField: ListingFacts.GivesPay(Record.Listing.SalaryText));
 }
