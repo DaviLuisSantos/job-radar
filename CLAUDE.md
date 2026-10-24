@@ -145,8 +145,8 @@ no perfil, e vale para todo perfil que usa o item.
 `requirement <item> have|obtainable|missing|out-of-reach|default`, `experience <perfil> <anos>|default`,
 `import-candidate <candidate.json> [--dry-run]`
 (estado do candidato em cada item do `RequirementCatalog`, em `candidate_requirements`; item sem estado fica com o
-padrão do tipo, que é o peso de antes; mudar um estado repontua na hora as vagas que podem pedir o item, e a página
-`/requirements` do site faz o mesmo e mostra o impacto de ter cada item). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
+padrão do tipo, que é o peso de antes; mudar um estado repontua na hora as vagas que podem pedir o item; no site,
+`/me` faz isso em linguagem simples e `/requirements` mostra o impacto de ter cada item). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
 1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` (os scores gravados: o antes) e
 `calibrate --rescore` (pontua de novo em memória com as regras do build, sem gravar: o depois). Para medir uma
 branch contra os rótulos reais, rode-a num worktree no trabalhopc com o `appsettings.Local.json` copiado.

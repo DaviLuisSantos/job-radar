@@ -51,7 +51,11 @@ else
 
     @foreach (var (kind, heading, intro) in Sections)
     {
-        var items = _requirements.Where(r => r.Item.Kind == kind).ToList();
+        // Tickets a short course gives before truck licences, and truck classes from the lowest up.
+        var items = _requirements.Where(r => r.Item.Kind == kind)
+            .OrderBy(r => r.Item.IsTruckLicence)
+            .ThenBy(r => Array.IndexOf(TruckOrder, r.Item.Id))
+            .ToList();
         <section class="about">
             <h2>@heading</h2>
             <p class="muted small">@intro</p>
@@ -97,6 +101,8 @@ else
 
 @code {
     private static readonly double[] YearOptions = [0, 1, 2, 3, 5, 8, 10];
+
+    private static readonly string[] TruckOrder = ["truck-mr", "truck-hr", "truck-hc", "truck-mc"];
 
     private static readonly (RequirementKind Kind, string Heading, string Intro)[] Sections =
     [

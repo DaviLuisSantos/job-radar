@@ -168,6 +168,17 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-24 — Página "About you" (`RulesVersion` 12)
+Pedido do autor: um jeito simples e rápido de dizer a própria situação. A `/requirements` é para medir (ids,
+selects, números); a `/me` pergunta o mesmo em palavras: anos de experiência por linha com botões rápidos (0, 1, 2,
+3, 5, 8, 10+ ou outro número) e cada licença, ticket e formação com o que é, como se tira e quatro botões ("I have
+it", "I'd get it", "I don't have it", "Out of reach"). Grava e repontua na hora; textos em `Wording.Requirement`.
+Regra v12: com os anos do candidato num perfil, o número de anos que o próprio anúncio pede conta mesmo que o perfil
+não busque frase de experiência; assim o tech compara os anos de software sem mexer na configuração. Mudar os anos
+repontua o perfil inteiro. Provado no trabalhopc numa cópia do banco, pelo navegador (também em tela de celular):
+paridade 191/191; sem anos o v12 sai idêntico ao instalado; fifo = 0 repontuou 6.474 vagas. A produção já tinha tech
+= 4 (gravado pelo autor na `/requirements`); o tech tem um só rótulo, então a calibragem ainda não diz nada dele.
+
 ### 2026-10-24 — Anos de experiência pedidos x os do candidato (`RulesVersion` 11, passo 5)
 O requisito de experiência custava 20 pedisse o anúncio 1 ano ou 10. Agora, quando o texto do anúncio diz quantos anos
 ("minimum 3 years experience", "3+ years of civil experience", "2-3 yrs": `ListingPatterns.YearsAsked`, o menor
