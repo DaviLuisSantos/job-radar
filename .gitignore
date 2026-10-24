@@ -483,3 +483,9 @@ $RECYCLE.BIN/
 
 # Real candidate profiles (see src/JobRadar.Worker/appsettings.Local.example.json)
 appsettings.Local.json
+
+# Real candidate facts and CVs: only the schema, the fictional example and the README are versioned
+candidate/*
+!candidate/candidate.schema.json
+!candidate/candidate.example.json
+!candidate/README.md

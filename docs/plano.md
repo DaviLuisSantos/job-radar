@@ -76,6 +76,30 @@ entra pelo navegador do próprio autor, que abre a vaga como qualquer pessoa:
 Cuidados: o texto fica só no banco do autor (uso pessoal); nunca entra no Raio-X, no repositório nem em
 fixture. A busca por frase (etapa 5) continua para as vagas sem descrição.
 
+### v1.x — Perfil a partir do currículo (decidido 2026-10-23)
+
+Hoje o perfil mistura duas coisas: **fatos** sobre o candidato (visto, formação, carteiras, tickets, anos de
+experiência), que vêm do currículo e mudam pouco, e **hipóteses** sobre o mercado (palavras-chave, palavras de
+contexto, sinais achados rotulando), que só os números confirmam. As duas camadas se separam:
+
+1. **Fatos** em `candidate/candidate.json` (fora do git), no formato de `candidate/candidate.schema.json`, preenchido
+   a partir do currículo pela skill `perfil-do-curriculo`, que pergunta o que o currículo não diz. ✅ 2026-10-23
+2. **`profile draft <candidate.json>`**: gera, de forma determinística e testada, o que sai dos fatos (carteira que
+   falta → `Licence`, formação não reconhecida → `Qualification`, poucos anos → `Experience`, nível →
+   `AllowSenior`, locais) e imprime o diff contra o `appsettings.Local.json`, sem gravar. O que foi ajustado
+   contra o mercado continua no perfil. **Critério de pronto:** com o `candidate.json` real, o rascunho reproduz
+   as regras dos perfis atuais; se não reproduzir, falta um fato no esquema.
+3. **`profile preview`**: antes de ligar uma palavra-chave, mostra o volume (`totalCount`, uma página), a
+   sobreposição com as buscas atuais, o rendimento (vagas do banco ≥ 50 / ≥ 75 pontuadas em memória) e
+   **quantas vagas rotuladas sairiam do perfil** se uma palavra antiga for removida.
+4. **Medir depois de ligar**: por palavra-chave (novas/dia, quantas só ela acha, fração visível, fração boa, teto
+   de 500), por perfil (o `calibrate` mais o funil achadas → visíveis → boas → candidatadas → resposta) e por
+   lacuna (requisitos mais pedidos nas vagas altas que o candidato não tem: qual ticket vale tirar).
+
+O progresso de calibragem não se perde: os rótulos são por vaga (`listing_labels`, sem perfil), as regras
+não mudam, os nomes de perfil se mantêm e todo perfil gerado passa por `calibrate` / `calibrate --rescore`
+antes de entrar. Upload do currículo pelo site, com extração por API, só na v3 (outros usuários).
+
 ### v2/v3 — Modelo de ML para o fit
 
 Pré-requisito: **rótulos**. Hoje há zero; a meta é ~200–300 por perfil, com boas e ruins. A métrica e os
@@ -93,6 +117,14 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Fatos do candidato separados do perfil (v1.x, passo 1)
+Primeiro passo do perfil a partir do currículo: `candidate/` com o esquema (`candidate.schema.json`, JSON Schema
+2020-12, cada campo dizendo o que faz no score), um candidato fictício e um README; o git ignora todo o resto da
+pasta (o `candidate.json` real e o próprio currículo). A skill `perfil-do-curriculo` lê o currículo, preenche
+os fatos e pergunta o que falta (carteira, tickets que tiraria, reconhecimento da formação, linhas de trabalho);
+o que ficar sem resposta vai para `openQuestions`. Ainda não gera perfil: é o passo 2 (`profile draft`). O exemplo
+foi validado contra o esquema com ajv em modo estrito; um campo inventado e um enum errado foram recusados.
 
 ### 2026-10-23 — Regras v9, lidas nas descrições das ruins (`RulesVersion` 9)
 O autor pediu para ler os anúncios das vagas ruins que ainda pontuavam alto. Achados: "HC **Unrestricted** licence"

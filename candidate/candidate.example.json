@@ -1,0 +1,90 @@
+{
+  "$schema": "./candidate.schema.json",
+  "schemaVersion": 1,
+  "visa": {
+    "type": "working_holiday",
+    "subclass": "462",
+    "expires": "2027-09",
+    "secondYear": { "wanted": true, "daysDone": 0 }
+  },
+  "base": {
+    "location": "Perth WA",
+    "fifo": true,
+    "relocate": []
+  },
+  "languages": [
+    { "language": "Portuguese", "level": "native" },
+    { "language": "English", "level": "intermediate" }
+  ],
+  "education": [
+    {
+      "title": "Técnico em Eletrônica",
+      "field": "electronics",
+      "level": "technical",
+      "country": "BR",
+      "completed": "2019-12",
+      "recognisedInAustralia": false
+    }
+  ],
+  "licences": {
+    "car": { "status": "provisional", "fullFrom": "2027-03", "country": "BR" },
+    "heavy": []
+  },
+  "tickets": {
+    "held": ["white card"],
+    "obtainable": ["HRWL", "forklift"],
+    "outOfReach": [
+      { "name": "electrical licence", "reason": "needs an Australian electrical trade qualification and supervised time" }
+    ]
+  },
+  "experience": [
+    {
+      "area": "software",
+      "role": "C# Developer",
+      "years": 2,
+      "level": "junior",
+      "country": "BR",
+      "lastYear": 2025,
+      "skills": ["C#", ".NET", "SQL"]
+    },
+    {
+      "area": "construction",
+      "role": "Labourer",
+      "years": 0.5,
+      "level": "entry",
+      "country": "AU",
+      "lastYear": 2026,
+      "skills": []
+    }
+  ],
+  "targets": [
+    {
+      "profile": "dotnet",
+      "roles": [".NET Developer", "C# Developer"],
+      "experienceAreas": ["software"],
+      "preferredLocations": ["Perth"],
+      "entryLevel": false,
+      "workFromHome": true,
+      "avoid": ["NV1"]
+    },
+    {
+      "profile": "fifo",
+      "roles": ["FIFO Labourer", "FIFO Trade Assistant"],
+      "experienceAreas": ["construction"],
+      "preferredLocations": ["WA"],
+      "entryLevel": true,
+      "workFromHome": false,
+      "avoid": []
+    },
+    {
+      "profile": "regional",
+      "roles": ["Farm Hand", "Fruit Picker"],
+      "locations": ["Western Australia"],
+      "excludedLocations": ["Perth WA"],
+      "entryLevel": true,
+      "workFromHome": false,
+      "avoid": ["supervisor"]
+    }
+  ],
+  "openQuestions": []
+}
