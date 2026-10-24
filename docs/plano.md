@@ -127,8 +127,8 @@ Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `
 | # | Passo | Muda score? | Estado |
 |---|---|---|---|
 | 1a | Constantes do `FitScorer` para a `ScoringPolicy` | não: paridade e `calibrate` iguais | ✅ 2026-10-23 |
-| 1b | Frases de requisito dos perfis viram itens do catálogo | não | 🔨 |
-| 2 | Estado no banco + `candidate import`; estado inicial reproduz o tratamento de hoje | não | |
+| 1b | Frases de requisito dos perfis viram itens do catálogo | não | ✅ 2026-10-23 (perfis reais migrados à parte, aguardando o autor) |
+| 2 | Estado no banco + `candidate import`; estado inicial reproduz o tratamento de hoje | não | 🔨 |
 | 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | |
 | 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | |
 | 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | |
@@ -138,6 +138,17 @@ A métrica de lacuna do passo 4 responde "qual ticket tirar primeiro"; agregada 
 construction pedem white card") serve ao Raio-X. Limites: orçamento de buscas (a página mostra quantas o catálogo
 custa) e a busca por frase sem contexto ("white card an advantage" casa como "essential"): o peso fica moderado
 fora das vagas com descrição.
+
+### v1.x — Informações da descrição (registrado 2026-10-23)
+
+Pedido do autor: as descrições completas trazem o que a busca não dá. Salário em vaga sem o campo de salário do
+Seek (`SalaryText`), roster (2:1, 8:6, 14:7), alojamento e voos, início ("immediate start"), turno, duração do
+contrato. Não são requisitos, e sim **atributos** da vaga. Mesma ideia do catálogo: cada atributo tem os padrões
+de como os anúncios escrevem, é extraído na gravação da descrição (`DescriptionService`) e na passada, e aparece
+na triagem como coluna e filtro. Se valer, entra no score por sinal do perfil ("accommodation provided" já é
+sinal do fifo no exemplo). Cuidado: a descrição só é buscada para vagas rotuladas e de score alto, uma amostra
+enviesada. Atributo tirado dela **não** entra no Raio-X; o salário do Raio-X continua vindo do campo do Seek.
+Entra depois do passo 4 dos requisitos.
 
 ### v2/v3 — Modelo de ML para o fit
 
@@ -156,6 +167,18 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-23 — Catálogo de requisitos (passo 1b)
+`RequirementCatalog` (13 itens, na `ScoringPolicy` e portanto no `rules_hash`): três de experiência (anos,
+"proven/demonstrated", "operating"), quatro de formação (trade, diploma, refrigerante/ARCtick, elétrica), seis de
+carteira e ticket (HR, MR, HC, MC, HRWL, VOC), com as frases exatas dos perfis reais. O perfil lista os ids em
+`Requirements:Items`; as listas de frase continuam valendo e somam aos itens; id desconhecido para o início (um erro
+de digitação tiraria uma penalidade calado). Prova no trabalhopc com os perfis e rótulos de produção:
+`calibrate --rescore` do build novo com a configuração de hoje sai idêntico ao do instalado; com a configuração
+migrada (um script troca cada conjunto de frases pelos itens e confere que a expansão dá o mesmo conjunto), os
+scores são os mesmos e muda só a frase mostrada numa vaga que pede ARCtick e electrical licence (as duas valem os
+mesmos −20). trades e fifo usam os 13 itens; construction, 11 (sem as licenças de profissão). A configuração
+migrada ainda não substituiu a real: espera o autor.
 
 ### 2026-10-23 — Pesos do score na política (requisitos configuráveis, passo 1a)
 Todo número que o `FitScorer` somava ou subtraía virou propriedade da `ScoringPolicy`, com o valor de antes como

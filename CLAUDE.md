@@ -135,7 +135,9 @@ Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**f
 união dos perfis. Os **fatos** do candidato (visto, formação, carteiras, tickets, experiência) ficam à parte, em
 `candidate/candidate.json` (fora do git, como o currículo; esquema e exemplo fictício versionados), preenchido
 pela skill `perfil-do-curriculo`. Fato vem do currículo; palavra-chave, contexto e sinal são ajustados contra o
-mercado e ficam no perfil.
+mercado e ficam no perfil. Requisitos de anúncio (anos de experiência, trade, carteira, ticket) são itens do
+`RequirementCatalog`, que o perfil cita por id em `Requirements:Items`: frase nova de requisito entra no item, não
+no perfil, e vale para todo perfil que usa o item.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
 `label <id> good|bad|clear [nota]`, `calibrate [--rescore]`, `market`, `market-report [YYYY-MM] [arquivo]`,
