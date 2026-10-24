@@ -28,6 +28,9 @@ public sealed class ProfileOptions
     public bool AllowSenior { get; set; }
     public List<string> PreferredLocations { get; set; } = [];
 
+    /// <summary>Locations that rule a listing out ("Perth WA" for regional work that must count for a visa).</summary>
+    public List<string> ExcludedLocations { get; set; } = [];
+
     /// <summary>Remote/hybrid bonus; turn off for site work, where "remote" means the place.</summary>
     public bool RewardRemote { get; set; } = true;
 

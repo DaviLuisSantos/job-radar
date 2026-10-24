@@ -54,7 +54,7 @@ internal static class ListingPatterns
 
     /// <summary>Work rights a Working Holiday visa (12 months, 6 per employer) cannot give.</summary>
     public static readonly Regex WorkRightsIncompatible = R(
-        @"(?:unlimited|unrestricted|permanent)\s+(?:australian\s+)?work(?:ing)?\s+rights"
+        @"(?:unlimited|unrestricted|permanent|long[\s-]term)\s+(?:australian\s+)?work(?:ing)?\s+rights"
         + @"|(?:12|twelve)\s*\+?\s*months?\s+(?:of\s+)?(?:valid\s+|remaining\s+)?(?:australian\s+)?work(?:ing)?\s+rights"
         + @"|work(?:ing)?\s+rights\s+for\s+(?:at\s+least\s+|a\s+minimum\s+of\s+|minimum\s+)?(?:12|twelve)\s+months"
         + @"|no\s+(?:temporary|working\s+holiday)\s+visas?"
@@ -81,10 +81,10 @@ internal static class ListingPatterns
 
     /// <summary>
     /// Truck licence classes (HR/HC/MR/MC): years of holding a car licence away for a newcomer, not a
-    /// course. Also "HR truck driver's licence", "HC class licence", "heavy combination".
+    /// course. Also "HR truck driver's licence", "HC class licence", "HC unrestricted licence", "heavy combination".
     /// </summary>
     public static readonly Regex TruckLicence = R(
-        @"\b(?:HR|HC|MR|MC)(?:[\s-]+(?:class|truck|rigid|combination))?[\s-]+(?:driver['’]?s?[\s-]+)?(?:licen[cs]e|driver)"
+        @"\b(?:HR|HC|MR|MC)(?:[\s-]+(?:class|truck|rigid|combination|unrestricted|open|full))?[\s-]+(?:driver['’]?s?[\s-]+)?(?:licen[cs]e|driver)"
         + @"|\b(?:HR|HC|MR|MC)\s*/\s*(?:HR|HC|MR|MC)\b"
         + @"|\bheavy\s+(?:rigid|combination)\b");
 
@@ -101,7 +101,9 @@ internal static class ListingPatterns
     public static readonly Regex MidTitle = R(@"\b(?:mid|intermediate)\b");
 
     /// <summary>A title naming several roles ("Graduate/ Junior Project Manager"): the entry mark wins.</summary>
-    public static readonly Regex JuniorTitle = R(@"\b(?:graduate|junior|entry[\s-]level|assistant|apprentice\w*|trainee\w*)\b");
+    /// <summary>Junior title: lifts the leadership and senior exclusions. "Assistant Village Manager" is management.</summary>
+    public static readonly Regex JuniorTitle = R(
+        @"\b(?:graduate|junior|entry[\s-]level|assistant(?!(?:\s+[\w/&-]+){0,3}?\s+manager)|apprentice\w*|trainee\w*)\b");
 
     /// <summary>Training role: "Certificate III" in the text is the course offered, not a requirement.</summary>
     public static readonly Regex TrainingTitle = R(@"\b(?:apprentice\w*|pre-apprentice\w*|trainee\w*|cadet\w*)\b");
@@ -150,13 +152,18 @@ internal static class ListingPatterns
     private static readonly Regex Desirable = R(
         @"\b(?:desirable|advantage(?:ous)?|preferred|highly\s+regarded|well\s+regarded|bonus|not\s+(?:essential|mandatory|required))\b");
 
+    /// <summary>Said of a requirement right after it: a condition ("HR licence is essential").</summary>
+    private static readonly Regex Essential = R(@"(?<!not\s)\b(?:essential|mandatory|required|must)\b");
+
     private const int ClauseWindow = 40;
 
     /// <summary>
     /// The truck licence the text asks for: the first one not negated in its own clause before it ("no HR
     /// licence needed"), preferring one that is a condition over one said to be desirable right after it.
     /// Null when the text asks for none. The clause, not <see cref="NegationWindow"/>: in a list of
-    /// requirements a "no" on the line above ("no experience needed") says nothing about the licence.
+    /// requirements a "no" on the line above ("no experience needed") says nothing about the licence. What
+    /// follows a licence is read up to the next one ("HR licence is essential - HC licence desirable"), and
+    /// a word that makes it a condition wins over one that makes it optional.
     /// </summary>
     public static (string Value, bool Desirable)? TruckLicenceAsked(string text)
     {
@@ -166,7 +173,10 @@ internal static class ListingPatterns
             if (Negation.IsMatch(Clause(text.AsSpan(Math.Max(0, m.Index - ClauseWindow), Math.Min(ClauseWindow, m.Index)), fromEnd: true)))
                 continue;
             var end = m.Index + m.Length;
-            if (!Desirable.IsMatch(Clause(text.AsSpan(end, Math.Min(ClauseWindow, text.Length - end)), fromEnd: false)))
+            var next = m.NextMatch();
+            var length = Math.Min(ClauseWindow, (next.Success ? next.Index : text.Length) - end);
+            var after = Clause(text.AsSpan(end, length), fromEnd: false);
+            if (Essential.IsMatch(after) || !Desirable.IsMatch(after))
                 return (m.Value, false);
             optional ??= (m.Value, true);
         }

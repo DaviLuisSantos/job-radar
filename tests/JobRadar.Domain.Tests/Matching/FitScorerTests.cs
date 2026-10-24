@@ -472,6 +472,48 @@ public class FitScorerTests
     }
 
     [Fact]
+    public void An_essential_truck_licence_is_not_made_optional_by_the_next_one()
+    {
+        var item = Item(Score(Job("Yard Person", "Minimum HR driver's license is essential - HC licence desirable")), ScoreRule.TruckLicence);
+
+        Assert.Equal(("hr driver's license", -40), (item.Detail, item.Points));
+    }
+
+    [Fact]
+    public void An_unrestricted_truck_licence_is_a_truck_licence() =>
+        Assert.Equal(-40, Item(Score(Job("Operator Assistant", "Current HC Unrestricted licence")), ScoreRule.TruckLicence).Points);
+
+    [Fact]
+    public void Long_term_work_rights_rule_a_working_holiday_out()
+    {
+        var local = Score(Job("Cleaning Utility", "Long-term Australian working rights"));
+        var described = Score(Described("Cleaning Utility", "Requirements: current C class licence and long term work rights."));
+
+        Assert.Equal(ScoreRule.WorkRightsIncompatible, Assert.Single(local.Items).Rule);
+        Assert.Equal(ScoreWhere.Description, Assert.Single(described.Items).Where);
+    }
+
+    [Theory]
+    [InlineData("Assistant Village Manager - DIDO/ FIFO", true)]
+    [InlineData("Assistant Manager", true)]
+    [InlineData("Trade Assistant", false)]
+    [InlineData("Assistant to the Site Manager", true)]
+    public void An_assistant_manager_is_management_not_a_junior_title(string title, bool excluded) =>
+        Assert.Equal(excluded, Score(Job(title)).Items.Any(i => i.Rule == ScoreRule.LeadershipTitle));
+
+    [Fact]
+    public void A_location_the_profile_rules_out_excludes_the_listing()
+    {
+        var regional = Trades with { ExcludedLocations = ["Perth WA"] };
+
+        var city = Score(Job("Farm Hand", location: "Osborne Park, Perth WA"), regional);
+        var town = Score(Job("Farm Hand", location: "Geraldton, Mid West WA"), regional);
+
+        Assert.Equal((0, ScoreRule.LocationExcluded, "Perth WA"), (city.Final, Assert.Single(city.Items).Rule, city.Items[0].Detail));
+        Assert.DoesNotContain(town.Items, i => i.Rule == ScoreRule.LocationExcluded);
+    }
+
+    [Fact]
     public void A_no_on_the_line_above_does_not_waive_a_truck_licence()
     {
         var ad = Described("Driller Offsider", "Requirements\n- No experience needed\n- Current HR licence\n- Police clearance");

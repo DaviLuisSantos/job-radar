@@ -29,6 +29,12 @@ public sealed record MatchingProfile(
     /// arrangement field says "Remote" for a remote mine), not working from home.
     /// </summary>
     public bool RewardRemote { get; init; } = true;
+
+    /// <summary>
+    /// Locations that rule a listing out for this profile ("Perth WA" for the 88 days of regional work, which
+    /// do not count in the city), matched as a whole token in the location label.
+    /// </summary>
+    public IReadOnlyList<string> ExcludedLocations { get; init; } = [];
 }
 
 /// <summary>

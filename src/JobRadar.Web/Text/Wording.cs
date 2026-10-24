@@ -18,6 +18,7 @@ public static class Wording
         ScoreRule.IdentifiedRole => "Identified position for Aboriginal and Torres Strait Islander applicants",
         ScoreRule.LeadershipTitle => $"Leadership title: {item.Detail}",
         ScoreRule.SeniorTitle => $"Senior title: {item.Detail}",
+        ScoreRule.LocationExcluded => $"Location this profile rules out: {item.Detail}",
         ScoreRule.SeniorPenalty => "Senior title",
         ScoreRule.PositiveSignal => $"Profile signal “{item.Detail}”",
         ScoreRule.NegativeSignal => $"Negative signal “{item.Detail}”",

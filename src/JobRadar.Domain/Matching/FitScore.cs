@@ -43,6 +43,7 @@ public enum ScoreRule
     IdentifiedRole,
     LeadershipTitle,
     SeniorTitle,
+    LocationExcluded,
 
     // Points
     SeniorPenalty,

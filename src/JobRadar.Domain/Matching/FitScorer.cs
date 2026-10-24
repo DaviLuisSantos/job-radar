@@ -6,8 +6,8 @@ namespace JobRadar.Domain.Matching;
 /// Fit score of a listing for a profile. Pure: same input, same score.
 ///
 /// Order matters and is part of the rules:
-/// 1. Exclusions (score 0): citizenship/PR, work rights a WHV cannot give, identified roles,
-///    leadership and (for most profiles) senior titles.
+/// 1. Exclusions (score 0): citizenship/PR, work rights a WHV cannot give, identified roles, a location
+///    the profile rules out, leadership and (for most profiles) senior titles.
 /// 2. Points from base 50: profile signals (title worth twice the body), sponsorship, remote,
 ///    FIFO, entry level, WHV-friendly, flexible work type, preferred location.
 /// 3. Compression above 80, so the best listings keep their order instead of tying at 100.
@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 8;
+    public const int RulesVersion = 9;
 
     private const int ExclusionPoints = -50;
 
@@ -79,6 +79,8 @@ public static class FitScorer
             return Excluded(ScoreRule.WorkRightsIncompatible, excludeHits[0], ScoreWhere.FullText);
         if (IdentifiedRole.Match(title) is { Success: true } identified)
             return Excluded(ScoreRule.IdentifiedRole, identified.Value, ScoreWhere.Title);
+        if (profile.ExcludedLocations.FirstOrDefault(l => Signal(l).IsMatch(job.LocationLabel ?? "")) is { } excludedAt)
+            return Excluded(ScoreRule.LocationExcluded, excludedAt, ScoreWhere.Location);
 
         var juniorTitle = JuniorTitle.IsMatch(title);
         if (policy.ExcludeSeniorTitles && !juniorTitle)
