@@ -99,10 +99,12 @@ public sealed class ProfileCatalog
     /// The profile's rules hash with the candidate's states on its requirements: the same hash while every
     /// state the profile searches is at its default, so setting nothing changes nothing.
     /// </summary>
-    internal static string RulesHash(ProfileDefinition profile, CandidateRequirements candidate, ScoringPolicy policy) =>
-        candidate.Relevant(profile.Profile, policy) is { Count: > 0 } states
-            ? Hash(new { profile.RulesHash, states })
-            : profile.RulesHash;
+    internal static string RulesHash(ProfileDefinition profile, CandidateRequirements candidate, ScoringPolicy policy)
+    {
+        var states = candidate.Relevant(profile.Profile, policy);
+        double? years = candidate.ExperienceYears.TryGetValue(profile.Name, out var y) ? y : null;
+        return states.Count > 0 || years is not null ? Hash(new { profile.RulesHash, states, years }) : profile.RulesHash;
+    }
 
     private static string Hash(object rules) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(rules))))[..16];

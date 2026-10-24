@@ -103,6 +103,51 @@ public class CandidateRequirementServiceTests
     }
 
     [Fact]
+    public async Task Setting_the_years_of_a_profile_rescores_the_listings_that_may_ask_for_experience()
+    {
+        await _listings.RecordObservationsAsync([Listings.Of("seek", "1", "Offsider", _time.GetUtcNow().AddDays(-1))],
+            "offsider @ perth wa", _time.GetUtcNow(), Ct);
+        var fifo = ProfileCatalogTests.Dotnet();
+        fifo.Keywords = ["Offsider"];
+        fifo.Requirements = new RequirementOptions { Items = ["experience-years"] };
+        var catalog = ProfileCatalogTests.Catalog(("fifo", fifo));
+        _terms.Marks.Add((new ListingId("seek", "1"), "years experience"));
+        var scoring = new ListingScoringService(catalog, _listings, _terms, new InMemoryDescriptions(), _scores, _repository, _time,
+            NullLogger<ListingScoringService>.Instance);
+        var service = new CandidateRequirementService(catalog, _repository, scoring, Options.Create(new CollectionOptions()), _time);
+
+        var rescored = await service.SetExperienceAsync("FIFO", 1.5, Ct);
+
+        Assert.Equal(1, rescored);
+        Assert.Equal(1.5, _repository.Years["fifo"]);
+        Assert.Equal([("fifo", (double?)1.5)], await service.ExperienceAsync(Ct));
+        await Assert.ThrowsAsync<UnknownProfileException>(() => service.SetExperienceAsync("chef", 3, Ct));
+    }
+
+    [Fact]
+    public async Task Import_adds_up_the_years_of_the_areas_each_target_counts()
+    {
+        _repository.Years["tech"] = 8;
+        var facts = Facts() with
+        {
+            Experience = [new("software", 6), new("support", 2), new("construction", 0.5)],
+            Targets =
+            [
+                new("tech", ["software", "support"]),       // 8, as already set
+                new("fifo", ["construction"]),
+                new("regional", ["farm"]),                  // not configured here
+                new("tech-lead", null),
+            ],
+        };
+
+        var report = await Service().ImportAsync(facts, dryRun: false, Ct);
+
+        Assert.Equal([("fifo", (double?)null, 0.5)], report.Experience.Select(e => (e.Profile, e.From, e.To)));
+        Assert.Equal(0.5, _repository.Years["fifo"]);
+        Assert.Contains("target profile not configured: regional", report.NotInCatalog);
+    }
+
+    [Fact]
     public async Task Import_sets_what_the_facts_imply_and_names_what_the_catalog_lacks()
     {
         _repository.States["hrwl"] = RequirementState.Obtainable;
@@ -154,6 +199,10 @@ public class CandidateRequirementServiceTests
         Assert.Equal(["electrical licence"], facts.TicketsOutOfReach);
         Assert.Empty(facts.HeavyLicences);
         Assert.Equal([new CandidateEducation("technical", false)], facts.Education);
+        Assert.Equal([new CandidateWork("software", 2), new CandidateWork("construction", 0.5)], facts.Experience);
+        Assert.Equal(["dotnet", "fifo", "regional"], facts.Targets.Select(t => t.Profile));
+        Assert.Equal(["software"], facts.Targets[0].ExperienceAreas);
+        Assert.Null(facts.Targets[2].ExperienceAreas);
     }
 
     [Theory]

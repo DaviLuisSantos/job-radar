@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 10;
+    public const int RulesVersion = 11;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
@@ -175,6 +175,17 @@ public static class FitScorer
             .Where(r => r.Where != ScoreWhere.None)
             .Select(r => (r.Kind, r.Truck, r.Phrase, r.Where, State: candidate.Of(r.Kind, r.Phrase, policy)))
             .ToList();
+        // Experience the ad counts in years, read in its own text, against the candidate's years in this line of
+        // work: the number decides instead of the item's state. Neither known, nothing changes.
+        if (asked.Any(r => r.Kind == RequirementKind.Experience)
+            && YearsAsked(fullAndDesc) is { } yearsAsked
+            && candidate.ExperienceState(profile.Name, yearsAsked) is { } experience)
+        {
+            var years = $"{yearsAsked} {(yearsAsked == 1 ? "year" : "years")} asked";
+            asked = asked
+                .Select(r => r.Kind == RequirementKind.Experience ? r with { Phrase = $"{r.Phrase} ({years})", State = experience } : r)
+                .ToList();
+        }
         var truckAsked = TruckLicenceAsked(fullAndDesc);
         var truckHeld = truckAsked is { } asksTruck && candidate.CoversTruck(asksTruck.Value);
         var truckGroupHit = !described && groups.TryGetValue(FullTextGroup.Licence, out var truckHits) ? truckHits[0] : null;

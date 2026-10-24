@@ -181,11 +181,11 @@ public class ListingScoringServiceTests
 
         var stored = Assert.Single(await Service(catalog).RescoreAsync(judged, Perth, Ct));
         var assumed = Assert.Single(await Service(catalog).RescoreAsync(judged, Perth, Ct,
-            new Dictionary<string, RequirementState?> { ["HRWL"] = null }));
+            new CandidateAssumption(new Dictionary<string, RequirementState?> { ["HRWL"] = null }, new Dictionary<string, double?>())));
 
         Assert.Equal(stored.Score.Final - 20, assumed.Score.Final);
         Assert.Equal(RequirementState.Have, _requirements.States["hrwl"]);
         await Assert.ThrowsAsync<UnknownRequirementException>(() => Service(catalog).RescoreAsync(judged, Perth, Ct,
-            new Dictionary<string, RequirementState?> { ["forklift"] = RequirementState.Have }));
+            new CandidateAssumption(new Dictionary<string, RequirementState?> { ["forklift"] = RequirementState.Have }, new Dictionary<string, double?>())));
     }
 }

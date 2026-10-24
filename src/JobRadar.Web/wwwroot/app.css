@@ -125,6 +125,11 @@ textarea { width: 100%; resize: vertical; }
 .requirements td { vertical-align: top; }
 .impact { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; font-size: .9rem; }
 .impact .num { font-variant-numeric: tabular-nums; }
+.experience { margin-bottom: 1.25rem; }
+.experience h2 { font-size: 1.05rem; margin: 0 0 .25rem; }
+.years { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; margin-top: .5rem; }
+.years label { display: flex; align-items: center; gap: .5rem; }
+.years input { width: 5.5rem; }
 
 /* Score badge */
 .score {

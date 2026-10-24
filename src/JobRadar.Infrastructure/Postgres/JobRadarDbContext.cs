@@ -21,6 +21,7 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<ListingScoreEntity> ListingScores => Set<ListingScoreEntity>();
     public DbSet<ListingTermEntity> ListingTerms => Set<ListingTermEntity>();
     public DbSet<CandidateRequirementEntity> CandidateRequirements => Set<CandidateRequirementEntity>();
+    public DbSet<CandidateExperienceEntity> CandidateExperience => Set<CandidateExperienceEntity>();
     public DbSet<ApplicationEntity> Applications => Set<ApplicationEntity>();
     public DbSet<ApplicationEventEntity> ApplicationEvents => Set<ApplicationEventEntity>();
     public DbSet<ListingLabelEntity> ListingLabels => Set<ListingLabelEntity>();

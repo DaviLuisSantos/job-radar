@@ -20,6 +20,24 @@
 }
 else
 {
+    @if (_experience is { Count: > 0 })
+    {
+        <section class="experience">
+            <h2>Years of experience</h2>
+            <p class="muted small">In each line of work. When an ad says how many years it asks, these decide; blank, experience weighs as a requirement you lack.</p>
+            <div class="years">
+                @foreach (var (profile, years) in _experience)
+                {
+                    <label>
+                        @profile
+                        <input type="number" min="0" max="60" step="0.5" value="@years?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                               disabled="@(_saving is not null)" @onchange="e => SetYearsAsync(profile, e.Value as string)" />
+                    </label>
+                }
+            </div>
+        </section>
+    }
+
     <table class="grid requirements">
         <thead>
             <tr>
@@ -103,8 +121,26 @@ else
         _ = MeasureAsync();
     }
 
-    private async Task LoadAsync() =>
+    private IReadOnlyList<(string Profile, double? Years)>? _experience;
+
+    private async Task LoadAsync()
+    {
         _requirements = await Backend.RunAsync<CandidateRequirementService, IReadOnlyList<RequirementStatus>>(s => s.ListAsync());
+        _experience = await Backend.RunAsync<CandidateRequirementService, IReadOnlyList<(string, double?)>>(s => s.ExperienceAsync());
+    }
+
+    private async Task SetYearsAsync(string profile, string? value)
+    {
+        double? years = double.TryParse(value, System.Globalization.NumberStyles.AllowDecimalPoint,
+            System.Globalization.CultureInfo.InvariantCulture, out var y) ? Math.Round(Math.Clamp(y, 0, 60), 1) : null;
+        _saving = profile;
+        _message = null;
+        var rescored = await Backend.RunAsync<CandidateRequirementService, int>(s => s.SetExperienceAsync(profile, years));
+        await LoadAsync();
+        _saving = null;
+        _message = $"{profile}: {(years is { } v ? $"{v.ToString(System.Globalization.CultureInfo.InvariantCulture)} years of experience" : "years cleared")}. {rescored:N0} scores updated now.";
+        _ = MeasureAsync();
+    }
 
     // Scores every listing of every profile twice per item: seconds, so it fills in after the page shows.
     private async Task MeasureAsync()

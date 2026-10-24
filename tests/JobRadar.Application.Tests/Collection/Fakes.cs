@@ -176,9 +176,22 @@ internal sealed class InMemoryScores : IListingScoreRepository
 internal sealed class InMemoryCandidateRequirements : ICandidateRequirementRepository
 {
     public Dictionary<string, RequirementState> States { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, double> Years { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Task<CandidateRequirements> GetAsync(CancellationToken ct = default) =>
-        Task.FromResult(new CandidateRequirements(new Dictionary<string, RequirementState>(States, StringComparer.OrdinalIgnoreCase)));
+        Task.FromResult(new CandidateRequirements(new Dictionary<string, RequirementState>(States, StringComparer.OrdinalIgnoreCase))
+        {
+            ExperienceYears = new Dictionary<string, double>(Years, StringComparer.OrdinalIgnoreCase),
+        });
+
+    public Task SetExperienceAsync(string profile, double? years, DateTimeOffset at, CancellationToken ct = default)
+    {
+        if (years is { } y)
+            Years[profile] = y;
+        else
+            Years.Remove(profile);
+        return Task.CompletedTask;
+    }
 
     public Task SetAsync(string itemId, RequirementState? state, DateTimeOffset at, CancellationToken ct = default)
     {

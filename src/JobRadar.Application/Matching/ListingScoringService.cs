@@ -81,7 +81,7 @@ public sealed class ListingScoringService(
     /// </summary>
     public async Task<IReadOnlyList<JudgedScore>> RescoreAsync(
         IReadOnlyList<JudgedScore> judged, TimeZoneInfo zone, CancellationToken ct,
-        IReadOnlyDictionary<string, RequirementState?>? assume = null)
+        CandidateAssumption? assume = null)
     {
         var now = time.GetUtcNow();
         var today = Today(now, zone);
@@ -89,7 +89,7 @@ public sealed class ListingScoringService(
         var termsById = await terms.GetTermsAsync(ids, ct);
         var textsById = await descriptions.GetTextsAsync(ids, ct);
         var profiles = catalog.Profiles.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-        var candidate = Assume(await requirements.GetAsync(ct), assume ?? new Dictionary<string, RequirementState?>());
+        var candidate = Assume(await requirements.GetAsync(ct), assume ?? CandidateAssumption.None);
 
         var rescored = new List<JudgedScore>();
         foreach (var j in judged)
@@ -185,7 +185,7 @@ public sealed class ListingScoringService(
             states[itemId] = s;
         else
             states.Remove(itemId);
-        return new CandidateRequirements(states);
+        return candidate with { States = states };
     }
 
     private async Task<IReadOnlyList<(ListingId Id, ScoringInput Input)>> InputsAsync(ProfileDefinition profile, CancellationToken ct)
@@ -197,12 +197,22 @@ public sealed class ListingScoringService(
         return found.Select(l => (l.Id, ScoringInput.From(l, termsById.GetValueOrDefault(l.Id), textsById.GetValueOrDefault(l.Id)))).ToList();
     }
 
-    private CandidateRequirements Assume(CandidateRequirements stored, IReadOnlyDictionary<string, RequirementState?> assume)
+    private CandidateRequirements Assume(CandidateRequirements stored, CandidateAssumption assume)
     {
-        if (assume.Count == 0)
+        if (assume.States.Count == 0 && assume.Years.Count == 0)
             return stored;
+        var years = new Dictionary<string, double>(stored.ExperienceYears, StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, value) in assume.Years)
+        {
+            var profile = catalog.Profiles.FirstOrDefault(p => string.Equals(p.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? throw new UnknownProfileException(name, catalog.Profiles.Select(p => p.Name));
+            if (value is { } v)
+                years[profile.Name] = v;
+            else
+                years.Remove(profile.Name);
+        }
         var states = new Dictionary<string, RequirementState>(stored.States, StringComparer.OrdinalIgnoreCase);
-        foreach (var (id, state) in assume)
+        foreach (var (id, state) in assume.States)
         {
             var item = catalog.Policy.Requirements.FirstOrDefault(i => string.Equals(i.Id, id.Trim(), StringComparison.OrdinalIgnoreCase))
                 ?? throw new UnknownRequirementException(id, catalog.Policy.Requirements.Select(i => i.Id));
@@ -211,7 +221,7 @@ public sealed class ListingScoringService(
             else
                 states.Remove(item.Id);
         }
-        return new CandidateRequirements(states);
+        return new CandidateRequirements(states) { ExperienceYears = years };
     }
 
     private ListingScore Score(

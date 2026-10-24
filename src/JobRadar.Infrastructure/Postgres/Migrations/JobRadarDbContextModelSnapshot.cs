@@ -419,6 +419,27 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.ToTable("market_snapshots", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Matching.CandidateExperienceEntity", b =>
+                {
+                    b.Property<string>("Profile")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("profile");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<decimal>("Years")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("years");
+
+                    b.HasKey("Profile");
+
+                    b.ToTable("candidate_experience", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Postgres.Matching.CandidateRequirementEntity", b =>
                 {
                     b.Property<string>("ItemId")

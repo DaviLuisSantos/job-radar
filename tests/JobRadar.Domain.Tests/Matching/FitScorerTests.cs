@@ -731,6 +731,42 @@ public class FitScorerTests
         Assert.Equal(10, Item(score, ScoreRule.RequirementHeld).Points);
     }
 
+    [Theory]
+    [InlineData(5.0, ScoreRule.RequirementHeld, 10)]          // reaches the 3 years asked
+    [InlineData(2.0, ScoreRule.FullTextExperience, -10)]      // a year short: obtainable
+    [InlineData(0.5, ScoreRule.FullTextExperience, -20)]      // further: missing
+    public void Years_of_experience_the_ad_asks_are_compared_with_the_candidates(double years, ScoreRule rule, int points)
+    {
+        var job = Job("Offsider", "Minimum 3 years experience in civil works", fullText: ["years experience"]);
+        var candidate = new CandidateRequirements(new Dictionary<string, RequirementState>())
+        {
+            ExperienceYears = new Dictionary<string, double> { [Fifo.Name] = years },
+        };
+
+        var item = Item(Score(job, candidate), rule);
+
+        Assert.Equal(("years experience (3 years asked)", points), (item.Detail, item.Points));
+    }
+
+    [Fact]
+    public void Without_the_candidates_years_or_a_number_in_the_ad_experience_weighs_as_before()
+    {
+        var withYears = new CandidateRequirements(new Dictionary<string, RequirementState>())
+        {
+            ExperienceYears = new Dictionary<string, double> { [Fifo.Name] = 10 },
+        };
+        var noNumber = Job("Offsider", "Proven experience in civil works", fullText: ["years experience"]);
+        var number = Job("Offsider", "Minimum 3 years experience in civil works", fullText: ["years experience"]);
+
+        Assert.Equal(("years experience", -20), Pair(Item(Score(noNumber, withYears), ScoreRule.FullTextExperience)));
+        Assert.Equal(("years experience", -20), Pair(Item(Score(number, CandidateRequirements.None), ScoreRule.FullTextExperience)));
+        // Another profile's years say nothing about this one.
+        var otherProfile = withYears with { ExperienceYears = new Dictionary<string, double> { ["tech"] = 10 } };
+        Assert.Equal(-20, Item(Score(number, otherProfile), ScoreRule.FullTextExperience).Points);
+
+        static (string, int) Pair(ScoreItem i) => (i.Detail, i.Points);
+    }
+
     [Fact]
     public void A_phrase_outside_the_catalog_keeps_the_default_of_its_kind()
     {

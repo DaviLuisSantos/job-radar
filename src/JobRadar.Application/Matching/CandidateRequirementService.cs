@@ -13,8 +13,13 @@ public sealed record RequirementStatus(RequirementItem Item, RequirementState St
 /// <param name="From">The state set before, null when the item was at its default.</param>
 public sealed record RequirementChange(string ItemId, RequirementState? From, RequirementState To, string Fact);
 
+/// <summary>Years of experience the candidate facts set for a profile, and the areas they add up.</summary>
+/// <param name="From">The years set before, null when none were.</param>
+public sealed record ExperienceChange(string Profile, double? From, double To, string Fact);
+
 /// <summary>What an import of the candidate facts set (or would set), and the facts no catalog item matches.</summary>
-public sealed record CandidateImportReport(IReadOnlyList<RequirementChange> Changes, IReadOnlyList<string> NotInCatalog);
+public sealed record CandidateImportReport(
+    IReadOnlyList<RequirementChange> Changes, IReadOnlyList<ExperienceChange> Experience, IReadOnlyList<string> NotInCatalog);
 
 /// <summary>What holding one catalog item would change in one profile's listings (see <c>ListingScoringService.ImpactAsync</c>).</summary>
 /// <param name="Affected">Listings whose score moves.</param>
@@ -23,6 +28,18 @@ public sealed record CandidateImportReport(IReadOnlyList<RequirementChange> Chan
 /// <param name="Good">Of those, the ones the candidate judged good; <paramref name="Bad"/>, bad.</param>
 public sealed record RequirementImpact(
     string ItemId, string Profile, int Affected, int VisibleWithout, int VisibleWith, int AlertWithout, int AlertWith, int Good, int Bad);
+
+/// <summary>
+/// States and years to score with instead of the stored ones, saving nothing (<c>calibrate --rescore --assume</c>).
+/// A null state puts the item back to its default; null years, the profile back to no years known.
+/// </summary>
+public sealed record CandidateAssumption(IReadOnlyDictionary<string, RequirementState?> States, IReadOnlyDictionary<string, double?> Years)
+{
+    public static CandidateAssumption None { get; } = new(new Dictionary<string, RequirementState?>(), new Dictionary<string, double?>());
+}
+
+public sealed class UnknownProfileException(string name, IEnumerable<string> known)
+    : Exception($"'{name}' is not a configured profile. Known: {string.Join(", ", known)}.");
 
 public sealed class UnknownRequirementException(string id, IEnumerable<string> known)
     : Exception($"'{id}' is not in the requirement catalog. Known: {string.Join(", ", known)}.");
@@ -70,10 +87,28 @@ public sealed class CandidateRequirementService(
         return (item, await scoring.RescoreRequirementAsync(item.Id, Zone, ct));
     }
 
+    /// <summary>The candidate's years of experience in each configured profile's line of work; null when not set.</summary>
+    public async Task<IReadOnlyList<(string Profile, double? Years)>> ExperienceAsync(CancellationToken ct = default)
+    {
+        var years = (await repository.GetAsync(ct)).ExperienceYears;
+        return catalog.Profiles.Select(p => (p.Name, years.TryGetValue(p.Name, out var y) ? y : (double?)null)).ToList();
+    }
+
+    /// <summary>
+    /// Sets the candidate's years of experience in a profile's line of work (null forgets them) and rescores the
+    /// listings that may ask for experience. Returns how many scores were saved.
+    /// </summary>
+    public async Task<int> SetExperienceAsync(string profile, double? years, CancellationToken ct = default)
+    {
+        var name = Profile(profile);
+        await repository.SetExperienceAsync(name, years, time.GetUtcNow(), ct);
+        return await RescoreExperienceAsync(ct);
+    }
+
     /// <summary>
     /// Sets the states the candidate facts imply: tickets as held, obtainable or out of reach, heavy vehicle
-    /// classes held, and a trade or degree recognised in Australia. Additive: a state the facts say nothing
-    /// about is kept. Experience is not read here: years against what an ad asks are a rule of their own.
+    /// classes held, and a trade or degree recognised in Australia; and, for each target whose experience areas the
+    /// facts name, the years of those areas added up. Additive: what the facts say nothing about is kept.
     /// </summary>
     public async Task<CandidateImportReport> ImportAsync(CandidateFacts facts, bool dryRun, CancellationToken ct = default)
     {
@@ -108,16 +143,47 @@ public sealed class CandidateRequirementService(
             .Select(w => new RequirementChange(w.Key, current.States.TryGetValue(w.Key, out var s) ? s : null, w.Value.State, w.Value.Fact))
             .OrderBy(c => c.ItemId, StringComparer.Ordinal)
             .ToList();
+        var configured = catalog.Profiles.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var experience = facts.Targets
+            .Where(t => t.ExperienceAreas is not null && configured.Contains(t.Profile))
+            .Select(t =>
+            {
+                var areas = t.ExperienceAreas!.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var years = Math.Round(facts.Experience.Where(w => areas.Contains(w.Area)).Sum(w => w.Years), 1);
+                var fact = areas.Count == 0 ? "no experience area counts" : $"{string.Join(" + ", t.ExperienceAreas!)}";
+                return new ExperienceChange(Profile(t.Profile), current.ExperienceYears.TryGetValue(t.Profile, out var y) ? y : null, years, fact);
+            })
+            .Where(e => e.From != e.To)
+            .OrderBy(e => e.Profile, StringComparer.Ordinal)
+            .ToList();
+        notInCatalog.AddRange(facts.Targets.Where(t => !configured.Contains(t.Profile)).Select(t => $"target profile not configured: {t.Profile}"));
+
         if (!dryRun)
         {
             var now = time.GetUtcNow();
             foreach (var change in changes)
                 await repository.SetAsync(change.ItemId, change.To, now, ct);
+            foreach (var change in experience)
+                await repository.SetExperienceAsync(change.Profile, change.To, now, ct);
             foreach (var change in changes)
                 await scoring.RescoreRequirementAsync(change.ItemId, Zone, ct);
+            if (experience.Count > 0)
+                await RescoreExperienceAsync(ct);
         }
-        return new CandidateImportReport(changes, notInCatalog);
+        return new CandidateImportReport(changes, experience, notInCatalog);
     }
+
+    private async Task<int> RescoreExperienceAsync(CancellationToken ct)
+    {
+        var rescored = 0;
+        foreach (var item in catalog.Policy.Requirements.Where(i => i.Kind == RequirementKind.Experience))
+            rescored += await scoring.RescoreRequirementAsync(item.Id, Zone, ct);
+        return rescored;
+    }
+
+    private string Profile(string name) =>
+        catalog.Profiles.FirstOrDefault(p => string.Equals(p.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))?.Name
+        ?? throw new UnknownProfileException(name, catalog.Profiles.Select(p => p.Name));
 
     /// <summary>A catalog item by its id or by one of its phrases ("HRWL", "ARCtick"), ignoring case.</summary>
     private RequirementItem? Find(string name)

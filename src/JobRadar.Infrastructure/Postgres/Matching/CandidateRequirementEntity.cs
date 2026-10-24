@@ -25,6 +25,27 @@ public class CandidateRequirementEntityConfiguration : IEntityTypeConfiguration<
     }
 }
 
+/// <summary>Row of <c>candidate_experience</c>: the candidate's years of experience in one profile's line of work.</summary>
+public class CandidateExperienceEntity
+{
+    public string Profile { get; set; } = "";
+    public decimal Years { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public class CandidateExperienceEntityConfiguration : IEntityTypeConfiguration<CandidateExperienceEntity>
+{
+    public void Configure(EntityTypeBuilder<CandidateExperienceEntity> b)
+    {
+        b.ToTable("candidate_experience");
+        b.HasKey(e => e.Profile);
+
+        b.Property(e => e.Profile).HasColumnName("profile").HasMaxLength(64);
+        b.Property(e => e.Years).HasColumnName("years").HasPrecision(4, 1);
+        b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+    }
+}
+
 /// <summary>Spelling of requirement states in the database.</summary>
 internal static class CandidateRequirementMapper
 {

@@ -5,6 +5,13 @@ namespace JobRadar.Application.Matching;
 /// <summary>An education entry of the candidate facts: its level and whether Australia recognises it.</summary>
 public sealed record CandidateEducation(string Level, bool RecognisedInAustralia);
 
+/// <summary>Years of work in one area ("software", "construction").</summary>
+public sealed record CandidateWork(string Area, double Years);
+
+/// <summary>A line of work the candidate wants, by profile name, and the experience areas that count for it.</summary>
+/// <param name="ExperienceAreas">Null when the facts do not say: the years of that profile are left as they are.</param>
+public sealed record CandidateTarget(string Profile, IReadOnlyList<string>? ExperienceAreas);
+
 /// <summary>
 /// What <c>candidate/candidate.json</c> (format in <c>candidate/candidate.schema.json</c>) says about the catalog
 /// requirements. Only these fields are read: the rest of the file is for the candidate and for profile drafting.
@@ -16,6 +23,9 @@ public sealed record CandidateFacts(
     IReadOnlyList<string> HeavyLicences,
     IReadOnlyList<CandidateEducation> Education)
 {
+    public IReadOnlyList<CandidateWork> Experience { get; init; } = [];
+    public IReadOnlyList<CandidateTarget> Targets { get; init; } = [];
+
     public const int SchemaVersion = 1;
 
     /// <summary>Reads the file's text; a wrong schema version or a broken file is a <see cref="FormatException"/>.</summary>
@@ -40,7 +50,21 @@ public sealed record CandidateFacts(
                     ? education.EnumerateArray()
                         .Select(e => new CandidateEducation(e.GetProperty("level").GetString()!, e.GetProperty("recognisedInAustralia").GetBoolean()))
                         .ToList()
-                    : []);
+                    : [])
+            {
+                Experience = root.TryGetProperty("experience", out var experience)
+                    ? experience.EnumerateArray()
+                        .Select(e => new CandidateWork(e.GetProperty("area").GetString()!, e.GetProperty("years").GetDouble()))
+                        .ToList()
+                    : [],
+                Targets = root.TryGetProperty("targets", out var targets)
+                    ? targets.EnumerateArray()
+                        .Select(t => new CandidateTarget(
+                            t.GetProperty("profile").GetString()!,
+                            t.TryGetProperty("experienceAreas", out var areas) ? areas.EnumerateArray().Select(a => a.GetString()!).ToList() : null))
+                        .ToList()
+                    : [],
+            };
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
         {

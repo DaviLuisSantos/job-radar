@@ -88,6 +88,29 @@ internal static class ListingPatterns
         + @"|\b(?:HR|HC|MR|MC)\s*/\s*(?:HR|HC|MR|MC)\b"
         + @"|\bheavy\s+(?:rigid|combination)\b");
 
+    /// <summary>
+    /// "minimum 3 years experience", "3+ years of civil experience", "at least 2 years' hands-on experience",
+    /// "2-3 yrs experience": the number of years, up to four words before "experience".
+    /// </summary>
+    private static readonly Regex YearsOfExperience = R(
+        @"\b(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|–|to)\s*\d{1,2}\s*\+?\s*)?(?:years?|yrs?)['’]?\s+(?:of\s+)?(?:[\w/&-]+\s+){0,4}?experience\b");
+
+    /// <summary>
+    /// The fewest years of experience the text asks for, null when it names none. The fewest because an ad that
+    /// asks "5 years preferred, 2 minimum" takes 2; a range ("2-3 years") counts from its start.
+    /// </summary>
+    public static int? YearsAsked(string text)
+    {
+        int? fewest = null;
+        foreach (Match m in YearsOfExperience.Matches(text))
+        {
+            var years = int.Parse(m.Groups[1].ValueSpan, System.Globalization.CultureInfo.InvariantCulture);
+            if (years is >= 1 and <= 20 && (fewest is null || years < fewest))
+                fewest = years;
+        }
+        return fewest;
+    }
+
     /// <summary>The truck licence classes a text names, to compare with the ones the candidate holds.</summary>
     public static readonly Regex TruckClass = R(@"\b(?:MR|HR|HC|MC)\b|\bheavy\s+(?:rigid|combination)\b");
 

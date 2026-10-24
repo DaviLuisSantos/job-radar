@@ -28,6 +28,25 @@ public sealed record CandidateRequirements(IReadOnlyDictionary<string, Requireme
 {
     public static CandidateRequirements None { get; } = new(new Dictionary<string, RequirementState>());
 
+    /// <summary>
+    /// Years of experience the candidate has in each profile's line of work, by profile name. A profile missing here
+    /// weighs an experience requirement by its state, as before; one present compares with the years the ad asks.
+    /// </summary>
+    public IReadOnlyDictionary<string, double> ExperienceYears { get; init; } =
+        new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The state of an experience requirement when the ad says how many years (<paramref name="asked"/>) and the
+    /// candidate's years in <paramref name="profile"/> are known: had when they reach it, obtainable a year short
+    /// (an employer often takes a year less), missing beyond. Null when either is unknown.
+    /// </summary>
+    public RequirementState? ExperienceState(string profile, int? asked) =>
+        asked is { } years && ExperienceYears.TryGetValue(profile, out var has)
+            ? has >= years ? RequirementState.Have
+            : years - has <= 1 ? RequirementState.Obtainable
+            : RequirementState.Missing
+            : null;
+
     public static RequirementState Default(RequirementKind kind, string phrase) => kind switch
     {
         RequirementKind.Licence when TruckLicence.IsMatch(phrase) => RequirementState.OutOfReach,
@@ -76,15 +95,16 @@ public sealed record CandidateRequirements(IReadOnlyDictionary<string, Requireme
     };
 
     /// <summary>
-    /// The states that differ from the default for the items <paramref name="profile"/> searches, in id
-    /// order: what a profile's rules hash must follow. Empty for a candidate who set nothing, so the hash stays
-    /// what it was before states existed.
+    /// The states that differ from the default for the items <paramref name="profile"/> searches, and for every
+    /// truck class (read in any ad's own text), in id order: what a profile's rules hash must follow. Empty for a
+    /// candidate who set nothing, so the hash stays what it was before states existed.
     /// </summary>
     public IReadOnlyList<KeyValuePair<string, RequirementState>> Relevant(MatchingProfile profile, ScoringPolicy policy)
     {
         var phrases = profile.Requirements.Terms().Select(t => t.Phrase).ToHashSet(StringComparer.OrdinalIgnoreCase);
         return policy.Requirements
-            .Where(i => i.Phrases.Any(phrases.Contains) && States.TryGetValue(i.Id, out var s) && s != Default(i.Kind, i.Phrases[0]))
+            .Where(i => (i.IsTruckLicence || i.Phrases.Any(phrases.Contains))
+                        && States.TryGetValue(i.Id, out var s) && s != Default(i.Kind, i.Phrases[0]))
             .OrderBy(i => i.Id, StringComparer.Ordinal)
             .Select(i => KeyValuePair.Create(i.Id, States[i.Id]))
             .ToList();

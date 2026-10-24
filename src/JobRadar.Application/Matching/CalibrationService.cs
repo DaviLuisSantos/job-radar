@@ -13,8 +13,8 @@ public sealed class CalibrationService(IListingScoreRepository scores, ListingSc
     /// The same measure with the judged listings scored again by this build's rules, without saving: the
     /// "after" of a rule change, read before it ships. The stored scores are the "before".
     /// </summary>
-    /// <param name="assume">Requirement states to measure instead of the stored ones (null: the default).</param>
+    /// <param name="assume">Requirement states and experience years to measure instead of the stored ones.</param>
     public async Task<IReadOnlyList<ProfileCalibration>> MeasureRescoredAsync(
-        TimeZoneInfo zone, CancellationToken ct = default, IReadOnlyDictionary<string, RequirementState?>? assume = null) =>
+        TimeZoneInfo zone, CancellationToken ct = default, CandidateAssumption? assume = null) =>
         Calibration.Measure(await scoring.RescoreAsync(await scores.ListJudgedAsync(ct), zone, ct, assume));
 }

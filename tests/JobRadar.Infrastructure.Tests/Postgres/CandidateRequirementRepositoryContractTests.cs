@@ -46,4 +46,28 @@ public class CandidateRequirementRepositoryContractTests(PostgresFixture db)
         Assert.Equal(RequirementState.Have, Assert.Single(states).Value);
         Assert.True(states.ContainsKey("HRWL"));                    // ids compare without case
     }
+
+    [DatabaseFact]
+    public async Task Years_of_experience_are_stored_per_profile_rounded_to_a_tenth_and_forgotten()
+    {
+        await db.ResetAsync();
+
+        await using (var ctx = db.NewContext())
+        {
+            await Repo(ctx).SetExperienceAsync("Tech", 7.96, Monday, Ct);
+            await Repo(ctx).SetExperienceAsync("fifo", 0.5, Monday, Ct);
+            await Repo(ctx).SetExperienceAsync("fifo", 1, Monday.AddDays(1), Ct);
+        }
+        await using (var ctx = db.NewContext())
+        {
+            var years = (await Repo(ctx).GetAsync(Ct)).ExperienceYears;
+            Assert.Equal([("fifo", 1.0), ("tech", 8.0)], years.OrderBy(y => y.Key, StringComparer.Ordinal).Select(y => (y.Key, y.Value)));
+            Assert.True(years.ContainsKey("TECH"));
+        }
+
+        await using (var ctx = db.NewContext())
+            await Repo(ctx).SetExperienceAsync("fifo", null, Monday, Ct);
+        await using var read = db.NewContext();
+        Assert.Equal(["tech"], (await Repo(read).GetAsync(Ct)).ExperienceYears.Keys);
+    }
 }

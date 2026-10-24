@@ -43,7 +43,9 @@ public static class CliRunner
                     var calibration = sp.GetRequiredService<CalibrationService>();
                     if (c.Rescore)
                         await output.WriteLineAsync($"Scored again with this build's rules (version {FitScorer.RulesVersion})"
-                            + (c.Assume is { } assumed ? ", assuming " + string.Join(", ", assumed.Select(a => $"{a.Key}={(a.Value is { } v ? StateWord(v) : "default")}")) : "")
+                            + (c.Assume is { } assumed ? ", assuming " + string.Join(", ",
+                                assumed.States.Select(a => $"{a.Key}={(a.Value is { } v ? StateWord(v) : "default")}")
+                                    .Concat(assumed.Years.Select(a => $"years:{a.Key}={(a.Value is { } y ? y.ToString(CultureInfo.InvariantCulture) : "default")}"))) : "")
                             + "; nothing saved.");
                     WriteCalibration(c.Rescore ? await calibration.MeasureRescoredAsync(LocalZone(sp), ct, c.Assume) : await calibration.MeasureAsync(ct), output);
                     break;
@@ -53,6 +55,11 @@ public static class CliRunner
                 case CliCommand.SetRequirement c:
                     var (item, rescored) = await sp.GetRequiredService<CandidateRequirementService>().SetAsync(c.Item, c.State, ct);
                     await output.WriteLineAsync($"{item.Id}: {(c.State is { } state ? StateWord(state) : "back to default")}; {rescored:N0} scores updated");
+                    break;
+                case CliCommand.SetExperience c:
+                    var updated = await sp.GetRequiredService<CandidateRequirementService>().SetExperienceAsync(c.Profile, c.Years, ct);
+                    await output.WriteLineAsync(
+                        $"{c.Profile.Trim().ToLowerInvariant()}: {(c.Years is { } y ? $"{y.ToString(CultureInfo.InvariantCulture)} years of experience" : "years forgotten")}; {updated:N0} scores updated");
                     break;
                 case CliCommand.ImportCandidate c:
                     var facts = CandidateFacts.Parse(await File.ReadAllTextAsync(c.Path, ct));
@@ -105,7 +112,7 @@ public static class CliRunner
             await output.WriteLineAsync(ex.Message);
             return 1;
         }
-        catch (Exception ex) when (ex is UnknownRequirementException or FormatException)
+        catch (Exception ex) when (ex is UnknownRequirementException or UnknownProfileException or FormatException)
         {
             await output.WriteLineAsync(ex.Message);
             return 2;
@@ -136,14 +143,16 @@ public static class CliRunner
 
     internal static void WriteCandidateImport(CandidateImportReport r, bool dryRun, TextWriter o)
     {
-        o.WriteLine(r.Changes.Count == 0
+        o.WriteLine(r.Changes.Count + r.Experience.Count == 0
             ? "Nothing to change: the states already match the facts."
             : dryRun ? "Dry run: nothing written. Would set:" : "Set:");
         foreach (var c in r.Changes)
             o.WriteLine($"  {c.ItemId,-22} {(c.From is { } f ? StateWord(f) : "default"),-12} -> {StateWord(c.To),-12} ({c.Fact})");
+        foreach (var e in r.Experience)
+            o.WriteLine($"  {"years: " + e.Profile,-22} {(e.From is { } f ? f.ToString(CultureInfo.InvariantCulture) : "unknown"),-12} -> {e.To.ToString(CultureInfo.InvariantCulture),-12} ({e.Fact})");
         if (r.NotInCatalog.Count > 0)
             o.WriteLine("Not in the requirement catalog (no ad is weighed by them yet): " + string.Join("; ", r.NotInCatalog));
-        if (!dryRun && r.Changes.Count > 0)
+        if (!dryRun && r.Changes.Count + r.Experience.Count > 0)
             o.WriteLine(RequirementsTakeEffect);
     }
 

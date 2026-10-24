@@ -37,10 +37,12 @@ public class CliCommandTests
         Assert.Equal(new CliCommand.Calibrate(Rescore: true), Parse("calibrate", "--rescore"));
         Assert.Null(Parse("calibrate", "--other"));
 
-        var assume = Assert.IsType<CliCommand.Calibrate>(Parse("calibrate", "--rescore", "--assume", "hrwl=have, truck-hr = default"));
+        var assume = Assert.IsType<CliCommand.Calibrate>(
+            Parse("calibrate", "--rescore", "--assume", "hrwl=have, truck-hr = default, years:tech=8, years:fifo=default"));
         Assert.True(assume.Rescore);
         Assert.Equal([("hrwl", (RequirementState?)RequirementState.Have), ("truck-hr", null)],
-            assume.Assume!.Select(a => (a.Key, a.Value)));
+            assume.Assume!.States.Select(a => (a.Key, a.Value)));
+        Assert.Equal([("tech", (double?)8), ("fifo", null)], assume.Assume.Years.Select(a => (a.Key, a.Value)));
     }
 
     [Fact]
@@ -68,13 +70,19 @@ public class CliCommandTests
         Assert.Equal(new CliCommand.SetRequirement("degree", null), Parse("requirement", "degree", "default"));
         Assert.Equal(new CliCommand.ImportCandidate("candidate.json", false), Parse("import-candidate", "candidate.json"));
         Assert.Equal(new CliCommand.ImportCandidate("candidate.json", true), Parse("import-candidate", "candidate.json", "--dry-run"));
+        Assert.Equal(new CliCommand.SetExperience("tech", 8), Parse("experience", "tech", "8"));
+        Assert.Equal(new CliCommand.SetExperience("fifo", 0.5), Parse("experience", "fifo", "0.5"));
+        Assert.Equal(new CliCommand.SetExperience("fifo", null), Parse("experience", "fifo", "default"));
     }
 
     [Theory]
     [InlineData("requirement", "hrwl", "maybe")]
+    [InlineData("experience", "tech", "eight")]
+    [InlineData("experience", "tech")]
     [InlineData("calibrate", "--assume", "hrwl=have")]
     [InlineData("calibrate", "--rescore", "--assume", "hrwl")]
     [InlineData("calibrate", "--rescore", "--assume", "hrwl=sometimes")]
+    [InlineData("calibrate", "--rescore", "--assume", "years:tech=many")]
     [InlineData("requirement", "hrwl")]
     [InlineData("import-candidate", "--dry-run")]
     [InlineData("market-report", "outubro")]
