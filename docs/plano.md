@@ -94,6 +94,22 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Carteira de caminhão e tickets (`RulesVersion` 8)
+O autor: anúncio que exige carteira HR é ruim, porque ela pede anos de carteira de carro (a dele vira definitiva no
+fim de dezembro); licença que se tira com curso (HRWL e afins) ele tiraria. As regras tratavam as duas com −20, e o
+padrão não lia "HR **truck** driver's licence" (a Driller Offsider de 89 pontos não tinha penalidade nenhuma).
+Agora: carteira de caminhão (HR/HC/MR/MC, "heavy rigid/combination") −40, ou −10 se o anúncio diz "desirable",
+"highly regarded" etc. logo depois; negação só na mesma oração (um "no experience needed" na linha de cima não
+dispensa a carteira); ticket −10. Com o anúncio completo, requisitos e carteira são lidos **nele**, não na busca
+por frase: a busca marcava "HRWL" em anúncios que não pedem (a boa "Gas Field Installer" levava −20 assim).
+Medido com o `calibrate --rescore` novo (as regras da branch contra os rótulos de produção, nada gravado):
+construction 95% → 99% de acerto de pares (ruins ≥ 50: 8 → 4; boas ≥ 75: 13 → 14 de 14), fifo 89% → 91% (10 → 9;
+6 → 7 de 10), trades 97% → 99% (5 de 6 boas ≥ 75). Duas ruins subiram ao perder o falso "HRWL" e mostraram o motivo
+real, experiência escrita de outro jeito: com "min 2 years", "minimum of 2 years", "relevant experience" e
+"experience in a similar role" nas frases de experiência dos perfis (configuração), construction vai a 100% e fifo a
+92% (ruins ≥ 50: 8). "previous experience" ficou de fora: derrubou uma boa ("an advantage"). Paridade: 55 de 5.388
+casos do protótipo mudam, todos de carteira de caminhão, contados à parte pelo teste.
+
 ### 2026-10-23 — Implantação automática e volta de versão
 Até aqui implantar era `git pull` + `deploy.ps1` no trabalhopc, à mão. Agora a tarefa `JobRadar Auto-deploy` (a
 cada 15 min, sessão do autor, `conhost --headless` para não piscar janela) roda `deploy/auto-deploy.ps1`:

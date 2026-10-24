@@ -135,9 +135,11 @@ Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**f
 união dos perfis.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
-`label <id> good|bad|clear [nota]`, `calibrate`, `market`, `market-report [YYYY-MM] [arquivo]`,
+`label <id> good|bad|clear [nota]`, `calibrate [--rescore]`, `market`, `market-report [YYYY-MM] [arquivo]`,
 `import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
-1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` antes e depois.
+1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` (os scores gravados: o antes) e
+`calibrate --rescore` (pontua de novo em memória com as regras do build, sem gravar: o depois). Para medir uma
+branch contra os rótulos reais, rode-a num worktree no trabalhopc com o `appsettings.Local.json` copiado.
 
 Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
 e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma prova leve).
@@ -199,7 +201,8 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Score: `FitScorer` é a **única** implementação; a ordem das fases faz parte da regra (ver o comentário
   da classe). Os padrões de texto ficam em `ListingPatterns`. `".NET"` não casa dentro de `"ASP.NET"`
   (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
-  vêm do protótipo, e a paridade depende delas.
+  vêm do protótipo, e a paridade depende delas. Desde a `RulesVersion` 8 a carteira de caminhão diverge do
+  protótipo de propósito (−40, não −20): o teste de paridade conta esses casos à parte.
 
 ## Convenções
 
