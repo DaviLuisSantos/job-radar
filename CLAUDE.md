@@ -202,7 +202,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   da classe). Os padrões de texto ficam em `ListingPatterns`. `".NET"` não casa dentro de `"ASP.NET"`
   (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
   vêm do protótipo, e a paridade depende delas. Desde a `RulesVersion` 8 a carteira de caminhão diverge do
-  protótipo de propósito (−40, não −20): o teste de paridade conta esses casos à parte.
+  protótipo de propósito (−40, não −20), e desde a 9 "Assistant … Manager" é liderança: o teste de paridade conta
+  esses casos à parte. `ExcludedLocations` de um perfil exclui pelo local (o regional exclui Perth: os 88 dias não
+  contam lá).
 
 ## Convenções
 

@@ -94,6 +94,18 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Regras v9, lidas nas descrições das ruins (`RulesVersion` 9)
+O autor pediu para ler os anúncios das vagas ruins que ainda pontuavam alto. Achados: "HC **Unrestricted** licence"
+escapava do padrão; "HR driver's license is essential - HC licence desirable" virava HR desejável (−10) por causa do
+"desirable" do HC; "**Long-term** Australian working rights" (Cleaning Utility) não excluía; "**Assistant** Village
+Manager" contava como título júnior e escapava da exclusão de liderança. Agora cada carteira lê só até a próxima e
+"essential/mandatory/required/must" vence "desirable"; "long-term work rights" exclui como "unlimited"; "assistant …
+manager" é gerência. Regional: o autor quer só onde os 88 dias contam (cultivo em área regional; nenhum código postal
+da Grande Perth nas listas da 462), então perfis ganharam `ExcludedLocations` e o regional exclui "Perth WA" (era
+−15). Medido com `--rescore`: construction ruins ≥ 50 4 → 3; fifo 94% → 95% de acerto, ruins ≥ 50 9 → 5. As três
+boas do regional eram jardinagem e paisagismo em Perth: boas vagas, mas não para esse perfil (o rótulo é da vaga,
+não do perfil). Paridade: mais 8 casos, todos "Assistant … Manager", contados à parte.
+
 ### 2026-10-23 — Perfis: sinais de função no fifo, licenças de profissão
 Configuração (fora do git), medida com `calibrate --rescore` numa cópia antes de implantar, com os rótulos do dia
 (construction 28 boas/22 ruins, fifo 16/47, trades 8/12):
