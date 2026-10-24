@@ -49,6 +49,8 @@ começar.
 
 ## O que vem depois
 
-Os fatos ainda não geram perfil sozinhos: o `profile draft` é a próxima etapa (ver `docs/plano.md`). Até lá,
-use o `candidate.json` como referência para revisar o `appsettings.Local.json` à mão. Qualquer mudança de perfil
-deve ser medida com `calibrate` (antes) e `calibrate --rescore` (depois) contra os rótulos.
+Os tickets, as carteiras pesadas e a formação reconhecida viram o estado do candidato em cada requisito:
+`import-candidate candidate/candidate.json --dry-run` mostra o que mudaria, e sem `--dry-run` grava. O relatório
+lista o que o catálogo de requisitos ainda não tem (white card, forklift…). O resto dos fatos ainda não gera
+perfil sozinho (ver `docs/plano.md`): use o `candidate.json` como referência para revisar o `appsettings.Local.json`
+à mão. Qualquer mudança deve ser medida com `calibrate` (antes) e `calibrate --rescore` (depois) contra os rótulos.

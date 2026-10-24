@@ -67,18 +67,20 @@ public sealed class CandidateRequirementService(ProfileCatalog catalog, ICandida
         }));
 
         var current = await repository.GetAsync(ct);
-        var wanted = new Dictionary<string, (RequirementState State, string Fact)>(StringComparer.Ordinal);
+        var wanted = new Dictionary<string, (RequirementItem Item, RequirementState State, string Fact)>(StringComparer.Ordinal);
         var notInCatalog = new List<string>();
         foreach (var (name, state, fact) in implied)
         {
             if (Find(name) is { } item)
-                wanted[item.Id] = (state, fact);
+                wanted[item.Id] = (item, state, fact);
             else
                 notInCatalog.Add(fact);
         }
 
+        // A fact that only repeats the current state (set, or the default of an item never set) changes nothing.
         var changes = wanted
-            .Where(w => !current.States.TryGetValue(w.Key, out var s) || s != w.Value.State)
+            .Where(w => (current.States.TryGetValue(w.Key, out var s) ? s : CandidateRequirements.Default(w.Value.Item.Kind, w.Value.Item.Phrases[0]))
+                        != w.Value.State)
             .Select(w => new RequirementChange(w.Key, current.States.TryGetValue(w.Key, out var s) ? s : null, w.Value.State, w.Value.Fact))
             .OrderBy(c => c.ItemId, StringComparer.Ordinal)
             .ToList();

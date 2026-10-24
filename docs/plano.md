@@ -128,8 +128,8 @@ Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `
 |---|---|---|---|
 | 1a | Constantes do `FitScorer` para a `ScoringPolicy` | não: paridade e `calibrate` iguais | ✅ 2026-10-23 |
 | 1b | Frases de requisito dos perfis viram itens do catálogo | não | ✅ 2026-10-23 (perfis reais migrados à parte, aguardando o autor) |
-| 2 | Estado no banco + `candidate import`; estado inicial reproduz o tratamento de hoje | não | 🔨 |
-| 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | |
+| 2 | Estado no banco + `import-candidate`; estado inicial reproduz o tratamento de hoje | não | ✅ 2026-10-24 |
+| 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | 🔨 |
 | 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | |
 | 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | |
 | 6 | Se valer: palavras-chave e sinais no banco, com o `profile preview` na mesma página | — | |
@@ -167,6 +167,23 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-24 — Estado do candidato em cada requisito (passo 2)
+Tabela `candidate_requirements` (uma linha por item que o candidato definiu) e o estado decidindo os pontos do
+requisito achado: `have` 0, `obtainable` 10, `missing` 20, `out_of_reach` 40 (`ScoringPolicy`; saíram
+`RequirementPenalty` e `TicketPenalty`). Item sem linha, e frase própria do perfil fora do catálogo, ficam com o
+padrão do tipo, que é o tratamento de antes: carteira de caminhão fora de alcance, outra licença ou ticket
+"tiraria", experiência e formação "não tenho". Com a tabela vazia nada muda, nem o `rules_hash`: ele só ganha os
+estados que diferem do padrão nos itens que o perfil busca. Vários do mesmo tipo no anúncio: vale o pior; um que o
+candidato tem não esconde outro. Comandos: `requirements`, `requirement <item> <estado>|default` e
+`import-candidate <candidate.json> [--dry-run]` (tickets, carteiras pesadas e formação reconhecida; o que o
+catálogo não tem, como white card e forklift, aparece no relatório). O efeito vale na passada seguinte; o
+`calibrate --rescore` lê os estados do banco e mede na hora.
+Provado no trabalhopc numa **cópia** do banco de produção (pg_dump para `jobradar_verify`, migration só nela,
+apagada depois; a produção não foi tocada): sem estados, o `calibrate --rescore` do build novo sai idêntico ao do
+instalado; gravar e voltar ao padrão também. Medido de passagem: ARCtick e licença elétrica como fora de alcance
+(o que o autor já disse que são) levam fifo de 5 a 4 ruins ≥ 50 e trades de 90% a 91% (ruins ≥ 50: 2 → 1), sem
+derrubar boa. Fica para o autor aplicar depois do deploy.
 
 ### 2026-10-23 — Catálogo de requisitos (passo 1b)
 `RequirementCatalog` (13 itens, na `ScoringPolicy` e portanto no `rules_hash`): três de experiência (anos,

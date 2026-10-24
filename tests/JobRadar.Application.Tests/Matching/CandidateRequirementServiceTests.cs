@@ -72,11 +72,10 @@ public class CandidateRequirementServiceTests
                 ("electrical-licence", (RequirementState?)null, RequirementState.OutOfReach),
                 ("trade-qualification", null, RequirementState.Have),
                 ("truck-mr", null, RequirementState.Have),
-                ("voc", null, RequirementState.Obtainable),
             ],
-            report.Changes.Select(c => (c.ItemId, c.From, c.To)));   // hrwl was already obtainable
+            report.Changes.Select(c => (c.ItemId, c.From, c.To)));   // hrwl already set, voc at its default: obtainable
         Assert.Equal(["ticket held: white card"], report.NotInCatalog);
-        Assert.Equal(5, _repository.States.Count);
+        Assert.Equal(4, _repository.States.Count);
     }
 
     [Fact]

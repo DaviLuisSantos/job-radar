@@ -141,7 +141,10 @@ no perfil, e vale para todo perfil que usa o item.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
 `label <id> good|bad|clear [nota]`, `calibrate [--rescore]`, `market`, `market-report [YYYY-MM] [arquivo]`,
-`import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
+`import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`), `requirements`,
+`requirement <item> have|obtainable|missing|out-of-reach|default`, `import-candidate <candidate.json> [--dry-run]`
+(estado do candidato em cada item do `RequirementCatalog`, em `candidate_requirements`; item sem estado fica com o
+padrão do tipo, que é o peso de antes). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
 1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` (os scores gravados: o antes) e
 `calibrate --rescore` (pontua de novo em memória com as regras do build, sem gravar: o depois). Para medir uma
 branch contra os rótulos reais, rode-a num worktree no trabalhopc com o `appsettings.Local.json` copiado.
