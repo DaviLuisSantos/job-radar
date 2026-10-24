@@ -43,6 +43,12 @@ public sealed class RequirementOptions
     /// <summary>Each phrase is searched together with each of these words ("FIFO").</summary>
     public List<string> Contexts { get; set; } = [];
 
+    /// <summary>
+    /// Ids from the requirement catalog (<c>ScoringPolicy.Requirements</c>): "hrwl", "truck-hr"… The phrase
+    /// lists below add to the items' phrases, for a phrase the catalog does not have yet.
+    /// </summary>
+    public List<string> Items { get; set; } = [];
+
     public List<string> Experience { get; set; } = [];
     public List<string> Qualification { get; set; } = [];
     public List<string> Licence { get; set; } = [];

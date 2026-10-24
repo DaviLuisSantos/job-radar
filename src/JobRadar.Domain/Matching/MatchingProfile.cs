@@ -130,6 +130,9 @@ public sealed record ScoringPolicy
     /// </summary>
     public IReadOnlyList<string> ContextGroups { get; init; } = [FullTextGroup.Citizen, FullTextGroup.Ambiguous];
 
+    /// <summary>Requirements profiles pick by id, so a phrase is written once, not in every profile.</summary>
+    public IReadOnlyList<RequirementItem> Requirements { get; init; } = RequirementCatalog.Defaults;
+
     public static ScoringPolicy Default { get; } = new();
 }
 

@@ -75,4 +75,51 @@ public class ProfileCatalogTests
         Assert.Empty(catalog.Profiles);
         Assert.Empty(catalog.Searches);
     }
+
+    [Fact]
+    public void Requirement_items_bring_their_phrases_and_own_phrases_add_to_them()
+    {
+        var options = Dotnet();
+        options.Requirements = new RequirementOptions
+        {
+            Contexts = ["FIFO"],
+            Items = ["truck-hr", " HRWL ", "degree"],
+            Licence = ["white card", "HR licence"],
+        };
+
+        var requirements = ProfileCatalog.Build("fifo", options, ScoringPolicy.Default).Profile.Requirements;
+
+        Assert.Equal(["FIFO"], requirements.Contexts);
+        Assert.Empty(requirements.Experience);
+        Assert.Equal(["degree in", "tertiary qualification", "relevant degree"], requirements.Qualification);
+        Assert.Equal(["HR licence", "HR license", "heavy rigid", "HRWL", "white card"], requirements.Licence);
+    }
+
+    [Fact]
+    public void An_unknown_requirement_stops_the_start()
+    {
+        var options = Dotnet();
+        options.Requirements = new RequirementOptions { Items = ["hrlw"] };
+
+        var error = Assert.Throws<InvalidOperationException>(() => ProfileCatalog.Build("fifo", options, ScoringPolicy.Default));
+
+        Assert.Contains("'hrlw'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("hrwl", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_catalog_is_part_of_the_rules_hash()
+    {
+        var options = Dotnet();
+        options.Requirements = new RequirementOptions { Items = ["hrwl"] };
+        var wider = ScoringPolicy.Default with
+        {
+            Requirements = [.. RequirementCatalog.Defaults.Where(i => i.Id != "hrwl"),
+                new RequirementItem("hrwl", RequirementKind.Licence, ["HRWL", "high risk work licence"])],
+        };
+
+        Assert.NotEqual(ProfileCatalog.Build("fifo", options, ScoringPolicy.Default).RulesHash,
+            ProfileCatalog.Build("fifo", options, wider).RulesHash);
+        Assert.Equal(["HRWL", "high risk work licence"], ProfileCatalog.Build("fifo", options, wider).Profile.Requirements.Licence);
+    }
 }
