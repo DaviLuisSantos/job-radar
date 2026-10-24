@@ -100,6 +100,41 @@ public static class Wording
         _ => state.ToString(),
     };
 
+    /// <summary>A catalog requirement in plain words: what it is and how one gets it. Unknown ids show as they are.</summary>
+    public static (string Title, string Hint) Requirement(string id) => id switch
+    {
+        "hrwl" => ("High Risk Work Licence (HRWL)", "Forklift, elevated work platform, dogging and the like: a course of a few days."),
+        "voc" => ("Verification of competency (VOC)", "Proof you can run a given machine, usually assessed on the job."),
+        "truck-mr" => ("Truck licence MR (medium rigid)", "Needs a year or more of a full car licence first."),
+        "truck-hr" => ("Truck licence HR (heavy rigid)", "Needs a year or more of a full car licence first; includes MR."),
+        "truck-hc" => ("Truck licence HC (heavy combination)", "Needs a year or more of HR first; includes HR and MR."),
+        "truck-mc" => ("Truck licence MC (multi combination)", "Road trains; needs HC first; includes every lower class."),
+        "trade-qualification" => ("Trade certificate (Cert III, trade qualified)", "An Australian trade qualification; an overseas course counts only once assessed."),
+        "degree" => ("University degree", "Asked as “degree in”, “tertiary qualification”."),
+        "refrigerant-licence" => ("Refrigerant handling licence (ARCtick)", "Needs a refrigeration trade plus supervised time."),
+        "electrical-licence" => ("Electrical licence", "Needs an electrical trade plus supervised time."),
+        "experience-years" => ("Years of experience, when the ad gives no number", "With a number, your years above decide."),
+        "experience-proven" => ("Proven experience in a similar role", "“Proven” or “demonstrated experience”."),
+        "experience-operating" => ("Experience operating machinery", "“Experience operating” excavators, rollers and the like."),
+        _ => (id, ""),
+    };
+
+    /// <summary>Short labels for the four states, as buttons.</summary>
+    public static string StateButton(RequirementState state) => state switch
+    {
+        RequirementState.Have => "I have it",
+        RequirementState.Obtainable => "I'd get it",
+        RequirementState.Missing => "I don't have it",
+        RequirementState.OutOfReach => "Out of reach",
+        _ => state.ToString(),
+    };
+
+    public static string Years(double years) =>
+        years == 1 ? "1 year" : $"{years.ToString("0.#", CultureInfo.InvariantCulture)} years";
+
+    /// <summary>A quick-pick button: the top option reads "10+".</summary>
+    public static string YearsShort(double years) => years >= 10 ? "10+" : years.ToString("0.#", CultureInfo.InvariantCulture);
+
     public static string Listings(int count) =>
         count == 1 ? "1 listing" : $"{count.ToString("N0", CultureInfo.InvariantCulture)} listings";
 

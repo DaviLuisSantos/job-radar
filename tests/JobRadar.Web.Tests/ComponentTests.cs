@@ -111,6 +111,28 @@ public class RequirementWordingTests
     public void Listing_counts_read_naturally(int count, string text) => Assert.Equal(text, Wording.Listings(count));
 
     [Fact]
+    public void Every_catalog_requirement_has_a_plain_title_and_hint()
+    {
+        Assert.All(RequirementCatalog.Defaults, item =>
+        {
+            var (title, hint) = Wording.Requirement(item.Id);
+            Assert.NotEqual(item.Id, title);
+            Assert.False(string.IsNullOrWhiteSpace(hint));
+        });
+        Assert.Equal(("forklift", ""), Wording.Requirement("forklift"));
+    }
+
+    [Theory]
+    [InlineData(1, "1 year", "1")]
+    [InlineData(0.5, "0.5 years", "0.5")]
+    [InlineData(10, "10 years", "10+")]
+    public void Years_read_naturally(double years, string text, string button)
+    {
+        Assert.Equal(text, Wording.Years(years));
+        Assert.Equal(button, Wording.YearsShort(years));
+    }
+
+    [Fact]
     public void Every_requirement_state_and_kind_has_words()
     {
         Assert.All(Enum.GetValues<RequirementState>(), s => Assert.NotEqual(s.ToString(), Wording.State(s)));

@@ -768,6 +768,24 @@ public class FitScorerTests
     }
 
     [Fact]
+    public void Years_in_the_ad_count_for_a_profile_that_searches_no_experience_phrase_once_its_years_are_known()
+    {
+        var job = Job("C# Developer", "5+ years of commercial experience with .NET");
+        static CandidateRequirements Years(double years) => new(new Dictionary<string, RequirementState>())
+        {
+            ExperienceYears = new Dictionary<string, double> { [Tech.Name] = years },
+        };
+
+        var senior = Score(job, Tech, null);
+        var held = Item(FitScorer.Score(job, Tech, ScoringPolicy.Default, Today, Years(8)), ScoreRule.RequirementHeld);
+        var missing = Item(FitScorer.Score(job, Tech, ScoringPolicy.Default, Today, Years(2)), ScoreRule.FullTextExperience);
+
+        Assert.DoesNotContain(senior.Items, i => i.Rule is ScoreRule.RequirementHeld or ScoreRule.FullTextExperience);
+        Assert.Equal(("experience (5 years asked)", ScoreWhere.Text, 10), (held.Detail, held.Where, held.Points));
+        Assert.Equal(-20, missing.Points);
+    }
+
+    [Fact]
     public void A_phrase_outside_the_catalog_keeps_the_default_of_its_kind()
     {
         var score = Score(Job("Offsider", fullText: ["white card"]), Candidate(("hrwl", RequirementState.Have)));

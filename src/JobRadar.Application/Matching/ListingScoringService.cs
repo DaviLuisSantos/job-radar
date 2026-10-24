@@ -149,6 +149,26 @@ public sealed class ListingScoringService(
     }
 
     /// <summary>
+    /// Scores again, with the candidate's current states and years, every listing of one profile: after the
+    /// candidate changed their years in it, which any ad stating years may weigh. Returns how many were saved.
+    /// </summary>
+    public async Task<int> RescoreProfileAsync(string profileName, TimeZoneInfo zone, CancellationToken ct)
+    {
+        var profile = catalog.Profiles.FirstOrDefault(p => string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new UnknownProfileException(profileName, catalog.Profiles.Select(p => p.Name));
+        var now = time.GetUtcNow();
+        var today = Today(now, zone);
+        var candidate = await requirements.GetAsync(ct);
+        var hash = ProfileCatalog.RulesHash(profile, candidate, catalog.Policy);
+        var scored = (await InputsAsync(profile, ct))
+            .AsParallel()
+            .Select(i => new ListingScore(i.Id, profile.Name, FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, candidate), hash, now))
+            .ToList();
+        await scores.SaveAsync(scored, ct);
+        return scored.Count;
+    }
+
+    /// <summary>
     /// Scores again, with the candidate's current states, the listings where <paramref name="itemId"/> may be
     /// asked: after the candidate changed their state on it, so triage shows it now instead of after the next
     /// daily pass. Returns how many scores were saved.

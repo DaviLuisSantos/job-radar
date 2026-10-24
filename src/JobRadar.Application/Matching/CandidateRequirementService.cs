@@ -95,14 +95,14 @@ public sealed class CandidateRequirementService(
     }
 
     /// <summary>
-    /// Sets the candidate's years of experience in a profile's line of work (null forgets them) and rescores the
-    /// listings that may ask for experience. Returns how many scores were saved.
+    /// Sets the candidate's years of experience in a profile's line of work (null forgets them) and rescores that
+    /// profile's listings: any ad stating the years it asks may move. Returns how many scores were saved.
     /// </summary>
     public async Task<int> SetExperienceAsync(string profile, double? years, CancellationToken ct = default)
     {
         var name = Profile(profile);
         await repository.SetExperienceAsync(name, years, time.GetUtcNow(), ct);
-        return await RescoreExperienceAsync(ct);
+        return await scoring.RescoreProfileAsync(name, Zone, ct);
     }
 
     /// <summary>
@@ -167,18 +167,10 @@ public sealed class CandidateRequirementService(
                 await repository.SetExperienceAsync(change.Profile, change.To, now, ct);
             foreach (var change in changes)
                 await scoring.RescoreRequirementAsync(change.ItemId, Zone, ct);
-            if (experience.Count > 0)
-                await RescoreExperienceAsync(ct);
+            foreach (var change in experience)
+                await scoring.RescoreProfileAsync(change.Profile, Zone, ct);
         }
         return new CandidateImportReport(changes, experience, notInCatalog);
-    }
-
-    private async Task<int> RescoreExperienceAsync(CancellationToken ct)
-    {
-        var rescored = 0;
-        foreach (var item in catalog.Policy.Requirements.Where(i => i.Kind == RequirementKind.Experience))
-            rescored += await scoring.RescoreRequirementAsync(item.Id, Zone, ct);
-        return rescored;
     }
 
     private string Profile(string name) =>
