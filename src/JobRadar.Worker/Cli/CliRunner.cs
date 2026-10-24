@@ -39,8 +39,11 @@ public static class CliRunner
                     await sp.GetRequiredService<TrackingService>().LabelAsync(c.Id, c.Verdict, c.Note, ct);
                     await output.WriteLineAsync($"{c.Id}: {(c.Verdict?.ToString() ?? "label cleared")}");
                     break;
-                case CliCommand.Calibrate:
-                    WriteCalibration(await sp.GetRequiredService<CalibrationService>().MeasureAsync(ct), output);
+                case CliCommand.Calibrate c:
+                    var calibration = sp.GetRequiredService<CalibrationService>();
+                    if (c.Rescore)
+                        await output.WriteLineAsync($"Scored again with this build's rules (version {FitScorer.RulesVersion}); nothing saved.");
+                    WriteCalibration(c.Rescore ? await calibration.MeasureRescoredAsync(LocalZone(sp), ct) : await calibration.MeasureAsync(ct), output);
                     break;
                 case CliCommand.TakeMarketSnapshot:
                     foreach (var s in await sp.GetRequiredService<MarketSnapshotService>().TakeAsync(LocalToday(sp), ct))
@@ -91,11 +94,11 @@ public static class CliRunner
         }
     }
 
-    private static DateOnly LocalToday(IServiceProvider sp)
-    {
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CollectionOptions>>().Value.TimeZone);
-        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(sp.GetRequiredService<TimeProvider>().GetUtcNow(), zone).DateTime);
-    }
+    private static TimeZoneInfo LocalZone(IServiceProvider sp) =>
+        TimeZoneInfo.FindSystemTimeZoneById(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CollectionOptions>>().Value.TimeZone);
+
+    private static DateOnly LocalToday(IServiceProvider sp) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(sp.GetRequiredService<TimeProvider>().GetUtcNow(), LocalZone(sp)).DateTime);
 
     internal static void WriteImport(ImportReport r, bool dryRun, TextWriter o)
     {

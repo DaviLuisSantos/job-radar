@@ -11,7 +11,7 @@ public abstract record CliCommand
           status    <id> reviewed|dismissed|applied|interview|offer|declined
           notes     <id> <text...>
           label     <id> good|bad|clear [note...]
-          calibrate
+          calibrate [--rescore]           how scores agree with your labels (--rescore: this build's rules, nothing saved)
           collect [--full]                run the daily pass now (--full: ignore the incremental windows)
           market                          take the market snapshot (Raio-X) now
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
@@ -22,7 +22,7 @@ public abstract record CliCommand
     public sealed record SetStatus(ListingId Id, ApplicationStatus Status) : CliCommand;
     public sealed record SetNotes(ListingId Id, string? Notes) : CliCommand;
     public sealed record SetLabel(ListingId Id, Verdict? Verdict, string? Note) : CliCommand;
-    public sealed record Calibrate : CliCommand;
+    public sealed record Calibrate(bool Rescore = false) : CliCommand;
     public sealed record TakeMarketSnapshot : CliCommand;
     public sealed record Collect(bool FullHistory) : CliCommand;
     public sealed record MarketReport(string? Month, string? OutputFile) : CliCommand;
@@ -47,6 +47,7 @@ public abstract record CliCommand
                 "notes" when args.Length >= 2 => new SetNotes(ParseId(args[1]), Rest(args, 2)),
                 "label" when args.Length >= 3 => new SetLabel(ParseId(args[1]), ParseLabel(args[2]), Rest(args, 3)),
                 "calibrate" when args.Length == 1 => new Calibrate(),
+                "calibrate" when args.Length == 2 && args[1] == "--rescore" => new Calibrate(Rescore: true),
                 "market" when args.Length == 1 => new TakeMarketSnapshot(),
                 "collect" when args.Length == 1 => new Collect(FullHistory: false),
                 "collect" when args.Length == 2 && args[1] == "--full" => new Collect(FullHistory: true),

@@ -3,6 +3,7 @@ using JobRadar.Application.Matching;
 using JobRadar.Application.Tests.Collection;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
+using JobRadar.Domain.Tracking;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 
@@ -64,6 +65,30 @@ public class ListingScoringServiceTests
         Assert.Contains(only.Score.Items, i => i.Where == ScoreWhere.Description);
         Assert.Equal(scored, _scores.Saved);
         Assert.Empty(await Service(catalog).ScoreOneAsync(new ListingId("seek", "404"), Perth, Ct));
+    }
+
+    [Fact]
+    public async Task Rescoring_judged_listings_uses_the_current_rules_and_saves_nothing()
+    {
+        var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()));
+        await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
+        var id = new ListingId("seek", "1");
+        _descriptions.Saved[id] = new ListingDescription(id, "You must hold Australian citizenship to be considered for this role.",
+            DescriptionOrigin.Pasted, _time.GetUtcNow());
+        var stale = new FitScore(90, []);
+        JudgedScore[] judged =
+        [
+            new(id, "C# Developer", "tech", stale, Verdict.Bad),
+            new(id, "C# Developer", "hospo", stale, Verdict.Bad),                        // profile no longer configured
+            new(new ListingId("seek", "404"), "Gone", "tech", stale, Verdict.Good),      // never collected
+        ];
+
+        var rescored = await Service(catalog).RescoreAsync(judged, Perth, Ct);
+
+        var only = Assert.Single(rescored);
+        Assert.Equal((id, "tech", Verdict.Bad), (only.Id, only.Profile, only.Verdict));
+        Assert.Contains(only.Score.Items, i => i.Where == ScoreWhere.Description);
+        Assert.Empty(_scores.Saved);
     }
 
     [Fact]

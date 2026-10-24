@@ -32,7 +32,9 @@ public class CliCommandTests
     [Fact]
     public void Calibrate()
     {
-        Assert.IsType<CliCommand.Calibrate>(Parse("calibrate"));
+        Assert.Equal(new CliCommand.Calibrate(), Parse("calibrate"));
+        Assert.Equal(new CliCommand.Calibrate(Rescore: true), Parse("calibrate", "--rescore"));
+        Assert.Null(Parse("calibrate", "--other"));
     }
 
     [Fact]

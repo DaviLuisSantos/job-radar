@@ -70,6 +70,31 @@ public sealed class ListingScoringService(
         return scored;
     }
 
+    /// <summary>
+    /// The judged listings scored again with the rules of this build, nothing saved: measures a rule
+    /// change against the labels before it ships (<c>calibrate --rescore</c>). A listing whose profile left
+    /// the configuration, or that was never collected, is left out.
+    /// </summary>
+    public async Task<IReadOnlyList<JudgedScore>> RescoreAsync(IReadOnlyList<JudgedScore> judged, TimeZoneInfo zone, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        var today = Today(now, zone);
+        var ids = judged.Select(j => j.Id).Distinct().ToList();
+        var termsById = await terms.GetTermsAsync(ids, ct);
+        var textsById = await descriptions.GetTextsAsync(ids, ct);
+        var profiles = catalog.Profiles.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+        var rescored = new List<JudgedScore>();
+        foreach (var j in judged)
+        {
+            if (!profiles.TryGetValue(j.Profile, out var profile) || await listings.FindAsync(j.Id, ct) is not { } record)
+                continue;
+            var input = ScoringInput.From(record.Listing, termsById.GetValueOrDefault(j.Id), textsById.GetValueOrDefault(j.Id));
+            rescored.Add(j with { Score = FitScorer.Score(input, profile.Profile, catalog.Policy, today) });
+        }
+        return rescored;
+    }
+
     private ListingScore Score(
         Listing listing, IReadOnlyCollection<string>? listingTerms, string? text, ProfileDefinition profile, DateOnly today, DateTimeOffset now) =>
         new(listing.Id, profile.Name,
