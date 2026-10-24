@@ -48,7 +48,12 @@ public class ListingFactsTests
     [InlineData("Must be able to start ASAP", FactKind.Start, "Immediate start")]
     [InlineData("Day and night shifts", FactKind.Shift, "Days and nights")]
     [InlineData("Night shift, 4 nights a week", FactKind.Shift, "Night shift")]
-    [InlineData("Monday to Friday, 7am-3pm", FactKind.Shift, "Day shift")]
+    [InlineData("Monday to Friday, 7am-3pm", FactKind.Shift, "Mon–Fri")]
+    [InlineData("Day shift only, 6am start", FactKind.Shift, "Day shift")]
+    [InlineData("Thursday FIFO flights from Perth", FactKind.Flights, "Flights paid")]
+    [InlineData("Flights and Accommodation Provided", FactKind.Flights, "Flights paid")]
+    [InlineData("Flights and Accommodation Provided", FactKind.Accommodation, "Accommodation")]
+    [InlineData("FIFO roster from Perth, with shared accommodation", FactKind.Accommodation, "Accommodation")]
     [InlineData("3 month contract with view to extend", FactKind.Duration, "3 months")]
     [InlineData("a 1-month shutdown", FactKind.Duration, "1 month")]
     public void Each_fact_is_read_as_a_short_label(string text, FactKind kind, string label) =>

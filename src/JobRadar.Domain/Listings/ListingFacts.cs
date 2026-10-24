@@ -51,21 +51,24 @@ public static class ListingFacts
     private static readonly Regex EvenTime = R(@"\beven[\s-]time\s+roster\b");
 
     private static readonly Regex Accommodation = R(
-        @"\b(?:accommodation|accom)\s+(?:is\s+|will\s+be\s+)?(?:provided|supplied|included|available|on[\s-]site|paid)\b"
-        + @"|\b(?:free|paid|subsidi[sz]ed|camp|onsite|on-site)\s+accommodation\b"
+        @"\b(?:accommodation|accom)\s+(?:is\s+|will\s+be\s+)?(?:provided|supplied|included|available|offered|on[\s-]site|paid)\b"
+        + @"|\b(?:free|paid|subsidi[sz]ed|camp|onsite|on-site|shared|including|includes|with)\s+accommodation\b"
+        + @"|\b(?:flights|travel)\s+(?:and|&)\s+accommodation\s+(?:are\s+)?(?:provided|paid|included|covered|supplied)\b"
         + @"|\baccommodation\s+(?:and|&)\s+meals\b|\bmeals\s+(?:and|&)\s+accommodation\b");
     private static readonly Regex Meals = R(
         @"\bmeals\s+(?:are\s+)?(?:provided|included|supplied)\b|\baccommodation\s+(?:and|&)\s+meals\b|\bmeals\s+(?:and|&)\s+accommodation\b"
         + @"|\b(?:free|all)\s+meals\b");
     private static readonly Regex Flights = R(
-        @"\bflights?\s+(?:are\s+|will\s+be\s+)?(?:provided|paid|included|covered)\b|\b(?:paid|free|return)\s+flights?\b");
+        @"\bflights?\s+(?:are\s+|will\s+be\s+)?(?:provided|paid|included|covered|supplied)\b|\b(?:paid|free|return|FIFO)\s+flights?\b"
+        + @"|\bflights\s+(?:and|&)\s+accommodation\s+(?:are\s+)?(?:provided|paid|included|covered|supplied)\b");
 
     private static readonly Regex Start = R(
         @"\b(?:immediate|asap)\s+starts?\b|\bstart(?:ing)?\s+(?:asap|immediately|straight\s+away|tomorrow|this\s+week|next\s+week)\b");
 
     private static readonly Regex Nights = R(@"\bnight\s?shifts?\b");
     private static readonly Regex DaysAndNights = R(@"\b(?:days?\s+(?:and|&|/)\s+nights?|rotating\s+shifts?|rotational\s+shifts?|day/night)\b");
-    private static readonly Regex DayShift = R(@"\bday\s?shifts?\s+only\b|\bmonday\s+to\s+friday\b|\bmon(?:day)?\s?[-–]\s?fri(?:day)?\b");
+    private static readonly Regex DayShift = R(@"\bday\s?shifts?\s+only\b");
+    private static readonly Regex Weekdays = R(@"\bmonday\s+to\s+friday\b|\bmon(?:day)?\s?[-–]\s?fri(?:day)?\b");
 
     private static readonly Regex Length = R(
         @"\b(\d{1,2})[\s-]+(weeks?|months?)\s+(?:contract|assignment|project|role|position|placement|engagement|shutdown)\b"
@@ -123,6 +126,8 @@ public static class ListingFacts
             facts.Add(new(FactKind.Shift, "Night shift"));
         else if (DayShift.IsMatch(text))
             facts.Add(new(FactKind.Shift, "Day shift"));
+        else if (Weekdays.IsMatch(text))
+            facts.Add(new(FactKind.Shift, "Mon–Fri"));
 
         if (Length.Match(text) is { Success: true } length)
         {
