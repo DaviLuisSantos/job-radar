@@ -447,6 +447,9 @@ public class FitScorerTests
     [InlineData("HC class licence essential", "HC class licence")]
     [InlineData("Must hold an MR/HR", "MR/HR")]
     [InlineData("Heavy combination experience", "Heavy combination")]
+    [InlineData("• HR-B Drivers License", "HR-B Drivers License")]
+    [InlineData("Current HC (B) licence", "HC (B) licence")]
+    [InlineData("MR B class licence required", "MR B class licence")]
     public void Truck_licences_are_told_however_the_ad_spells_them(string text, string found)
     {
         var item = Item(Score(Job("Offsider", text)), ScoreRule.TruckLicence);
@@ -457,6 +460,8 @@ public class FitScorerTests
     [Theory]
     [InlineData("Report to our HR team")]
     [InlineData("HR manager will contact you")]
+    [InlineData("Our HR team checks your car licence")]
+    [InlineData("HR a driver will call you")]
     [InlineData("No HR licence needed, we train")]
     public void A_truck_licence_is_not_read_into_other_hr_or_a_waived_one(string text) =>
         Assert.DoesNotContain(Score(Job("Labourer", text)).Items, i => i.Rule == ScoreRule.TruckLicence);

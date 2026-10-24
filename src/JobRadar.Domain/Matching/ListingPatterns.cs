@@ -81,10 +81,11 @@ internal static class ListingPatterns
 
     /// <summary>
     /// Truck licence classes (HR/HC/MR/MC): years of holding a car licence away for a newcomer, not a
-    /// course. Also "HR truck driver's licence", "HC class licence", "HC unrestricted licence", "heavy combination".
+    /// course. Also "HR truck driver's licence", "HC class licence", "HC unrestricted licence", "heavy combination", and a
+    /// class with its condition letter ("HR-B Drivers License", "HC (B) licence").
     /// </summary>
     public static readonly Regex TruckLicence = R(
-        @"\b(?:HR|HC|MR|MC)(?:[\s-]+(?:class|truck|rigid|combination|unrestricted|open|full))?[\s-]+(?:driver['’]?s?[\s-]+)?(?:licen[cs]e|driver)"
+        @"\b(?:HR|HC|MR|MC)(?:-[a-z](?=[\s-])|\s?\([a-z]\)|\s[a-z](?=\s+class\b))?(?:[\s-]+(?:class|truck|rigid|combination|unrestricted|open|full))?[\s-]+(?:driver['’]?s?[\s-]+)?(?:licen[cs]e|driver)"
         + @"|\b(?:HR|HC|MR|MC)\s*/\s*(?:HR|HC|MR|MC)\b"
         + @"|\bheavy\s+(?:rigid|combination)\b");
 

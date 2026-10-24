@@ -20,7 +20,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 12;
+    public const int RulesVersion = 13;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
