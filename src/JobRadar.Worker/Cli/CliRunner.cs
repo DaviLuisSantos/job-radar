@@ -51,9 +51,8 @@ public static class CliRunner
                     WriteRequirements(await sp.GetRequiredService<CandidateRequirementService>().ListAsync(ct), output);
                     break;
                 case CliCommand.SetRequirement c:
-                    var item = await sp.GetRequiredService<CandidateRequirementService>().SetAsync(c.Item, c.State, ct);
-                    await output.WriteLineAsync($"{item.Id}: {(c.State is { } state ? StateWord(state) : "back to default")}");
-                    await output.WriteLineAsync(RequirementsTakeEffect);
+                    var (item, rescored) = await sp.GetRequiredService<CandidateRequirementService>().SetAsync(c.Item, c.State, ct);
+                    await output.WriteLineAsync($"{item.Id}: {(c.State is { } state ? StateWord(state) : "back to default")}; {rescored:N0} scores updated");
                     break;
                 case CliCommand.ImportCandidate c:
                     var facts = CandidateFacts.Parse(await File.ReadAllTextAsync(c.Path, ct));
@@ -114,7 +113,7 @@ public static class CliRunner
     }
 
     private const string RequirementsTakeEffect =
-        "Scores change in the next daily pass; measure the change now with: calibrate --rescore";
+        "Scores where these items may be asked are updated; the rest of each profile follows in the next daily pass.";
 
     private static string StateWord(RequirementState state) => state switch
     {

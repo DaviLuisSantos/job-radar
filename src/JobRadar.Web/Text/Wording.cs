@@ -91,6 +91,23 @@ public static class Wording
         _ => origin.ToString(),
     };
 
+    public static string State(RequirementState state) => state switch
+    {
+        RequirementState.Have => "I have it",
+        RequirementState.Obtainable => "I would get it",
+        RequirementState.Missing => "I don't have it",
+        RequirementState.OutOfReach => "Out of reach",
+        _ => state.ToString(),
+    };
+
+    public static string Kind(RequirementKind kind) => kind switch
+    {
+        RequirementKind.Experience => "Experience",
+        RequirementKind.Qualification => "Qualification",
+        RequirementKind.Licence => "Licence or ticket",
+        _ => kind.ToString(),
+    };
+
     public static string Verdict(Verdict verdict) => verdict == Domain.Tracking.Verdict.Good ? "Good match" : "Bad match";
 
     public static string WorkType(WorkType workType) => ScoringInput.FormatWorkType(workType) ?? "";

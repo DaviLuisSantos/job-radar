@@ -9,7 +9,26 @@ namespace JobRadar.Domain.Matching;
 /// Searched in the full ad like any requirement phrase. A truck licence class is told apart from a ticket
 /// by <see cref="ListingPatterns.TruckLicence"/>, not by the item.
 /// </param>
-public sealed record RequirementItem(string Id, RequirementKind Kind, IReadOnlyList<string> Phrases);
+public sealed record RequirementItem(string Id, RequirementKind Kind, IReadOnlyList<string> Phrases)
+{
+    /// <summary>
+    /// A truck licence class: read in the ad's own text for every profile, not only the ones that search it.
+    /// </summary>
+    public bool IsTruckLicence => Kind == RequirementKind.Licence && Phrases.Any(ListingPatterns.TruckLicence.IsMatch);
+
+    /// <summary>
+    /// Cheap and generous: the item's phrases (for a truck class, any class name) anywhere in the listing's text
+    /// or searched terms. The scorer decides; this only spares it the listings that cannot ask for the item.
+    /// </summary>
+    public bool MayBeAskedIn(ScoringInput input)
+    {
+        var text = $"{input.Title} {input.Summary} {input.Description}";
+        return IsTruckLicence
+            ? ListingPatterns.TruckClass.IsMatch(text) || input.FullTextTerms.Any(ListingPatterns.TruckClass.IsMatch)
+            : Phrases.Any(p => text.Contains(p, StringComparison.OrdinalIgnoreCase)
+                || input.FullTextTerms.Any(t => t.StartsWith(p, StringComparison.OrdinalIgnoreCase)));
+    }
+}
 
 /// <summary>
 /// The requirements known so far. Phrases are the ones calibrated against the candidate's labels (see the

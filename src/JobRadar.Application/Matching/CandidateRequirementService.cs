@@ -1,5 +1,7 @@
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Collection;
 using JobRadar.Domain.Matching;
+using Microsoft.Extensions.Options;
 
 namespace JobRadar.Application.Matching;
 
@@ -14,15 +16,34 @@ public sealed record RequirementChange(string ItemId, RequirementState? From, Re
 /// <summary>What an import of the candidate facts set (or would set), and the facts no catalog item matches.</summary>
 public sealed record CandidateImportReport(IReadOnlyList<RequirementChange> Changes, IReadOnlyList<string> NotInCatalog);
 
+/// <summary>What holding one catalog item would change in one profile's listings (see <c>ListingScoringService.ImpactAsync</c>).</summary>
+/// <param name="Affected">Listings whose score moves.</param>
+/// <param name="VisibleWithout">Of those, at or above the visible threshold without the item; <paramref name="VisibleWith"/>, with it.</param>
+/// <param name="AlertWithout">Of those, at or above the alert threshold without the item; <paramref name="AlertWith"/>, with it.</param>
+/// <param name="Good">Of those, the ones the candidate judged good; <paramref name="Bad"/>, bad.</param>
+public sealed record RequirementImpact(
+    string ItemId, string Profile, int Affected, int VisibleWithout, int VisibleWith, int AlertWithout, int AlertWith, int Good, int Bad);
+
 public sealed class UnknownRequirementException(string id, IEnumerable<string> known)
     : Exception($"'{id}' is not in the requirement catalog. Known: {string.Join(", ", known)}.");
 
 /// <summary>
-/// The candidate's state on each catalog requirement: listed, set one by one or imported from the candidate facts.
-/// A change shows in the scores of the next daily pass; <c>calibrate --rescore</c> measures it at once.
+/// The candidate's state on each catalog requirement: listed, set one by one or imported from the candidate facts,
+/// with what holding each would change. A change rescores at once the listings where the item may be asked; the
+/// rest of each profile follows in the next daily pass, which changes nothing else in them.
 /// </summary>
-public sealed class CandidateRequirementService(ProfileCatalog catalog, ICandidateRequirementRepository repository, TimeProvider time)
+public sealed class CandidateRequirementService(
+    ProfileCatalog catalog,
+    ICandidateRequirementRepository repository,
+    ListingScoringService scoring,
+    IOptions<CollectionOptions> collection,
+    TimeProvider time)
 {
+    private TimeZoneInfo Zone => TimeZoneInfo.FindSystemTimeZoneById(collection.Value.TimeZone);
+
+    /// <summary>What holding each item would change, per profile (<see cref="ListingScoringService.ImpactAsync"/>).</summary>
+    public Task<IReadOnlyList<RequirementImpact>> ImpactAsync(CancellationToken ct = default) => scoring.ImpactAsync(Zone, ct);
+
     public async Task<IReadOnlyList<RequirementStatus>> ListAsync(CancellationToken ct = default)
     {
         var candidate = await repository.GetAsync(ct);
@@ -38,12 +59,15 @@ public sealed class CandidateRequirementService(ProfileCatalog catalog, ICandida
             .ToList();
     }
 
-    /// <summary>Sets the state of an item; null clears it back to the default of its kind.</summary>
-    public async Task<RequirementItem> SetAsync(string id, RequirementState? state, CancellationToken ct = default)
+    /// <summary>
+    /// Sets the state of an item (null clears it back to the default of its kind) and rescores the listings where it
+    /// may be asked. Returns the item and how many scores were saved.
+    /// </summary>
+    public async Task<(RequirementItem Item, int Rescored)> SetAsync(string id, RequirementState? state, CancellationToken ct = default)
     {
         var item = Find(id) ?? throw new UnknownRequirementException(id, catalog.Policy.Requirements.Select(i => i.Id));
         await repository.SetAsync(item.Id, state, time.GetUtcNow(), ct);
-        return item;
+        return (item, await scoring.RescoreRequirementAsync(item.Id, Zone, ct));
     }
 
     /// <summary>
@@ -89,6 +113,8 @@ public sealed class CandidateRequirementService(ProfileCatalog catalog, ICandida
             var now = time.GetUtcNow();
             foreach (var change in changes)
                 await repository.SetAsync(change.ItemId, change.To, now, ct);
+            foreach (var change in changes)
+                await scoring.RescoreRequirementAsync(change.ItemId, Zone, ct);
         }
         return new CandidateImportReport(changes, notInCatalog);
     }

@@ -102,6 +102,101 @@ public sealed class ListingScoringService(
         return rescored;
     }
 
+    /// <summary>
+    /// What holding each catalog item would change, per profile, scored in memory and saved nowhere: the listings
+    /// whose score moves, and how many of them reach the visible and alert thresholds without and with it. Without
+    /// is the item at the candidate's state, or at its default when they already hold it, so a held item shows
+    /// what it gives. An item counts for the profiles that search it; a truck class, for every profile, since the
+    /// ad's own text is read for truck licences whatever the profile searches.
+    /// </summary>
+    public async Task<IReadOnlyList<RequirementImpact>> ImpactAsync(TimeZoneInfo zone, CancellationToken ct)
+    {
+        var today = Today(time.GetUtcNow(), zone);
+        var candidate = await requirements.GetAsync(ct);
+        var verdicts = (await scores.ListJudgedAsync(ct))
+            .GroupBy(j => (j.Id, j.Profile))
+            .ToDictionary(g => g.Key, g => g.First().Verdict);
+
+        var impacts = new List<RequirementImpact>();
+        foreach (var profile in catalog.Profiles)
+        {
+            var items = catalog.Policy.Requirements.Where(i => Concerns(i, profile)).ToList();
+            if (items.Count == 0)
+                continue;
+            var inputs = await InputsAsync(profile, ct);
+            foreach (var item in items)
+            {
+                var stored = candidate.States.TryGetValue(item.Id, out var s) ? s : (RequirementState?)null;
+                var without = With(candidate, item.Id, stored is RequirementState.Have ? null : stored);
+                var with = With(candidate, item.Id, RequirementState.Have);
+                var moved = inputs
+                    .Where(i => item.MayBeAskedIn(i.Input))
+                    .AsParallel()
+                    .Select(i => (i.Id,
+                        Without: FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, without).Final,
+                        With: FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, with).Final))
+                    .Where(r => r.Without != r.With)
+                    .ToList();
+                var judged = moved.Select(m => verdicts.TryGetValue((m.Id, profile.Name), out var v) ? v : (Domain.Tracking.Verdict?)null).ToList();
+                impacts.Add(new RequirementImpact(
+                    item.Id, profile.Name, moved.Count,
+                    moved.Count(m => m.Without >= Calibration.VisibleThreshold), moved.Count(m => m.With >= Calibration.VisibleThreshold),
+                    moved.Count(m => m.Without >= Calibration.AlertThreshold), moved.Count(m => m.With >= Calibration.AlertThreshold),
+                    judged.Count(v => v == Domain.Tracking.Verdict.Good), judged.Count(v => v == Domain.Tracking.Verdict.Bad)));
+            }
+        }
+        return impacts;
+    }
+
+    /// <summary>
+    /// Scores again, with the candidate's current states, the listings where <paramref name="itemId"/> may be
+    /// asked: after the candidate changed their state on it, so triage shows it now instead of after the next
+    /// daily pass. Returns how many scores were saved.
+    /// </summary>
+    public async Task<int> RescoreRequirementAsync(string itemId, TimeZoneInfo zone, CancellationToken ct)
+    {
+        var item = catalog.Policy.Requirements.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new UnknownRequirementException(itemId, catalog.Policy.Requirements.Select(i => i.Id));
+        var now = time.GetUtcNow();
+        var today = Today(now, zone);
+        var candidate = await requirements.GetAsync(ct);
+        var saved = 0;
+        foreach (var profile in catalog.Profiles.Where(p => Concerns(item, p)))
+        {
+            var hash = ProfileCatalog.RulesHash(profile, candidate, catalog.Policy);
+            var scored = (await InputsAsync(profile, ct))
+                .Where(i => item.MayBeAskedIn(i.Input))
+                .Select(i => new ListingScore(i.Id, profile.Name, FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, candidate), hash, now))
+                .ToList();
+            await scores.SaveAsync(scored, ct);
+            saved += scored.Count;
+        }
+        return saved;
+    }
+
+    private static bool Concerns(RequirementItem item, ProfileDefinition profile) =>
+        item.IsTruckLicence
+        || profile.Profile.Requirements.Terms().Any(t => item.Phrases.Contains(t.Phrase, StringComparer.OrdinalIgnoreCase));
+
+    private static CandidateRequirements With(CandidateRequirements candidate, string itemId, RequirementState? state)
+    {
+        var states = new Dictionary<string, RequirementState>(candidate.States, StringComparer.OrdinalIgnoreCase);
+        if (state is { } s)
+            states[itemId] = s;
+        else
+            states.Remove(itemId);
+        return new CandidateRequirements(states);
+    }
+
+    private async Task<IReadOnlyList<(ListingId Id, ScoringInput Input)>> InputsAsync(ProfileDefinition profile, CancellationToken ct)
+    {
+        var found = await listings.ListFoundByAsync(profile.SearchKeys, ct);
+        var ids = found.Select(l => l.Id).ToList();
+        var termsById = await terms.GetTermsAsync(ids, ct);
+        var textsById = await descriptions.GetTextsAsync(ids, ct);
+        return found.Select(l => (l.Id, ScoringInput.From(l, termsById.GetValueOrDefault(l.Id), textsById.GetValueOrDefault(l.Id)))).ToList();
+    }
+
     private CandidateRequirements Assume(CandidateRequirements stored, IReadOnlyDictionary<string, RequirementState?> assume)
     {
         if (assume.Count == 0)

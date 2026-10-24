@@ -151,6 +151,27 @@ internal sealed class InMemoryTerms : IListingTermRepository
             .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(m => m.Term).ToList()));
 }
 
+/// <summary>Keeps every score saved; the judged listings are whatever a test puts in <see cref="Judged"/>.</summary>
+internal sealed class InMemoryScores : IListingScoreRepository
+{
+    public List<ListingScore> Saved { get; } = [];
+    public List<JudgedScore> Judged { get; } = [];
+
+    public Task SaveAsync(IReadOnlyCollection<ListingScore> scores, CancellationToken ct = default)
+    {
+        Saved.AddRange(scores);
+        return Task.CompletedTask;
+    }
+
+    public Task<int> DeleteScoredBeforeAsync(DateTimeOffset before, CancellationToken ct = default) =>
+        Task.FromResult(Saved.RemoveAll(s => s.ScoredAt < before));
+
+    public Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<JudgedScore>>(Judged);
+    public Task<IReadOnlyList<string>> ListProfilesAsync(CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<IReadOnlyList<JobRadar.Domain.Triage.TriageRow>> ListForTriageAsync(JobRadar.Domain.Triage.TriageFilter filter, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<IReadOnlyList<JobRadar.Domain.Triage.ProfileScore>> GetScoresAsync(ListingId id, CancellationToken ct = default) => throw new NotSupportedException();
+}
+
 /// <summary>The candidate's states, kept as set; ids compare without case, as in Postgres.</summary>
 internal sealed class InMemoryCandidateRequirements : ICandidateRequirementRepository
 {

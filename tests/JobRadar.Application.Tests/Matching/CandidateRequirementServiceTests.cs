@@ -1,6 +1,11 @@
+using JobRadar.Application.Collection;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tests.Collection;
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
+using JobRadar.Domain.Tracking;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace JobRadar.Application.Tests.Matching;
@@ -10,13 +15,30 @@ public class CandidateRequirementServiceTests
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private readonly InMemoryCandidateRequirements _repository = new();
+    private readonly InMemoryListings _listings = new();
+    private readonly InMemoryTerms _terms = new();
+    private readonly InMemoryScores _scores = new();
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 24, 0, 0, 0, TimeSpan.Zero));
 
     private CandidateRequirementService Service()
     {
         var fifo = ProfileCatalogTests.Dotnet();
+        fifo.Keywords = ["Offsider"];
         fifo.Requirements = new RequirementOptions { Items = ["hrwl", "truck-hr", "trade-qualification"] };
-        return new(ProfileCatalogTests.Catalog(("fifo", fifo), ("tech", ProfileCatalogTests.Dotnet())), _repository,
-            new FakeTimeProvider(new DateTimeOffset(2026, 10, 24, 0, 0, 0, TimeSpan.Zero)));
+        var catalog = ProfileCatalogTests.Catalog(("fifo", fifo), ("tech", ProfileCatalogTests.Dotnet()));
+        var scoring = new ListingScoringService(catalog, _listings, _terms, new InMemoryDescriptions(), _scores, _repository, _time,
+            NullLogger<ListingScoringService>.Instance);
+        return new(catalog, _repository, scoring, Options.Create(new CollectionOptions()), _time);
+    }
+
+    /// <summary>An offsider ad found by the fifo search, whose full text asks for the HRWL.</summary>
+    private async Task<ListingId> HrwlAdAsync(string id = "1", string title = "Offsider")
+    {
+        await _listings.RecordObservationsAsync([Listings.Of("seek", id, title, _time.GetUtcNow().AddDays(-1))],
+            "offsider @ perth wa", _time.GetUtcNow(), Ct);
+        var listing = new ListingId("seek", id);
+        _terms.Marks.Add((listing, "HRWL"));
+        return listing;
     }
 
     private static CandidateFacts Facts(
@@ -42,11 +64,42 @@ public class CandidateRequirementServiceTests
     [Fact]
     public async Task An_item_is_set_by_id_or_phrase_and_cleared_back_to_its_default()
     {
-        Assert.Equal("refrigerant-licence", (await Service().SetAsync("arctick", RequirementState.OutOfReach, Ct)).Id);
+        Assert.Equal("refrigerant-licence", (await Service().SetAsync("arctick", RequirementState.OutOfReach, Ct)).Item.Id);
         await Service().SetAsync("refrigerant-licence", null, Ct);
 
         Assert.Empty(_repository.States);
         await Assert.ThrowsAsync<UnknownRequirementException>(() => Service().SetAsync("forklift", RequirementState.Have, Ct));
+    }
+
+    [Fact]
+    public async Task Setting_a_state_rescores_at_once_the_listings_that_may_ask_for_the_item()
+    {
+        var asks = await HrwlAdAsync("1");
+        await _listings.RecordObservationsAsync([Listings.Of("seek", "2", "Offsider")], "offsider @ perth wa", _time.GetUtcNow(), Ct);
+
+        var (_, rescored) = await Service().SetAsync("hrwl", RequirementState.Have, Ct);
+
+        var score = Assert.Single(_scores.Saved);
+        Assert.Equal(1, rescored);
+        Assert.Equal((asks, "fifo"), (score.Id, score.Profile));
+        Assert.Contains(score.Score.Items, i => i.Rule == ScoreRule.RequirementHeld);
+    }
+
+    [Fact]
+    public async Task Impact_counts_the_listings_holding_an_item_would_move_and_how_far()
+    {
+        var asks = await HrwlAdAsync("1");
+        await HrwlAdAsync("2", "Offsider citizens only");   // excluded either way: does not move
+        _scores.Judged.Add(new JudgedScore(asks, "Offsider", "fifo", new FitScore(0, []), Verdict.Good));
+
+        var impact = Assert.Single(await Service().ImpactAsync(Ct), i => i.ItemId == "hrwl");
+
+        Assert.Equal(("fifo", 1, 1, 0), (impact.Profile, impact.Affected, impact.Good, impact.Bad));
+        Assert.Equal(1, impact.VisibleWith);
+        Assert.True(impact.VisibleWith >= impact.VisibleWithout);
+        Assert.DoesNotContain(await Service().ImpactAsync(Ct), i => i.ItemId == "hrwl" && i.Profile == "tech");
+        Assert.Empty(_repository.States);
+        Assert.Empty(_scores.Saved);
     }
 
     [Fact]

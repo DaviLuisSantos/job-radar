@@ -1,0 +1,146 @@
+@page "/requirements"
+@rendermode InteractiveServer
+@inject Backend Backend
+
+<PageTitle>Requirements · JobRadar AU</PageTitle>
+
+<div class="page-head">
+    <h1>Requirements</h1>
+    <p class="muted">What ads ask for and where you stand on each. An ad asking for something you have scores higher; one asking for what you lack, lower, more the harder it is to get.</p>
+</div>
+
+@if (_message is not null)
+{
+    <p class="notice" role="status">@_message</p>
+}
+
+@if (_requirements is null)
+{
+    <p class="muted">Loading…</p>
+}
+else
+{
+    <table class="grid requirements">
+        <thead>
+            <tr>
+                <th>Requirement</th>
+                <th>Kind</th>
+                <th>You</th>
+                <th title="Listings whose score holding it would move, and how many of them reach @Calibration.VisibleThreshold and @Calibration.AlertThreshold without → with it">If you had it</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _requirements)
+            {
+                <tr>
+                    <td>
+                        <b>@r.Item.Id</b>
+                        <div class="muted small">@string.Join(" · ", r.Item.Phrases)</div>
+                    </td>
+                    <td>@Wording.Kind(r.Item.Kind)</td>
+                    <td>
+                        <select aria-label="@($"Your state on {r.Item.Id}")" disabled="@(_saving is not null)"
+                                value="@(r.IsDefault ? Default : Value(r.State))" @onchange="e => SetAsync(r, e.Value as string)">
+                            <option value="@Default">@($"Default: {Wording.State(r.State)}")</option>
+                            @foreach (var state in Enum.GetValues<RequirementState>())
+                            {
+                                <option value="@Value(state)">@Wording.State(state)</option>
+                            }
+                        </select>
+                        @if (_saving == r.Item.Id)
+                        {
+                            <span class="muted small">Saving and rescoring…</span>
+                        }
+                    </td>
+                    <td>
+                        @if (_impact is null)
+                        {
+                            <span class="muted small">Measuring…</span>
+                        }
+                        else if (_impact.Where(i => i.ItemId == r.Item.Id && i.Affected > 0).ToList() is { Count: > 0 } moves)
+                        {
+                            <ul class="impact">
+                                @foreach (var i in moves)
+                                {
+                                    <li>
+                                        <b>@i.Profile</b>: @i.Affected listings move ·
+                                        ≥ @Calibration.VisibleThreshold <span class="num">@i.VisibleWithout → @i.VisibleWith</span> ·
+                                        ≥ @Calibration.AlertThreshold <span class="num">@i.AlertWithout → @i.AlertWith</span>
+                                        @if (i.Good + i.Bad > 0)
+                                        {
+                                            <span class="muted"> · judged @i.Good good, @i.Bad bad</span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <span class="muted small">No listing would move</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <p class="muted small">
+        Judged listings that would move were judged for the state you were in then: if you get a licence, listings you
+        marked bad for asking it may be good now.
+    </p>
+}
+
+@code {
+    private const string Default = "default";
+
+    private IReadOnlyList<RequirementStatus>? _requirements;
+    private IReadOnlyList<RequirementImpact>? _impact;
+    private string? _saving;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        _ = MeasureAsync();
+    }
+
+    private async Task LoadAsync() =>
+        _requirements = await Backend.RunAsync<CandidateRequirementService, IReadOnlyList<RequirementStatus>>(s => s.ListAsync());
+
+    // Scores every listing of every profile twice per item: seconds, so it fills in after the page shows.
+    private async Task MeasureAsync()
+    {
+        _impact = null;
+        try
+        {
+            var impact = await Backend.RunAsync<CandidateRequirementService, IReadOnlyList<RequirementImpact>>(s => s.ImpactAsync());
+            await InvokeAsync(() =>
+            {
+                _impact = impact;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                _impact = [];
+                _message = $"Could not measure the impact: {ex.Message}";
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task SetAsync(RequirementStatus requirement, string? value)
+    {
+        RequirementState? state = value == Default ? null : Enum.GetValues<RequirementState>().First(s => Value(s) == value);
+        _saving = requirement.Item.Id;
+        _message = null;
+        var (item, rescored) = await Backend.RunAsync<CandidateRequirementService, (RequirementItem, int)>(s => s.SetAsync(requirement.Item.Id, state));
+        await LoadAsync();
+        _saving = null;
+        _message = $"{item.Id}: {(state is { } s ? Wording.State(s) : "back to default")}. {rescored:N0} scores updated now; the rest follow in the next daily pass.";
+        _ = MeasureAsync();
+    }
+
+    private static string Value(RequirementState state) => state.ToString().ToLowerInvariant();
+}

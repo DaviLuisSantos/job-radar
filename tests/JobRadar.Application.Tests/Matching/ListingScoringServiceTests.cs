@@ -14,25 +14,6 @@ public class ListingScoringServiceTests
     private static readonly TimeZoneInfo Perth = TimeZoneInfo.FindSystemTimeZoneById("Australia/Perth");
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private sealed class InMemoryScores : IListingScoreRepository
-    {
-        public List<ListingScore> Saved { get; } = [];
-
-        public Task SaveAsync(IReadOnlyCollection<ListingScore> scores, CancellationToken ct = default)
-        {
-            Saved.AddRange(scores);
-            return Task.CompletedTask;
-        }
-
-        public Task<int> DeleteScoredBeforeAsync(DateTimeOffset before, CancellationToken ct = default) =>
-            Task.FromResult(Saved.RemoveAll(s => s.ScoredAt < before));
-
-        public Task<IReadOnlyList<JudgedScore>> ListJudgedAsync(CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<IReadOnlyList<string>> ListProfilesAsync(CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<IReadOnlyList<JobRadar.Domain.Triage.TriageRow>> ListForTriageAsync(JobRadar.Domain.Triage.TriageFilter filter, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<IReadOnlyList<JobRadar.Domain.Triage.ProfileScore>> GetScoresAsync(ListingId id, CancellationToken ct = default) => throw new NotSupportedException();
-    }
-
     // 23:00 UTC on the 20th is 07:00 on the 21st in Perth.
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 20, 23, 0, 0, TimeSpan.Zero));
     private readonly InMemoryListings _listings = new();
