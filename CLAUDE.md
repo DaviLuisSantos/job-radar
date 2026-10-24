@@ -140,9 +140,10 @@ mercado e ficam no perfil. Requisitos de anúncio (anos de experiência, trade, 
 no perfil, e vale para todo perfil que usa o item.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
-`label <id> good|bad|clear [nota]`, `calibrate [--rescore [--assume item=estado,...]]`, `market`, `market-report [YYYY-MM] [arquivo]`,
+`label <id> good|bad|clear [nota]`, `calibrate [--rescore [--assume item=estado,years:perfil=n,...]]`, `market`, `market-report [YYYY-MM] [arquivo]`,
 `import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`), `requirements`,
-`requirement <item> have|obtainable|missing|out-of-reach|default`, `import-candidate <candidate.json> [--dry-run]`
+`requirement <item> have|obtainable|missing|out-of-reach|default`, `experience <perfil> <anos>|default`,
+`import-candidate <candidate.json> [--dry-run]`
 (estado do candidato em cada item do `RequirementCatalog`, em `candidate_requirements`; item sem estado fica com o
 padrão do tipo, que é o peso de antes; mudar um estado repontua na hora as vagas que podem pedir o item, e a página
 `/requirements` do site faz o mesmo e mostra o impacto de ter cada item). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,

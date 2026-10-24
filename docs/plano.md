@@ -131,7 +131,7 @@ Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `
 | 2 | Estado no banco + `import-candidate`; estado inicial reproduz o tratamento de hoje | não | ✅ 2026-10-24 |
 | 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | ✅ 2026-10-24 |
 | 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | ✅ 2026-10-24 |
-| 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | 🔨 |
+| 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | ✅ 2026-10-24 (faltam os anos reais do autor) |
 | 6 | Se valer: palavras-chave e sinais no banco, com o `profile preview` na mesma página | — | |
 
 A métrica de lacuna do passo 4 responde "qual ticket tirar primeiro"; agregada por categoria ("x% das vagas de
@@ -167,6 +167,32 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-24 — Anos de experiência pedidos x os do candidato (`RulesVersion` 11, passo 5)
+O requisito de experiência custava 20 pedisse o anúncio 1 ano ou 10. Agora, quando o texto do anúncio diz quantos anos
+("minimum 3 years experience", "3+ years of civil experience", "2-3 yrs": `ListingPatterns.YearsAsked`, o menor
+número entre 1 e 20) **e** os anos do candidato naquela linha são conhecidos, o número decide: alcança, "tenho"
+(bônus); um ano a menos, "tiraria" (−10); mais, "não tenho" (−20). Sem um dos dois, nada muda. Anos por perfil em
+`candidate_experience`: comando `experience <perfil> <anos>|default`, bloco na página `/requirements` ou
+`import-candidate` (soma os anos das áreas de `experienceAreas` de cada alvo). `--assume years:<perfil>=<n>` mede
+antes de gravar. De quebra: estado de carteira de caminhão entra no `rules_hash` de todo perfil (a regra lê o texto
+do anúncio em qualquer perfil).
+Medido no trabalhopc numa cópia do banco (apagada depois): paridade 190/190; sem anos gravados o v11 sai idêntico
+ao instalado. Simulando os mesmos anos em construction, fifo e trades:
+
+| anos | construction | fifo | trades |
+|---|---|---|---|
+| nenhum (hoje) | 100%, 3 ruins ≥ 50 | 95%, 4; boas ≥ 75: 13/16 | 91%, 1; 6/8 |
+| 0 | igual | igual | igual |
+| 1 | igual | 95%, 5 | igual |
+| 2 | igual | 95%, 5; boas ≥ 75: 14/16 | 91%, 1; 7/8 |
+| 5 | igual | igual a 2 | 90%, 1; 7/8 |
+
+Efeito pequeno porque **o número quase nunca está no que se lê**: das vagas com requisito de experiência, só 13%
+no construction (103 de 803), 6% no fifo (48 de 782) e 10% no trades (41 de 394) trazem os anos no resumo ou na
+descrição; o resto só tem a marca da busca por frase, sem número. Cresce com as descrições baixadas. O perfil tech
+não busca nenhum item de experiência hoje: para a regra valer lá, `experience-years` entra no `Requirements:Items`
+dele (configuração do autor) e os anos de software em `experience tech <n>`.
 
 ### 2026-10-24 — Página "Requirements" (passo 4)
 `/requirements` lista cada item do catálogo com o estado do candidato (editável ali) e o que ter o item mudaria em
