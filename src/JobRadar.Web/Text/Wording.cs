@@ -100,6 +100,9 @@ public static class Wording
         _ => state.ToString(),
     };
 
+    public static string Listings(int count) =>
+        count == 1 ? "1 listing" : $"{count.ToString("N0", CultureInfo.InvariantCulture)} listings";
+
     public static string Kind(RequirementKind kind) => kind switch
     {
         RequirementKind.Experience => "Experience",

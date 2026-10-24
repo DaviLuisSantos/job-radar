@@ -130,8 +130,8 @@ Os perfis ficam com a hipótese de mercado (palavras-chave, contextos, sinais, `
 | 1b | Frases de requisito dos perfis viram itens do catálogo | não | ✅ 2026-10-23 (perfis reais migrados à parte, aguardando o autor) |
 | 2 | Estado no banco + `import-candidate`; estado inicial reproduz o tratamento de hoje | não | ✅ 2026-10-24 |
 | 3 | Bônus do "tenho" (`RulesVersion` 10, medido com `calibrate --rescore`) | sim | ✅ 2026-10-24 |
-| 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | 🔨 |
-| 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | |
+| 4 | Página "Requisitos": estado editável, repontuação na hora, impacto por item (vagas que pedem; quantas passariam de 50/75 se o candidato tivesse, simulado em memória) | não | ✅ 2026-10-24 |
+| 5 | Anos de experiência: ler "minimum 3 years" e comparar com os anos do candidato na área da linha | sim | 🔨 |
 | 6 | Se valer: palavras-chave e sinais no banco, com o `profile preview` na mesma página | — | |
 
 A métrica de lacuna do passo 4 responde "qual ticket tirar primeiro"; agregada por categoria ("x% das vagas de
@@ -167,6 +167,20 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-24 — Página "Requirements" (passo 4)
+`/requirements` lista cada item do catálogo com o estado do candidato (editável ali) e o que ter o item mudaria em
+cada perfil: quantas vagas mexem e quantas delas passam de 50 e de 75 sem e com ele, e quantas foram rotuladas boas
+ou ruins. Pontuado em memória (`ListingScoringService.ImpactAsync`): um filtro barato por frase poupa o scorer das
+vagas que não podem pedir o item, e a página toda mede em ~10 s com os dados de produção. Mudar um estado, ali ou
+com `requirement`, repontua na hora as vagas que podem pedir o item (`RescoreRequirementAsync`); o resto do perfil
+fica para a passada, onde nada mais muda. Provado no trabalhopc com o site novo apontado para uma cópia do banco de
+produção (túnel ssh para o navegador): HRWL marcado "tenho" repontuou 1.406 scores, 1.002 com o bônus, e a vaga
+mostra "Asks for something you have". Cópia apagada; a produção não foi tocada.
+O que a página mostrou (vagas que passam de 50, sem → com o item): **HRWL**, o único ao alcance com curso curto,
+leva construction de 17 a 269, trades de 4 a 115 e fifo de 33 a 83 — é o ticket que mais abre vaga. Carteira HR
+moveria 539 vagas no construction (29 → 314), mas está anos à frente. Trade e experiência movem centenas em cada
+perfil, e não se compram.
 
 ### 2026-10-24 — Bônus do "tenho" (`RulesVersion` 10, passo 3)
 Anúncio que pede o que o candidato tem ganha `HaveRequirementBonus` (10, uma vez por tipo, na fase de pontos,

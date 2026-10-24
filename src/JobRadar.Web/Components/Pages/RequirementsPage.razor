@@ -63,7 +63,7 @@ else
                                 @foreach (var i in moves)
                                 {
                                     <li>
-                                        <b>@i.Profile</b>: @i.Affected listings move ·
+                                        <b>@i.Profile</b>: @Wording.Listings(i.Affected) move ·
                                         ≥ @Calibration.VisibleThreshold <span class="num">@i.VisibleWithout → @i.VisibleWith</span> ·
                                         ≥ @Calibration.AlertThreshold <span class="num">@i.AlertWithout → @i.AlertWith</span>
                                         @if (i.Good + i.Bad > 0)

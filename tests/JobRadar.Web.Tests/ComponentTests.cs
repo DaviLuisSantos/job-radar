@@ -102,6 +102,24 @@ public class WordingTests
         Assert.Equal(expected, Wording.Shorten(error, 30));
 }
 
+public class RequirementWordingTests
+{
+    [Theory]
+    [InlineData(1, "1 listing")]
+    [InlineData(0, "0 listings")]
+    [InlineData(1406, "1,406 listings")]
+    public void Listing_counts_read_naturally(int count, string text) => Assert.Equal(text, Wording.Listings(count));
+
+    [Fact]
+    public void Every_requirement_state_and_kind_has_words()
+    {
+        Assert.All(Enum.GetValues<RequirementState>(), s => Assert.NotEqual(s.ToString(), Wording.State(s)));
+        Assert.All(Enum.GetValues<RequirementKind>(), k => Assert.False(string.IsNullOrWhiteSpace(Wording.Kind(k))));
+        Assert.DoesNotContain(nameof(ScoreRule.RequirementHeld),
+            Wording.Describe(new ScoreItem(ScoreRule.RequirementHeld, "HRWL", ScoreWhere.FullText, 10)), StringComparison.Ordinal);
+    }
+}
+
 public class DeploymentTests
 {
     [Fact]
