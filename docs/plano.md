@@ -94,6 +94,18 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-23 — Perfis: sinais de função no fifo, licenças de profissão
+Configuração (fora do git), medida com `calibrate --rescore` numa cópia antes de implantar, com os rótulos do dia
+(construction 28 boas/22 ruins, fifo 16/47, trades 8/12):
+- fifo não tinha sinal positivo de função; com "offsider", "labourer", "drainer" e "concreter", boas ≥ 75 foram de
+  9 para 13 de 16, acerto de pares 93% → 94%, ruins visíveis iguais.
+- "relevant experience" (posta mais cedo no mesmo dia) saiu: derrubava duas boas ("Delivery Driver/Offsider",
+  "Shutdown Roles"); sem ela o construction tem 28 de 28 boas ≥ 75.
+- "refrigerant handling licence", "electrical licence" e "ARCtick" viraram qualificação (−20) no trades e no fifo: o
+  autor não tem certificado de profissão (é técnico em mecatrônica e em sistemas), e essas licenças pedem o
+  certificado mais tempo supervisionado. Sem efeito nos rótulos de hoje; cobre anúncio que só cita a licença.
+Em aberto, perguntado ao autor: o regional dá −15 a "Perth WA" (88 dias), mas duas jardinagens em Perth são boas.
+
 ### 2026-10-23 — Carteira de caminhão e tickets (`RulesVersion` 8)
 O autor: anúncio que exige carteira HR é ruim, porque ela pede anos de carteira de carro (a dele vira definitiva no
 fim de dezembro); licença que se tira com curso (HRWL e afins) ele tiraria. As regras tratavam as duas com −20, e o
