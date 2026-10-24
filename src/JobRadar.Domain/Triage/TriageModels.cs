@@ -49,6 +49,9 @@ public sealed record TriageRow(
 
     /// <summary>This listing and its copies: what a triage action applies to.</summary>
     public IEnumerable<ListingId> AllIds => Copies.Prepend(Id);
+
+    /// <summary>Pay, roster, accommodation and the like, read from the full ad (<see cref="ListingFacts"/>).</summary>
+    public IReadOnlyList<ListingFact> Facts { get; init; } = [];
 }
 
 /// <param name="Total">Rows after collapsing duplicates, across all pages.</param>
@@ -64,4 +67,12 @@ public sealed record ListingDetail(
     IReadOnlyList<string> Terms,
     JobApplication? Application,
     ListingLabel? Label,
-    ListingDescription? Description = null);
+    ListingDescription? Description = null)
+{
+    /// <summary>
+    /// Pay, roster, accommodation and the like, read from the full ad, or from the summary when there is none; pay
+    /// only when the source gives none.
+    /// </summary>
+    public IReadOnlyList<ListingFact> Facts { get; } =
+        ListingFacts.Read(Description?.Text ?? Record.Listing.Summary, hasPayField: Record.Listing.SalaryText is not null);
+}

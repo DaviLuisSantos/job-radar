@@ -187,6 +187,10 @@ kbd {
 .row .title:hover { color: var(--accent); }
 .meta { display: flex; flex-wrap: wrap; gap: .25rem .9rem; color: var(--muted); font-size: .88rem; margin: .15rem 0 0; }
 .salary { color: var(--strong); font-weight: 500; }
+.facts { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
+.chip.fact { background: var(--surface-2); color: var(--text); font-weight: 500; }
+.chip.fact-pay { background: var(--good-soft); color: var(--good); }
+.chip.fact-travel, .chip.fact-roster { background: var(--accent-soft); color: var(--accent); }
 .state { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
 .age { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
 .actions { display: flex; gap: .35rem; flex-wrap: wrap; justify-content: flex-end; }

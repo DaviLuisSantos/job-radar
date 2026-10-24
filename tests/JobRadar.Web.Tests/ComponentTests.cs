@@ -1,4 +1,5 @@
 using Bunit;
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Web.Components.Shared;
 using JobRadar.Web.Text;
@@ -38,6 +39,18 @@ public class ComponentTests : BunitContext
         Assert.Empty(cut.FindAll("li.base"));
         Assert.Single(cut.FindAll("li.exclusion"));
         Assert.Contains("Excluded", cut.Find("li.total").TextContent);
+    }
+
+    [Fact]
+    public void Facts_show_as_labels_and_nothing_shows_without_them()
+    {
+        var cut = Render<FactChips>(p => p.Add(x => x.Facts,
+            [new ListingFact(FactKind.Pay, "$48/hr"), new ListingFact(FactKind.Roster, "2:1 roster")]));
+
+        Assert.Equal(["$48/hr", "2:1 roster"], cut.FindAll(".chip.fact").Select(c => c.TextContent));
+        Assert.Contains("fact-pay", cut.Find(".chip.fact").ClassList);
+        Assert.Empty(Render<FactChips>(p => p.Add(x => x.Facts, [])).Markup.Trim());
+        Assert.All(Enum.GetValues<FactKind>(), k => Assert.EndsWith("(read from the ad)", Wording.FactTitle(k), StringComparison.Ordinal));
     }
 
     [Theory]

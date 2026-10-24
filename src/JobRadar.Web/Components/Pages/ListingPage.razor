@@ -30,6 +30,7 @@ else if (_detail is { } d)
                     <span class="salary">@salary</span>
                 }
             </p>
+            <FactChips Facts="d.Facts" />
             <p class="muted">
                 Posted @(listing.PostedAt?.ToString("d MMM yyyy") ?? "—") · first seen @d.Record.FirstSeenAt.ToString("d MMM yyyy")
                 @if (listing.SourceCategory is { } category)

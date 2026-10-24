@@ -1,4 +1,5 @@
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Tests.Collection;
 using JobRadar.Application.Triage;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
@@ -31,7 +32,26 @@ public class TriageServiceTests
         new(new ListingId("seek", i.ToString(System.Globalization.CultureInfo.InvariantCulture)), "Same title", company,
             ListingLocation.Unknown, WorkType.Unknown, null, null, DateTimeOffset.UnixEpoch, 100 - i, null, null);
 
-    private static TriageService Service(IListingScoreRepository scores) => new(null!, scores, null!, null!, null!);
+    private static TriageService Service(IListingScoreRepository scores, InMemoryDescriptions? descriptions = null) =>
+        new(null!, scores, null!, null!, descriptions ?? new InMemoryDescriptions());
+
+    [Fact]
+    public async Task Rows_shown_carry_the_facts_of_their_full_ad()
+    {
+        var descriptions = new InMemoryDescriptions();
+        var described = new ListingId("seek", "1");
+        descriptions.Saved[described] = new ListingDescription(described, "FIFO 2:1 roster, $48/hr, accommodation provided.",
+            DescriptionOrigin.Source, DateTimeOffset.UnixEpoch);
+        var paid = Row(2, "B") with { SalaryText = "$50 per hour" };
+        descriptions.Saved[paid.Id] = new ListingDescription(paid.Id, "$48/hr, immediate start", DescriptionOrigin.Source, DateTimeOffset.UnixEpoch);
+
+        var page = await Service(new FixedRows([Row(0, "A"), Row(1, "C"), paid]), descriptions).ListAsync(new TriageFilter("fifo"), Ct);
+        var facts = page.Rows.ToDictionary(r => r.Id.SourceId, r => r.Facts.Select(f => f.Text).ToList());
+
+        Assert.Equal(["$48/hr", "FIFO", "2:1 roster", "Accommodation"], facts["1"]);
+        Assert.Empty(facts["0"]);                    // no full ad: nothing read
+        Assert.Equal(["Immediate start"], facts["2"]);  // the source gives the pay: not read again
+    }
 
     [Fact]
     public async Task Pages_after_collapsing_duplicates_so_counts_and_pages_are_right()

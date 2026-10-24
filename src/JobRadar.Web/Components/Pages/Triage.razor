@@ -87,6 +87,7 @@ else if (_page is not null)
                             <span class="salary">@salary</span>
                         }
                     </div>
+                    <FactChips Facts="row.Facts" />
                 </div>
                 <div class="state">
                     <span class="age" title="@row.PostedAt?.ToString("d MMM yyyy")">@Wording.Age(row.PostedAt, Time.GetUtcNow())</span>

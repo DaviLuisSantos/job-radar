@@ -27,7 +27,14 @@ public sealed class TriageService(
         var rows = Duplicates.Collapse(await scores.ListForTriageAsync(f, ct));
         if (f.Order == TriageOrder.AcrossScores)
             rows = LabelSample.Spread(rows);
-        return new TriagePage(rows.Skip((f.Page - 1) * f.PageSize).Take(f.PageSize).ToList(), rows.Count);
+        var page = rows.Skip((f.Page - 1) * f.PageSize).Take(f.PageSize).ToList();
+
+        // Read only for the rows shown: full texts are long, and a page is at most a couple of hundred.
+        var texts = await descriptions.GetTextsAsync(page.Select(r => r.Id).ToList(), ct);
+        page = page
+            .Select(r => texts.TryGetValue(r.Id, out var text) ? r with { Facts = ListingFacts.Read(text, hasPayField: r.SalaryText is not null) } : r)
+            .ToList();
+        return new TriagePage(page, rows.Count);
     }
 
     /// <summary>Null when the listing was never collected.</summary>

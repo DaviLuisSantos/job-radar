@@ -119,6 +119,21 @@ public static class Wording
         _ => (id, ""),
     };
 
+    /// <summary>The tooltip of a fact label: what kind of fact it is and where it came from.</summary>
+    public static string FactTitle(FactKind kind) => kind switch
+    {
+        FactKind.Pay => "Pay, as the ad states it",
+        FactKind.Travel => "How you get to site",
+        FactKind.Roster => "Roster: days or weeks on and off",
+        FactKind.Accommodation => "Accommodation provided",
+        FactKind.Meals => "Meals provided",
+        FactKind.Flights => "Flights paid by the employer",
+        FactKind.Start => "Start date",
+        FactKind.Shift => "Shifts",
+        FactKind.Duration => "Length of the contract",
+        _ => kind.ToString(),
+    } + " (read from the ad)";
+
     /// <summary>Short labels for the four states, as buttons.</summary>
     public static string StateButton(RequirementState state) => state switch
     {
