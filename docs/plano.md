@@ -168,6 +168,14 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-24 — Carteira com letra de condição (`RulesVersion` 13)
+Achado do piloto: "HR-B Drivers License" (classe HR com condição) passava pelo padrão de carteira, e o anúncio contava
+como sem carteira. O padrão aceita agora a letra colada por hífen, entre parênteses ou seguida de "class" ("hr-b",
+"hc (b)", "mr b class"); o texto chega em minúsculas, e "HR a driver will call" não pode virar carteira. 29 vagas do
+banco citam assim. Paridade 237/237. Medido nos rótulos de produção: construction 100% → 97% (boas ≥ 75: 28 → 25) e
+fifo 95% → 92% (13 → 10), por três driller offsider rotuladas boas que pedem HR-B. O autor confirmou que carteira HR
+o barra de qualquer forma; as três foram remarcadas ruins (nota: "pede carteira HR-B, que barra o candidato").
+
 ### 2026-10-24 — Piloto: Claude lendo os requisitos (não adotado)
 Pergunta: um modelo lendo a descrição com contexto ("cert III an advantage" x "essential") acerta mais que a busca por
 frase? Branch `pilot/llm-requirements` (fora da main): `IRequirementReader` (`JobRadar.Integrations.Claude`, SDK
