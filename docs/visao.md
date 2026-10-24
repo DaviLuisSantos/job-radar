@@ -60,5 +60,5 @@ Detalhes em [fontes.md](fontes.md).
 
 - Áreas acompanhadas no Raio-X além de tecnologia (hospitality, construção, farm/regional, limpeza, cuidados?)
 - Cadência: newsletter mensal; post semanal no canal da Sirene?
-- IA (Gemini) no score: mantém na v1 ou só volta se melhorar a calibragem?
+- IA no score: só se melhorar a calibragem. Piloto de 2026-10-24 (Claude lendo requisitos): não melhorou; ver Diário do plano.
 - Número de leitores que libera a v3

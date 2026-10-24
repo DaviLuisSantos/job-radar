@@ -168,6 +168,31 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-24 — Piloto: Claude lendo os requisitos (não adotado)
+Pergunta: um modelo lendo a descrição com contexto ("cert III an advantage" x "essential") acerta mais que a busca por
+frase? Branch `pilot/llm-requirements` (fora da main): `IRequirementReader` (`JobRadar.Integrations.Claude`, SDK
+oficial `Anthropic` 13.3, saída estruturada, instruções em cache, effort baixo) devolve por item do catálogo
+"exigido / desejável / não pedido" e os anos pedidos; com a leitura, o `FitScorer` pesa requisitos, anos e carteira
+por ela. `read-requirements <modelo> <arquivo>` e `calibrate --rescore --readings <arquivo>`. Credencial: login do
+`ant` (OAuth) no trabalhopc, sem chave em arquivo. Rodado nas 52 vagas julgadas com descrição (de 92), custo
+estimado ~US$ 2:
+
+| leitura | construction | fifo | trades |
+|---|---|---|---|
+| frase (hoje) | 100%, 28/28 boas ≥ 75, 3 ruins ≥ 50 | 95%, 13/16, 4 | 91%, 6/8, 1 |
+| Haiku 5.5 | 97%, 22/28, 4 | 93%, 8/16, 3 | 92%, 6/8, 1 |
+| Sonnet 5.5 | 96%, 20/28, 4 | 93%, 9/16, 3 | 92%, 4/8, 1 |
+| Opus 5.5 | 98%, 22/28, 4 | 94%, 10/16, 2 | 92%, 5/8, 1 |
+
+Nenhum melhora: seguram um pouco mais as ruins, mas derrubam boas. Lido à mão, **o modelo lê certo**: a "Drillers
+Offsider" boa pede "HR-B Drivers License" (o padrão de carteira não reconhece "HR-B": bug das regras atuais, e o
+rótulo contradiz a decisão de 2026-10-23 de que vaga que pede HR é ruim); as "Entry Level" boas listam "Experience in
+manufacturing, mining, or site-based work" em "What you'll need" (requisito de verdade, mas genérico, que o autor não
+vê como barreira). Ou seja: a busca por frase acerta mais **porque erra a favor** das boas, e o −20 fixo de
+experiência pune demais quando a leitura é precisa. Adotar exigiria recalibrar o peso de experiência genérica, com
+risco de ajustar 52 rótulos à mão. Fica fora da main; as leituras ficam no trabalhopc (`%TEMP%\jr-pilot-readings`)
+para reanalisar sem novo custo. Responde o "IA no score" da `visao.md`: hoje não melhora a calibragem.
+
 ### 2026-10-24 — Informações da descrição como etiquetas
 O autor achou o resumo pobre. Medido: das 1.781 vagas visíveis (≥ 50), 1.755 já tinham a descrição completa no banco,
 e a triagem mostrava só título, empresa e o resumo do Seek (~195 caracteres). `ListingFacts` (domínio, puro) lê da
