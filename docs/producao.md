@@ -13,7 +13,7 @@
 | Site | serviço do Windows `JobRadarWeb` | `C:\JobRadar\web` → `http://localhost:5380` e `http://<IP Tailscale>:5380` |
 | Migrations | pacote `migrate.exe`, aplicado a cada implantação | `C:\JobRadar\migrate.exe` |
 | Versão | commit e hora da última implantação; a anterior, para voltar | `C:\JobRadar\deployed.txt`, `C:\JobRadar\previous` |
-| Implantação automática | tarefa `JobRadar Auto-deploy`, a cada 15 min: main com CI verde | `C:\JobRadaruto-deploy.log` |
+| Implantação automática | tarefa `JobRadar Auto-deploy`, a cada 15 min: main com CI verde | `C:\JobRadar\auto-deploy.log` |
 | Vigia | tarefa `JobRadar Watchdog`, 2 min após o login e a cada 15 min: inicia serviço parado | `C:\JobRadar\watchdog.log` |
 
 - Conexão com o banco e ambiente (`Production`) ficam nas variáveis do serviço, no registro
