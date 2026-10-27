@@ -14,6 +14,9 @@
     rolled-back commit alone (-Target\rollback-skip.txt) until a newer one reaches main.
     Refuses to run during the daily pass, or while runs are still being recorded (a pass recovered at another
     hour), unless -Force: stopping the worker would cut the pass short.
+    While the services are down on purpose it holds -Target\deploying.lock, so watchdog.ps1 leaves them be.
+    A deploy that fails keeps the lock: the watchdog starts the services again only after an hour.
+    Publishes ReadyToRun (win-x64): about half the start-up time, which matters at boot.
     See docs/producao.md.
 #>
 param(
@@ -36,6 +39,7 @@ $services = @(
 $previous = Join-Path $Target 'previous'
 $record = Join-Path $Target 'deployed.txt'
 $skip = Join-Path $Target 'rollback-skip.txt'
+$lock = Join-Path $Target 'deploying.lock'
 
 function Copy-Tree([string] $From, [string] $To) {
     # A stopped service can hold its files for a moment: retry instead of failing.
@@ -89,6 +93,7 @@ if ($Rollback) {
     $back = Get-Content (Join-Path $previous 'deployed.txt') | Select-Object -First 1
     Write-Host "== Rolling back to: $back" -ForegroundColor Cyan
     Write-Warning 'Migrations are not undone: an older build may not run on a newer schema.'
+    New-Item $lock -ItemType File -Force | Out-Null
     foreach ($s in $services) { Stop-Service $s.Name -Force }
     $swap = Join-Path $Target 'rollback-swap'
     foreach ($s in $services) {
@@ -100,6 +105,7 @@ if ($Rollback) {
     Copy-Item (Join-Path $previous 'migrate.exe') $Target -Force
     Copy-Item (Join-Path $swap 'migrate.exe') $previous -Force
     Start-AndWait
+    Remove-Item $lock -Force -ErrorAction SilentlyContinue
     $undone = ($current -split ' ')[0]
     $current | Set-Content (Join-Path $previous 'deployed.txt') -Encoding utf8
     "$back (rolled back from $undone on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'))" | Set-Content $record -Encoding utf8
@@ -115,7 +121,8 @@ if ($dirty) { Write-Warning 'The working tree has uncommitted changes: they go t
 
 Write-Host '== Publishing' -ForegroundColor Cyan
 foreach ($s in $services) {
-    dotnet publish (Join-Path $repo $s.Project) -c Release -o (Join-Path $staging $s.Dir) --nologo -v quiet
+    dotnet publish (Join-Path $repo $s.Project) -c Release -o (Join-Path $staging $s.Dir) --nologo -v quiet `
+        -r win-x64 --self-contained false -p:PublishReadyToRun=true
     if ($LASTEXITCODE) { throw "Publishing $($s.Project) failed." }
 }
 Push-Location $repo
@@ -151,6 +158,7 @@ if ($dnsName) { $hosts += $dnsName }
 Write-Host "Site: $($urls -join ', ')"
 
 Write-Host '== Stopping services' -ForegroundColor Cyan
+New-Item $lock -ItemType File -Force | Out-Null
 foreach ($s in $services) { Stop-Service $s.Name -Force }
 
 if (Test-Path $record) {
@@ -168,6 +176,7 @@ Write-Host '== Applying migrations' -ForegroundColor Cyan
 if ($LASTEXITCODE) { throw 'Migrations failed: is the database up (docker compose up -d)? The services are stopped.' }
 
 Start-AndWait
+Remove-Item $lock -Force -ErrorAction SilentlyContinue
 
 "$commit$(if ($dirty) { ' (with uncommitted changes)' }) deployed $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')" |
     Set-Content $record -Encoding utf8

@@ -168,6 +168,16 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-27 — Queda de energia: vigia dos serviços e ReadyToRun
+O PC desligou sem aviso em 2026-10-25 11:50 e voltou em 26/10 09:54. No boot, `JobRadarWorker` e
+`JobRadarWeb` passaram dos 30 s de partida (eventos 7009/7000) e ficaram parados: **sem passada em 25 e 26**.
+A recuperação configurada (`sc failure`) só reinicia serviço que cai depois de rodar. O backup seguiu (tarefa
+do Agendador). Iniciados à mão em 27/10 17:14 (BRT); o worker rodou a passada perdida na partida.
+Correção: `deploy/watchdog.ps1` + tarefa `JobRadar Watchdog` (login + 2 min, a cada 15 min; respeita a trava
+`deploying.lock` que o `deploy.ps1` mantém enquanto para os serviços) e publicação ReadyToRun (win-x64):
+partida de 2,6 s para 1,3 s num comando curto. Testado: serviço parado → iniciado e registrado; com trava →
+não mexe. Fica para depois: Docker como serviço, para tudo voltar sem login.
+
 ### 2026-10-24 — Carteira com letra de condição (`RulesVersion` 13)
 Achado do piloto: "HR-B Drivers License" (classe HR com condição) passava pelo padrão de carteira, e o anúncio contava
 como sem carteira. O padrão aceita agora a letra colada por hífen, entre parênteses ou seguida de "class" ("hr-b",

@@ -14,6 +14,7 @@
 | Migrations | pacote `migrate.exe`, aplicado a cada implantação | `C:\JobRadar\migrate.exe` |
 | Versão | commit e hora da última implantação; a anterior, para voltar | `C:\JobRadar\deployed.txt`, `C:\JobRadar\previous` |
 | Implantação automática | tarefa `JobRadar Auto-deploy`, a cada 15 min: main com CI verde | `C:\JobRadaruto-deploy.log` |
+| Vigia | tarefa `JobRadar Watchdog`, 2 min após o login e a cada 15 min: inicia serviço parado | `C:\JobRadar\watchdog.log` |
 
 - Conexão com o banco e ambiente (`Production`) ficam nas variáveis do serviço, no registro
   (`HKLM\SYSTEM\CurrentControlSet\Services\<serviço>\Environment`), não em arquivo.
@@ -98,6 +99,15 @@ desfeitas**: uma versão anterior a uma migration pode não rodar no schema novo
   Só **avisos e erros** vão para lá (padrão do log de eventos); um log com apenas "Service started" é normal.
   O andamento de cada passada está na página de status e em `collection_runs`.
 - **Serviços:** `Get-Service JobRadar*`.
+- **Vigia** (desde 2026-10-27): a tarefa `JobRadar Watchdog` (`deploy\watchdog.ps1`) inicia os serviços quando
+  estão parados, 2 min depois do login e a cada 15 min, com o usuário do autor e sem janela. Motivo: depois de
+  uma queda de energia em 2026-10-25, os dois serviços passaram dos 30 s de partida no boot e ficaram parados
+  dois dias (a recuperação do serviço só cobre queda depois de rodar, não falha na partida). O vigia respeita
+  `C:\JobRadar\deploying.lock`, que o `deploy.ps1` mantém enquanto para os serviços de propósito; um deploy
+  que falha deixa a trava, e o vigia só volta a agir depois de 1 h. Escreve em `watchdog.log` só quando age
+  ou falha. Recriar: `.\deploy\schedule-watchdog.ps1`. A publicação é ReadyToRun (win-x64): metade do tempo
+  de partida (1,3 s contra 2,6 s num comando curto), o que ajuda no boot.
+  Antes do login nada roda: o banco vive no Docker Desktop, na sessão do autor.
 
 ## Backup
 
