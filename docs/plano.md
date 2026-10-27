@@ -27,6 +27,12 @@ Pendências conhecidas, com a etapa onde entram:
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
+- **Voltar sem login (adiado em 2026-10-27, decisão do autor):** depois de um reboot, nada roda até o login,
+  porque o banco vive no Docker Desktop, que não roda como serviço (o `com.docker.service` é só auxiliar).
+  Opções avaliadas: (A) Postgres 18 nativo como serviço do Windows, porta 5433 na troca, com dependência dos
+  serviços do JobRadar e ajustes em `install.ps1`, `backup.ps1` e na trava do `deploy.ps1`, recomendada;
+  (B) Docker Engine numa distro WSL ligado por tarefa, frágil; (C) login automático + Docker Desktop, risco de
+  acesso físico; (D) resolver na migração para VM. Hoje: o vigia religa os serviços 2 min após o login.
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
@@ -176,7 +182,7 @@ do Agendador). Iniciados à mão em 27/10 17:14 (BRT); o worker rodou a passada 
 Correção: `deploy/watchdog.ps1` + tarefa `JobRadar Watchdog` (login + 2 min, a cada 15 min; respeita a trava
 `deploying.lock` que o `deploy.ps1` mantém enquanto para os serviços) e publicação ReadyToRun (win-x64):
 partida de 2,6 s para 1,3 s num comando curto. Testado: serviço parado → iniciado e registrado; com trava →
-não mexe. Fica para depois: Docker como serviço, para tudo voltar sem login.
+não mexe. Voltar sem login ficou como pendência (opções na lista acima).
 
 ### 2026-10-24 — Carteira com letra de condição (`RulesVersion` 13)
 Achado do piloto: "HR-B Drivers License" (classe HR com condição) passava pelo padrão de carteira, e o anúncio contava
