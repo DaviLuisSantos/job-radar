@@ -15,7 +15,7 @@ public sealed class SeekOptions
 
     /// <summary>The bot says who it is instead of pretending to be a browser.</summary>
     [Required]
-    public string UserAgent { get; set; } = "JobRadarAU/0.1 (+https://github.com/DaviLuisSantos/job-radar-au)";
+    public string UserAgent { get; set; } = "JobRadar/0.1 (+https://github.com/DaviLuisSantos/job-radar)";
 
     /// <summary>
     /// 100 is the API maximum. Market counts must use it: totalCount includes promoted ads

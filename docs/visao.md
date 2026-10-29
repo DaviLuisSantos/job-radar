@@ -1,4 +1,4 @@
-# Visão — JobRadar AU
+# Visão — JobRadar
 
 > Documento vivo. Alinhado em 2026-10-21, antes da primeira linha de código.
 > Mudou o escopo? Atualize aqui primeiro.
@@ -40,7 +40,7 @@ pode pegar.
 - Não é tempo real: uma coleta por dia
 - Não envia e-mail: gera o conteúdo; distribuição por plataforma pronta ou canal da Sirene WHV
 - Não substitui dado oficial, complementa
-- Só Austrália
+- Raio-X só da Austrália. O Brasil entra só no Matching, de uso próprio (decidido em 2026-10-29: [evolucao.md](evolucao.md))
 
 ## Fontes de vagas
 

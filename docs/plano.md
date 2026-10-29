@@ -65,6 +65,12 @@ Pendências conhecidas, com a etapa onde entram:
 
 Ideias decididas como direção, sem data. Entram como etapas quando a v1 fechar.
 
+### Evolução: JobRadar com mais de um país (decidido 2026-10-29)
+
+SQL Server ao lado do Postgres, Brasil no Matching (Gupy), observabilidade e mensageria, em fases com
+critério de pronto: [evolucao.md](evolucao.md), onde fica o estado. A Gupy não mexe nos dados da calibragem
+da Austrália (país separado), por isso não espera por ela; o Adzuna continua a primeira fonte nova da Austrália.
+
 ### v1.x — Descrição completa das vagas que importam ✅ 2026-10-22
 
 As páginas de vaga do Seek seguem atrás do Cloudflare e **contornar continua fora**. O texto completo
@@ -173,6 +179,14 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-29 — Rename para JobRadar (fase 0 da evolução)
+O repositório vira `job-radar` (o GitHub redireciona o nome antigo). Decidido: Brasil só no Matching, de uso
+próprio; o Raio-X segue só da Austrália (`visao.md`). O User-Agent do Seek passa a `JobRadar/0.1` com o link
+novo; nada mais muda na integração. O `docker-compose.yml` fixa `name: job-radar-au`: o Compose dá ao projeto o
+nome da pasta, e o volume do banco vai junto, então renomear o checkout subiria um banco vazio. Por isso a pasta
+da produção (`D:Desenvolvimentojob-radar-au`) pode ficar com o nome antigo, e o `-p job-radar-au` do
+`deploy.ps1` continua certo.
 
 ### 2026-10-27 — Queda de energia: vigia dos serviços e ReadyToRun
 O PC desligou sem aviso em 2026-10-25 11:50 e voltou em 26/10 09:54. No boot, `JobRadarWorker` e
