@@ -15,7 +15,7 @@
 #>
 param(
     [string] $Target = 'C:\JobRadar',
-    [string] $Repository = 'DaviLuisSantos/job-radar-au',
+    [string] $Repository = 'DaviLuisSantos/job-radar',
     [string] $Workflow = 'CI',
     [switch] $DryRun
 )

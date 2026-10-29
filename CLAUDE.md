@@ -1,4 +1,4 @@
-# JobRadar AU
+# JobRadar
 
 Acompanha o mercado de trabalho australiano para quem chega com Working Holiday (WHV).
 Dois produtos sobre um núcleo comum: **Matching** (privado: ranqueia vagas para um perfil,
@@ -10,6 +10,7 @@ Produção (onde roda, instalar, atualizar, logs, backup): [docs/producao.md](do
 verde é implantado sozinho em até 15 min (`deploy/auto-deploy.ps1`); voltar: `deploy.ps1 -Rollback`.
 
 Escopo, públicos, não-objetivos e fases: [docs/visao.md](docs/visao.md). Fontes de vagas: [docs/fontes.md](docs/fontes.md).
+Evolução para mais de um país (SQL Server, Brasil, observabilidade, mensageria): [docs/evolucao.md](docs/evolucao.md).
 
 **Onde estamos e o que vem a seguir: [docs/plano.md](docs/plano.md).** Ao fechar uma etapa, atualize o
 plano (estado, Diário) e passe para a próxima na ordem.

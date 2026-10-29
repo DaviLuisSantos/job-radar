@@ -1,4 +1,7 @@
 # Local development database. Credentials are local-only defaults, not secrets.
+# The project name is pinned: by default Compose names it after the folder, and the data volume
+# (job-radar-au_pgdata) with it. Renaming the checkout would then start an empty database.
+name: job-radar-au
 services:
   postgres:
     image: postgres:18

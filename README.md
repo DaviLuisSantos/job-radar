@@ -1,4 +1,4 @@
-# JobRadar AU
+# JobRadar
 
 Tracks the Australian job market for people arriving on a Working Holiday visa (subclass 417/462):
 which jobs they can actually take, and how the market moves month to month.

@@ -28,7 +28,7 @@
 - Até 100 por página e no máximo 500 resultados por busca. Acima disso é preciso dividir a busca,
   por estado por exemplo.
 - `totalCount` conta os promovidos repetidos em cada página. Para contar, use sempre `pageSize=100`.
-- User-Agent identificado (`JobRadarAU/0.1 (+repo)`), pausa de ~1 s com variação entre páginas,
+- User-Agent identificado (`JobRadar/0.1 (+repo)`, até 2026-10-29 `JobRadarAU/0.1`), pausa de ~1 s com variação entre páginas,
   backoff em 429.
 - Não abre páginas de vaga (Cloudflare). O texto completo entra pela busca por frase (etapa 5) e, desde
   2026-10-23, pelo endpoint GraphQL `jobDetails` que o próprio site usa (respondeu sem desafio, com o
