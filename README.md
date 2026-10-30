@@ -124,6 +124,19 @@ Docker. The worker waits for the database at boot and catches up on a run missed
 machine was off; the site is reachable on localhost and over Tailscale only. One script publishes,
 migrates and installs everything: see [docs/producao.md](docs/producao.md) (Portuguese).
 
+## Observability
+
+The daily pass is one trace, with a span per stage and per search, and metrics for what each search found, what was
+new, what failed and how long each stage took (`JobRadarTelemetry`). Nothing is collected unless an OTLP endpoint is
+configured; locally, the Aspire dashboard shows it all:
+
+```bash
+docker compose --profile telemetry up -d aspire
+Telemetry__OtlpEndpoint=http://localhost:4317 Collection__RunOnStartup=true dotnet run --project src/JobRadar.Worker
+```
+
+Then open http://localhost:18888.
+
 ## Tests
 
 ```bash

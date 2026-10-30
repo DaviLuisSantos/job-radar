@@ -26,6 +26,10 @@ internal sealed class DailyPipeline(
         var zone = TimeZoneInfo.FindSystemTimeZoneById(options.Value.TimeZone);
         var failed = new List<string>();
         var watch = System.Diagnostics.Stopwatch.StartNew();
+        // One trace per pass; its id is the RunId every log line of the pass carries.
+        using var activity = JobRadar.Application.JobRadarTelemetry.Source.StartActivity("daily pass", System.Diagnostics.ActivityKind.Internal);
+        var runId = activity?.TraceId.ToString() ?? Guid.NewGuid().ToString("N");
+        using var scope = log.BeginScope(new Dictionary<string, object> { ["RunId"] = runId });
 
         await StageAsync("Collection", sp => sp.GetRequiredService<ListingCollector>().CollectAsync(catalog.Searches, fullHistory, ct), failed, ct);
         await StageAsync("Full-text terms", sp => sp.GetRequiredService<FullTextTermService>().TagAsync(ct), failed, ct);
@@ -35,6 +39,10 @@ internal sealed class DailyPipeline(
 
         log.LogInformation("Pass finished in {Seconds:N1} s{Failed}", watch.Elapsed.TotalSeconds,
             failed.Count == 0 ? "" : $"; failed: {string.Join(", ", failed)}");
+        JobRadar.Application.JobRadarTelemetry.RunDuration.Record(watch.Elapsed.TotalSeconds,
+            new KeyValuePair<string, object?>("failed_stages", failed.Count));
+        if (failed.Count > 0)
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, string.Join(", ", failed));
         return failed;
     }
 
@@ -43,6 +51,9 @@ internal sealed class DailyPipeline(
     private async Task StageAsync(string stage, Func<IServiceProvider, Task> work, List<string> failed, CancellationToken ct)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
+        using var activity = JobRadar.Application.JobRadarTelemetry.Source.StartActivity(stage);
+        using var logScope = log.BeginScope(new Dictionary<string, object> { ["Stage"] = stage });
+        var outcome = "ok";
         try
         {
             await using var scope = scopes.CreateAsyncScope();
@@ -53,6 +64,13 @@ internal sealed class DailyPipeline(
         {
             log.LogError(ex, "{Stage} failed; retrying at the next run", stage);
             failed.Add(stage);
+            outcome = "failed";
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.GetType().Name);
+        }
+        finally
+        {
+            JobRadar.Application.JobRadarTelemetry.StageDuration.Record(watch.Elapsed.TotalSeconds,
+                new KeyValuePair<string, object?>("stage", stage), new KeyValuePair<string, object?>("outcome", outcome));
         }
     }
 }

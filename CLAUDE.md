@@ -219,6 +219,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   A collation não basta: o provider do SQL Server compara chaves de texto **sem** caixa no change tracker, e o
   `ProviderModel` troca por ordinal (`Text_keys_compare_by_case_and_accent_in_memory_too`). JSON no SQL Server é
   `nvarchar(max)` com `CHECK (ISJSON(...) = 1)`, para recusar o que o jsonb recusa.
+- Telemetria (`JobRadarTelemetry`): só sai com `Telemetry:OtlpEndpoint` (local: Aspire, `--profile telemetry`). Tag de
+  métrica ou trace leva fonte, país, etapa, nunca título, empresa ou dado do candidato. O `Meter` é estático e do
+  processo: teste que escuta métricas filtra pela fonte que ele mesmo criou.
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
   todas as cópias (`TriageRow.AllIds`).
 - Paralelismo: chamadas ao Seek podem rodar em paralelo à vontade, o `SeekPacingHandler` segura o total
