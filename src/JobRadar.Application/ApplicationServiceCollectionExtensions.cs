@@ -50,6 +50,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<MarketReportService>();
         services.AddScoped<TechnologyReportService>();
         services.AddScoped<StatusService>();
+        services.AddScoped<HealthService>();
         return services;
     }
 }

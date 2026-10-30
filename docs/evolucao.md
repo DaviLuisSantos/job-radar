@@ -219,9 +219,17 @@ novas). Métricas: `jobradar.jobs.collected`, `.jobs.new`, `.jobs.known` (o "ded
 quando a busca as devolveu), `jobradar.source.errors` (por fonte, país e tipo de erro), `jobradar.stage.duration` (por
 etapa e resultado, cobre o "enrichment") e `jobradar.run.duration`. Tags nunca levam título, empresa ou dado do candidato.
 
-**3.3 `/health` e o vigia.** Na Web, reusando o `StatusService`: banco acessível e última passada com sucesso
-há menos de 26 h. O vigia passa a consultar `/health` **além** de olhar o serviço parado (o Worker não tem HTTP;
-o `/health` vê a passada que ele gravou).
+**3.3 `/health` e o vigia.** ✅ `GET /health` no site (`HealthService`): 200 quando o banco responde e uma passada
+começou há menos de 26 h; 503 com o motivo, senão. Só a hora da passada, nada de vaga. "Com sucesso" do original virou
+"começou": uma etapa que falha é refeita na passada seguinte e já aparece na `/status`; o que o vigia pode consertar é a
+passada que não roda. O `watchdog.ps1`, além de religar serviço parado, consulta o `/health`: passada atrasada com o
+banco de pé → reinicia o Worker (que recupera a passada perdida ao subir); banco fora → só registra (o Worker já espera
+o banco). No máximo uma vez a cada 6 h (`-HealthEveryHours`, marca em `C:\JobRadar\watchdog-health.txt`), para não
+reiniciar em laço. **Não testado no Windows PowerShell 5.1 de verdade com um 503**: conferir no trabalhopc
+(`.\deploy\watchdog.ps1` à mão com a passada atrasada ou o banco parado).
+
+**Pronto da fase 3** (§4 do original): trace completo de uma passada no painel ✅ no código (ver no Aspire com
+`--profile telemetry`); métricas ✅; `/health` e o vigia usando ✅; erro de fonte com contexto (fonte, país, `RunId`) ✅.
 
 **Pronto:** §4 do original.
 
