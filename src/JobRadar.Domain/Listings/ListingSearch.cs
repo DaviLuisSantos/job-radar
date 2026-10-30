@@ -6,8 +6,13 @@ namespace JobRadar.Domain.Listings;
 /// <param name="PostedWithinDays">Only listings posted in the last N days; null for no limit.</param>
 /// <param name="SourceCategory">A category code of the source being searched (opaque to the core).</param>
 /// <param name="Market">The market searched: only the sources that serve it run it.</param>
+/// <param name="ExtraSources">
+/// Opt-in sources that also run it, by name (lower case); null for none. Not part of the key: the same search on one more
+/// source is still the same search.
+/// </param>
 public sealed record ListingSearch(
-    string Keywords, string Location, int? PostedWithinDays = null, string? SourceCategory = null, JobMarket Market = JobMarket.AU)
+    string Keywords, string Location, int? PostedWithinDays = null, string? SourceCategory = null, JobMarket Market = JobMarket.AU,
+    IReadOnlyList<string>? ExtraSources = null)
 {
     /// <summary>
     /// Stable identity of the search, ignoring the date window: "keywords @ location". Another market than

@@ -8,7 +8,8 @@
 - **Domínio comum, peculiaridades por integração.** O núcleo não conhece nenhum site; cada um
   entra como `Integrations/<Site>` traduzindo para o modelo neutro.
 - **v1: só Seek.** **v2: Adzuna primeiro, Workforce Australia junto com o recorte por região.**
-- **Fora:** Indeed e LinkedIn (sem API de busca, anti-bot, risco jurídico). Jora não planejado.
+- **Fora:** Indeed e LinkedIn (sem API de busca, anti-bot, risco jurídico). Jora não planejado. O LinkedIn entrou no
+  Matching em 2026-10-30, só pelos endpoints de convidado ([abaixo](#linkedin-spike-de-2026-10-30)).
 
 ## Candidatas
 
@@ -20,7 +21,7 @@
 | **Quadros de trabalho temporário** | sites pequenos (*verificar* um a um) | vagas casuais que não aparecem no Seek | variável | v2, se o Raio-X pedir |
 | **Jora** | pertence ao Seek; agregador | pouco além do Seek | o mesmo do Seek | não planejado |
 | **Indeed** | sem API pública para busca; anti-bot forte | volume alto | alto | fora |
-| **LinkedIn** | anti-scraping agressivo, histórico de processos | vagas de tecnologia | alto | fora |
+| **LinkedIn** | endpoints de convidado (HTML), sem conta; anti-scraping agressivo, histórico de processos | nenhum: a busca não respeita frase e o total é arredondado | alto | Matching (AU e BR) desde 2026-10-30; fora do Raio-X |
 
 ## Seek — como a integração funciona (etapa 2)
 
@@ -125,3 +126,40 @@ baixo, nada público). Get on Board fica para quando os termos e a semântica de
   cada busca lê o feed e fica com as vagas que têm todas as palavras-chave no título ou no anúncio. `jobGeo` "Anywhere" vira
   "Worldwide".
 - Os dois: orçamento de 0,5 requisição por segundo, uma por vez, User-Agent identificado; anúncio HTML gravado como texto.
+
+## LinkedIn (spike de 2026-10-30)
+
+**Decidido (2026-10-30), revendo o "fora" de 2026-10-21:** o LinkedIn entra no Matching (uso pessoal, ritmo baixo, nada
+público), porque é onde estão as vagas de tecnologia. Só pelos endpoints de convidado, sem conta e sem login: nenhum
+termo é aceito, que é o que separa este uso do caso hiQ × LinkedIn (a hiQ perdeu por quebra de contrato, com contas).
+O `robots.txt` tem `Disallow: /jobs-guest/` e diz que acesso automatizado depende de permissão: risco aceito pelo autor,
+como o do `jobDetails` do Seek. Nada do LinkedIn vai ao Raio-X.
+
+**O que o spike mostrou** (chamadas com o User-Agent identificado, a partir do trabalhopc):
+- Busca: `GET www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=&location=&start=N`. Responde 200
+  com `<li>` de cards em HTML, 10 por página, sem escolha. `start=850` ainda respondia, `start=1000` dá 400: teto de
+  ~1.000 por busca. `f_TPR=r<segundos>` filtra pela idade (r86400 = um dia), `f_WT=2` só remoto, `sortBy=DD` mais novas
+  primeiro. Uma rajada de 12 pedidos não foi recusada; o limite por IP não foi medido.
+- Card: id (`urn:li:jobPosting:<id>`), título, empresa, local ("Osborne Park, Western Australia, Australia" ou
+  "Greater Perth Area"), data (`<time datetime="AAAA-MM-DD">`), link e, raramente, `job-search-card__salary-info`.
+- Anúncio: `GET .../jobs-guest/jobs/api/jobPosting/<id>`, 404 quando sumiu. O texto fica em
+  `show-more-less-html__markup`; abaixo, "Seniority level", "Employment type", "Job function", "Industries"; a faixa
+  salarial, quando há, em `class="salary compensation__salary"` (apareceu em vagas dos EUA). Sem desafio de Cloudflare.
+- Local: "Perth WA", "Western Australia" e "Rio de Janeiro" resolvem; **"Brasil" em português devolve vagas dos EUA**
+  (tem de ser "Brazil"), e um local desconhecido também cai nos EUA.
+- **Não serve para termos nem para o Raio-X:** a busca não respeita frase entre aspas (`"white card" electrician`
+  devolveu anúncios sem a frase), e o total vem arredondado ("2,000+").
+
+**Como a integração funciona:** `JobRadar.Integrations.LinkedIn` com `IJobSource` (AU e BR,
+configurável em `LinkedIn:Markets`) e `IDescriptionSource`; um cliente só (`LinkedInGuestClient`) para os dois endpoints,
+com orçamento próprio (1/s, 2 simultâneas). A primeira recusa (403, 429, 999 ou redirecionamento para `/authwall`,
+`/login`, `/checkpoint`) bloqueia todo pedido ao LinkedIn por 6 horas, sem perguntar de novo, porque a coleta roda todas
+as buscas mesmo quando uma falha; 999 não é repetido pelo resiliente. HTML lido por regex sobre as classes do site
+(sem parser). O payload gravado é o card em JSON, sem os selos que mudam todo dia ("Be an early applicant"). No Brasil,
+o local ganha ", Brazil"; "Remoto" vira "Brazil" + `f_WT=2` e o resumo "Remoto". Card de outro país é descartado; se a
+primeira página inteira é de outro país, a busca falha dizendo que o local não foi reconhecido.
+
+**Em produção desde 2026-10-30:** fonte opcional (`OptIn`). Só busca nos perfis que pedem, com
+`"ExtraSources": ["linkedin"]` no `appsettings.Local.json`, porque a primeira passada sem janela pode passar de mil pedidos
+e o perfil de fazenda ou de obra ganha pouco com ele. `LiveLinkedInTests` (busca em "Perth WA" e um anúncio) passou no
+mesmo dia. Ligar em mais perfis um de cada vez, olhando na `/status` se alguma busca do LinkedIn falhou.

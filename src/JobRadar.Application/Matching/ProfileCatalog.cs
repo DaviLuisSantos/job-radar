@@ -35,7 +35,10 @@ public sealed class ProfileCatalog
             .OrderBy(p => p.Key, StringComparer.Ordinal)
             .Select(p => Build(p.Key, p.Value, policy, options.Value.Compensation, Markets[MarketOf(p.Key, p.Value)]))
             .ToList();
-        Searches = Profiles.SelectMany(p => p.Searches).DistinctBy(s => s.Key).ToList();
+        Searches = Profiles.SelectMany(p => p.Searches)
+            .GroupBy(s => s.Key, StringComparer.Ordinal)
+            .Select(g => g.First() with { ExtraSources = ExtraSources(g.SelectMany(s => s.ExtraSources ?? [])) })
+            .ToList();
     }
 
     public ScoringPolicy Policy { get; }
@@ -80,8 +83,22 @@ public sealed class ProfileCatalog
 
     public IReadOnlyList<ProfileDefinition> Profiles { get; }
 
-    /// <summary>Every search of every profile, once: a search shared by two profiles runs once.</summary>
+    /// <summary>
+    /// Every search of every profile, once: a search shared by two profiles runs once, on the extra sources of both.
+    /// </summary>
     public IReadOnlyList<ListingSearch> Searches { get; }
+
+    /// <summary>Source names as <see cref="ListingId.Source"/> writes them, each once; null for none.</summary>
+    private static List<string>? ExtraSources(IEnumerable<string> names)
+    {
+        var distinct = names
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        return distinct.Count > 0 ? distinct : null;
+    }
 
     private static JobMarket MarketOf(string name, ProfileOptions o)
     {
@@ -109,8 +126,9 @@ public sealed class ProfileCatalog
             Market = market,
             Compensation = Compensation(o.Compensation, compensation ?? new CompensationOptions()),
         };
+        var extra = ExtraSources(o.ExtraSources);
         var searches = o.Keywords
-            .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Market: market)))
+            .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Market: market, ExtraSources: extra)))
             .DistinctBy(s => s.Key)
             .ToList();
         return new ProfileDefinition(profile, rules, searches, RulesHash(profile, policy, rules.Eligibility));

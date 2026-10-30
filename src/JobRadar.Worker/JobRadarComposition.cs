@@ -4,6 +4,7 @@ using JobRadar.Infrastructure.Telemetry;
 using JobRadar.Integrations.Gupy;
 using JobRadar.Integrations.Himalayas;
 using JobRadar.Integrations.Jobicy;
+using JobRadar.Integrations.LinkedIn;
 using JobRadar.Integrations.Prototype;
 using JobRadar.Integrations.Seek;
 
@@ -24,6 +25,7 @@ public static class JobRadarComposition
         services.AddGupyIntegration(configuration);
         services.AddHimalayasIntegration(configuration);
         services.AddJobicyIntegration(configuration);
+        services.AddLinkedInIntegration(configuration);
         // One-off import command: the archive reader and the service that uses it live only in the worker.
         services.AddPrototypeImport();
         services.AddScoped<JobRadar.Application.Import.PrototypeImportService>();

@@ -101,6 +101,12 @@ public sealed class ProfileOptions
 
     public List<string> Locations { get; set; } = [];
 
+    /// <summary>
+    /// Opt-in sources that also run this profile's searches ("linkedin"), besides every source of its market that is
+    /// not opt-in. An unknown name stops the collection.
+    /// </summary>
+    public List<string> ExtraSources { get; set; } = [];
+
     public List<string> PositiveSignals { get; set; } = [];
     public List<string> NegativeSignals { get; set; } = [];
     public List<string> DisqualifySignals { get; set; } = [];

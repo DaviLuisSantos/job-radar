@@ -99,6 +99,24 @@ public class ProfileCatalogTests
     }
 
     [Fact]
+    public void Extra_sources_reach_the_searches_and_a_shared_search_runs_on_those_of_both()
+    {
+        var tech = Dotnet();
+        tech.ExtraSources = [" LinkedIn "];
+        var other = Dotnet();
+        other.Keywords = ["C# developer", "Integration Developer"];
+        var catalog = Catalog(("tech", tech), ("integration", other));
+
+        Assert.All(catalog.Profiles.Single(p => p.Name == "tech").Searches, s => Assert.Equal(["linkedin"], s.ExtraSources));
+        Assert.All(catalog.Profiles.Single(p => p.Name == "integration").Searches, s => Assert.Null(s.ExtraSources));
+        var shared = catalog.Searches.Single(s => s.Key == "c# developer @ perth wa");
+        Assert.Equal(["linkedin"], shared.ExtraSources);
+        Assert.Null(catalog.Searches.Single(s => s.Key == "integration developer @ perth wa").ExtraSources);
+        // Not part of the key: turning a source on keeps the search's history.
+        Assert.Equal("c# developer @ perth wa", shared.Key);
+    }
+
+    [Fact]
     public void Rules_hash_follows_the_scoring_rules_not_the_searches()
     {
         var baseline = Build("tech", Dotnet(), ScoringPolicy.Default).RulesHash;

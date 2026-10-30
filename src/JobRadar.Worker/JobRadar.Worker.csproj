@@ -11,6 +11,7 @@
     <ProjectReference Include="..\JobRadar.Integrations.Gupy\JobRadar.Integrations.Gupy.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Himalayas\JobRadar.Integrations.Himalayas.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Jobicy\JobRadar.Integrations.Jobicy.csproj" />
+    <ProjectReference Include="..\JobRadar.Integrations.LinkedIn\JobRadar.Integrations.LinkedIn.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Prototype\JobRadar.Integrations.Prototype.csproj" />
   </ItemGroup>
 

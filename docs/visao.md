@@ -47,8 +47,8 @@ australiano.
 ## Fontes de vagas
 
 Domínio comum; cada site é uma integração que traduz o que ele tem para o modelo neutro. Hoje: Seek (Austrália),
-Gupy (Brasil), Himalayas e Jobicy (remoto). Adzuna e Workforce Australia avaliados para a Austrália; Indeed e
-LinkedIn fora. Detalhes em [fontes.md](fontes.md).
+Gupy (Brasil), Himalayas e Jobicy (remoto) e o LinkedIn (Austrália e Brasil, só no Matching). Adzuna e Workforce Australia
+avaliados para a Austrália; Indeed fora. Detalhes em [fontes.md](fontes.md).
 
 ## Fases
 

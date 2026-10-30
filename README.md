@@ -1,6 +1,7 @@
 # JobRadar
 
-Multi-market job radar with pluggable sources: Seek (Australia), Gupy (Brazil), Himalayas and Jobicy (remote).
+Multi-market job radar with pluggable sources: Seek (Australia), Gupy (Brazil), LinkedIn
+(both, personal matching only), Himalayas and Jobicy (remote).
 It collects every day, scores each listing for the profiles of its market and explains every score.
 
 Two products share one core:
@@ -37,6 +38,7 @@ src/
   JobRadar.Infrastructure   EF Core: entity → configuration → mapper → repository, one model for both databases
   JobRadar.Infrastructure.Migrations.Postgres / .SqlServer   migrations per provider
   JobRadar.Integrations.Seek  Seek search API: resilient HTTP client, translator to the neutral model
+  JobRadar.Integrations.<Site>  Gupy, LinkedIn, Himalayas, Jobicy: the same shape, one project per site
   JobRadar.Worker           composition root, daily pipeline and CLI commands
   JobRadar.Web              triage UI (Blazor, server rendering)
 tests/
@@ -163,7 +165,9 @@ Only aggregated numbers are published, never individual listings. The system doe
 anti-bot protection and does not open protected job pages. Ad text, for the listings that score well,
 comes from the same data endpoint the source's own site uses; the first refusal stops that stage.
 Requests identify the bot in the User-Agent, share one paced budget (a few per second), and back off
-on HTTP 429. Ad text stays in the owner's database for personal use.
+on HTTP 429. Ad text stays in the owner's database for personal use. LinkedIn is read only through its
+logged-out (guest) pages, at one request per second, and never feeds the published numbers; a refusal or a login wall
+stops every LinkedIn request for six hours.
 
 ## License
 

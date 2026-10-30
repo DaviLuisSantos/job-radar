@@ -17,7 +17,7 @@ public sealed class LiveFactAttribute : FactAttribute
         : base(sourceFilePath, sourceLineNumber)
     {
         if (Environment.GetEnvironmentVariable("JOBRADAR_LIVE_TESTS") != "1")
-            Skip = "Set JOBRADAR_LIVE_TESTS=1 to call the real Seek and Gupy APIs.";
+            Skip = "Set JOBRADAR_LIVE_TESTS=1 to call the real Seek, Gupy and LinkedIn APIs.";
     }
 }
 

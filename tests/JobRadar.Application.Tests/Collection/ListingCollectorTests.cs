@@ -75,6 +75,35 @@ public class ListingCollectorTests
     }
 
     [Fact]
+    public async Task An_opt_in_source_runs_only_the_searches_that_name_it()
+    {
+        var seek = new FakeSource("seek");
+        var linkedIn = new FakeSource("LinkedIn", optIn: true);
+        var named = new ListingSearch("c# developer", "Perth", ExtraSources: ["linkedin"]);
+        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Market: JobMarket.BR, ExtraSources: ["linkedin"]);
+
+        await Collector(seek, linkedIn).CollectAsync([Dev, named, rio], Ct);
+
+        Assert.Equal([Dev.Key, named.Key], seek.Received.Select(s => s.Key));
+        // Still only its markets: naming it does not take a Brazilian search to an Australian source.
+        Assert.Equal([named.Key], linkedIn.Received.Select(s => s.Key));
+    }
+
+    [Fact]
+    public async Task An_extra_source_that_is_not_an_opt_in_source_stops_the_collection()
+    {
+        var seek = new FakeSource("seek");
+        var typo = new ListingSearch("c# developer", "Perth", ExtraSources: ["linkdin"]);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Collector(seek, new FakeSource("linkedin", optIn: true)).CollectAsync([Dev, typo], Ct));
+
+        Assert.Contains("'linkdin'", error.Message);
+        Assert.Contains("Known: linkedin", error.Message);
+        Assert.Empty(seek.Received);
+    }
+
+    [Fact]
     public async Task A_full_ad_the_search_returns_is_stored_once_and_replaced_when_it_changes()
     {
         var ad = new string('x', ListingDescription.MinLength) + " C# .NET";

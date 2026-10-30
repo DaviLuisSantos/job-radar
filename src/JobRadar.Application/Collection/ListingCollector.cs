@@ -32,7 +32,9 @@ public sealed class ListingCollector(
     public async Task<CollectionSummary> CollectAsync(IReadOnlyList<ListingSearch> searches, bool fullHistory, CancellationToken ct)
     {
         var done = new ConcurrentBag<CollectionRun>();
-        var work = sources.SelectMany(source => searches.Where(s => source.Markets.Contains(s.Market)).Select(search => (source, search)));
+        var all = sources.ToList();
+        RefuseUnknownExtraSources(all, searches);
+        var work = all.SelectMany(source => searches.Where(s => Runs(source, s)).Select(search => (source, search)));
         var parallel = new ParallelOptions { MaxDegreeOfParallelism = options.Value.MaxParallelSearches, CancellationToken = ct };
 
         await Parallel.ForEachAsync(work, parallel, async (item, token) =>
@@ -52,6 +54,25 @@ public sealed class ListingCollector(
             "Collection finished: {Runs} runs, {Failed} failed, {Incomplete} incomplete, {Found} found, {New} new",
             summary.Runs, summary.Failed, summary.Incomplete, summary.Found, summary.New);
         return summary;
+    }
+
+    /// <summary>A source runs the searches of its markets; an opt-in one, only those that name it.</summary>
+    internal static bool Runs(IJobSource source, ListingSearch search) =>
+        source.Markets.Contains(search.Market)
+        && (!source.OptIn || (search.ExtraSources?.Contains(Normalized(source.Name)) ?? false));
+
+    /// <summary>As <see cref="ListingId"/> writes a source, the form the profiles' extra sources are kept in.</summary>
+    private static string Normalized(string source) => source.Trim().ToLowerInvariant();
+
+    /// <summary>A typo in a profile's extra sources would silently leave the source out: it stops the collection instead.</summary>
+    private static void RefuseUnknownExtraSources(IReadOnlyList<IJobSource> sources, IReadOnlyList<ListingSearch> searches)
+    {
+        var optIn = sources.Where(s => s.OptIn).Select(s => Normalized(s.Name)).ToHashSet(StringComparer.Ordinal);
+        var unknown = searches.SelectMany(s => s.ExtraSources ?? []).Where(n => !optIn.Contains(n)).Distinct().Order().ToList();
+        if (unknown.Count > 0)
+            throw new InvalidOperationException(
+                $"Matching:Profiles:<profile>:ExtraSources names {string.Join(", ", unknown.Select(n => $"'{n}'"))}, which is not an "
+                + $"opt-in source. Known: {(optIn.Count > 0 ? string.Join(", ", optIn.Order()) : "none")}.");
     }
 
     private async Task<CollectionRun> RunOneAsync(IJobSource source, ListingSearch search, bool fullHistory, CancellationToken ct)

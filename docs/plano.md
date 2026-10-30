@@ -26,6 +26,9 @@ Pendências conhecidas, com a etapa onde entram:
 - **v2 (newsletter):** áreas e cidades do Raio-X ainda são as do protótipo (HVAC-R, Elétrica,
   Desenvolvimento; Perth + Austrália). Mudar = configurar `Market` (cada lista configurada substitui o padrão). Os
   termos não têm padrão no código desde 2026-10-30: só `Market:Terms`, no arquivo local.
+- **LinkedIn (2026-10-30):** fonte opcional, desligada até um perfil pedir. Ligar com `"ExtraSources": ["linkedin"]` nos
+  perfis de tecnologia do arquivo local da produção, um de cada vez, e conferir na `/status` a primeira passada
+  ([fontes.md](fontes.md#linkedin-spike-de-2026-10-30)).
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
 - **Voltar sem login ([#29](https://github.com/DaviLuisSantos/job-radar/issues/29)), decidido em 2026-10-30:** o autor quis
   uma solução que não dependa de SO. Tudo virou containers (`docker compose --profile prod`, scripts em PowerShell 7), igual

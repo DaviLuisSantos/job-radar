@@ -8,6 +8,7 @@
     <Project Path="src/JobRadar.Integrations.Gupy/JobRadar.Integrations.Gupy.csproj" />
     <Project Path="src/JobRadar.Integrations.Himalayas/JobRadar.Integrations.Himalayas.csproj" />
     <Project Path="src/JobRadar.Integrations.Jobicy/JobRadar.Integrations.Jobicy.csproj" />
+    <Project Path="src/JobRadar.Integrations.LinkedIn/JobRadar.Integrations.LinkedIn.csproj" />
     <Project Path="src/JobRadar.Integrations.Prototype/JobRadar.Integrations.Prototype.csproj" />
     <Project Path="src/JobRadar.Integrations.Seek/JobRadar.Integrations.Seek.csproj" />
     <Project Path="src/JobRadar.Web/JobRadar.Web.csproj" />
@@ -19,6 +20,7 @@
     <Project Path="tests/JobRadar.Infrastructure.Tests/JobRadar.Infrastructure.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Gupy.Tests/JobRadar.Integrations.Gupy.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Remote.Tests/JobRadar.Integrations.Remote.Tests.csproj" />
+    <Project Path="tests/JobRadar.Integrations.LinkedIn.Tests/JobRadar.Integrations.LinkedIn.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Prototype.Tests/JobRadar.Integrations.Prototype.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Seek.Tests/JobRadar.Integrations.Seek.Tests.csproj" />
     <Project Path="tests/JobRadar.Web.Tests/JobRadar.Web.Tests.csproj" />

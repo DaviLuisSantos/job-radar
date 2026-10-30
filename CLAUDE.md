@@ -59,7 +59,7 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`, em `Contracts/`) são classes abstratas com uma
   derivada por banco: sobem Postgres 18 **e** SQL Server 2022 via Testcontainers e só rodam com `JOBRADAR_DB_TESTS=1`.
   O CI roda os dois. Contrato novo ganha as duas derivadas no fim do arquivo.
-- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek, da Gupy, do Himalayas e do Jobicy pela composição completa.
+- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek, da Gupy, do LinkedIn, do Himalayas e do Jobicy pela composição completa.
   Fora do CI de propósito. Rode ao mexer numa `Integrations.*`, ou quando a coleta começar a falhar.
 - Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
   fora do repo (são anúncios reais), pontuadas com o bloco de elegibilidade do arquivo local (`JOBRADAR_LOCAL_SETTINGS`;
@@ -88,6 +88,7 @@ src/JobRadar.Infrastructure.Migrations.Postgres  migrations do Postgres (EF não
 src/JobRadar.Infrastructure.Migrations.SqlServer  migrations do SQL Server, geradas do mesmo modelo
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Integrations.Gupy  IJobSource da Gupy (Brasil): busca do portal, tradutor; o anúncio inteiro vem na busca
+src/JobRadar.Integrations.LinkedIn  IJobSource (AU e BR) e IDescriptionSource pelos endpoints de convidado: HTML lido por regex
 src/JobRadar.Integrations.Himalayas  IJobSource remoto (LATAM e global): busca pública; elegibilidade, fuso, salário
 src/JobRadar.Integrations.Jobicy  IJobSource remoto (LATAM): feed de 7 dias filtrado pelas palavras-chave aqui
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
@@ -114,7 +115,8 @@ do Raio-X.
 
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
 1. para cada fonte e cada busca **de um mercado que a fonte serve** (`IJobSource.Markets`, `Market` do perfil), calcula a janela
-   incremental pelo último sucesso;
+   incremental pelo último sucesso. Fonte opcional (`IJobSource.OptIn`, o LinkedIn) só roda as buscas dos perfis que a citam
+   em `ExtraSources`; nome desconhecido ali para a coleta;
 2. `IJobSource.SearchAsync`, que devolve as vagas únicas e diz se a busca veio completa;
 3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas, guarda o
    payload só quando o conteúdo mudou e registra que aquela busca achou a vaga (`listing_search_hits`);
@@ -152,7 +154,7 @@ uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatór
 
 Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**fora do git**; modelo em
 `appsettings.Local.example.json`). Cada palavra-chave é buscada em cada local; as buscas da coleta são a
-união dos perfis. Os **fatos** do candidato (formação, carteiras, tickets, experiência) ficam à parte, em
+união dos perfis (busca de dois perfis roda uma vez, nas fontes extras dos dois). Os **fatos** do candidato (formação, carteiras, tickets, experiência) ficam à parte, em
 `candidate/candidate.json` (fora do git, como o currículo; esquema e exemplo fictício versionados), preenchido
 pela skill `perfil-do-curriculo`. Fato vem do currículo; palavra-chave, contexto e sinal são ajustados contra o
 mercado e ficam no perfil. Requisitos de anúncio (anos de experiência, trade, carteira, ticket) são itens do
@@ -249,6 +251,11 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   dispara anti-bot. Acesso ao banco dentro de um serviço paralelo passa pelo `SemaphoreSlim` (um `DbContext`
   por escopo não aceita duas operações). O tempo de uma tentativa inclui a espera na fila do orçamento
   (`AttemptTimeout` 60 s).
+- LinkedIn: fonte opcional, só nos perfis com `"ExtraSources": ["linkedin"]` (a primeira passada sem janela pode passar de
+  mil pedidos). Ligar num perfil não muda a chave das buscas: o histórico continua. Orçamento próprio (`LinkedInPacing`, 1/s, 2 simultâneas), separado do Seek. A primeira recusa (403, 429, 999 ou
+  redirecionamento para `/authwall`) bloqueia **todo** pedido ao LinkedIn por 6 horas: a coleta roda todas as buscas mesmo
+  quando uma falha, e insistir é o que vira bloqueio do IP. Local do Brasil em inglês (", Brazil"): "Brasil" e local
+  desconhecido caem nos EUA, e a busca falha dizendo que não reconheceu o local. Nada do LinkedIn vai ao Raio-X.
 - Contagem do Raio-X só com `Seek:PageSize = 100`: o `totalCount` inclui os promovidos repetidos em cada página
   (`SeekMarketSource.CountAsync` recusa outro valor).
 - `Market` na configuração: cada lista presente **substitui** o padrão do código (`MarketDefaults`), não soma.

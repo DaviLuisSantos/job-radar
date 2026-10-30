@@ -15,6 +15,12 @@ public interface IJobSource
     IReadOnlySet<JobMarket> Markets { get; }
 
     /// <summary>
+    /// Runs only the searches of the profiles that name it in their extra sources (<see cref="ListingSearch.ExtraSources"/>),
+    /// not every search of its markets: a source with a tight budget or a higher risk (LinkedIn) is turned on per profile.
+    /// </summary>
+    bool OptIn => false;
+
+    /// <summary>
     /// Every listing matching the search, each once, with paging and source quirks handled
     /// inside. Sources cap results (Seek: 500), so the result says whether it is complete.
     /// </summary>
