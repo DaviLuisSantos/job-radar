@@ -59,8 +59,8 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`, em `Contracts/`) são classes abstratas com uma
   derivada por banco: sobem Postgres 18 **e** SQL Server 2022 via Testcontainers e só rodam com `JOBRADAR_DB_TESTS=1`.
   O CI roda os dois. Contrato novo ganha as duas derivadas no fim do arquivo.
-- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek pela composição completa.
-  Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou quando a coleta começar a falhar.
+- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek e da Gupy pela composição completa.
+  Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou `Integrations.Gupy`, ou quando a coleta começar a falhar.
 - Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
   fora do repo (são anúncios reais). **Mexeu em `Domain/Matching`? Rode.** Mudança de regra intencional
   quebra a paridade: aí registre no `docs/plano.md` e incremente `FitScorer.RulesVersion`.

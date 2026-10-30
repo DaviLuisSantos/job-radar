@@ -186,7 +186,7 @@ requisição por segundo, 2 simultâneas). A busca já traz o anúncio inteiro, 
 coleta grava em `listing_descriptions` (origem `Source`), reescrevendo só quando muda. Banco de talentos fica de fora.
 Local: uma cidade (`city`), `Remoto` (`workplaceType=remote`) ou `Brasil` (o país todo). Sem filtro de data na API: a
 janela incremental não se aplica e cada passada lê as páginas da busca. Resumo da vaga: arranjo e regime ("Remoto · CLT").
-Testes com uma resposta fictícia no formato real; sem teste ao vivo ainda. Perfil de exemplo `dotnet-br` em
+Testes com uma resposta fictícia no formato real, e `LiveGupyTests` contra a API (passou em 2026-10-29). Perfil de exemplo `dotnet-br` em
 `appsettings.Local.example.json`.
 
 **2.6 Triagem e contagem do Brasil.** Filtro por país na triagem (hoje um perfil já separa: só pontua as vagas das
