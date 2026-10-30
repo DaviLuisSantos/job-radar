@@ -19,7 +19,7 @@ Two products share one core:
 
 ![Triage of a remote profile: best first, with who may apply, time zones and how the job hires, one-key labelling](docs/img/triage.png)
 
-![A listing: the score explained step by step, the full ad, and the decision bar that stays on screen](docs/img/listing.png)
+![A listing: the score explained step by step, the full ad, and the decision panel that stays on screen](docs/img/listing.png)
 
 ![Today: what arrived for each profile of a market since the last visit](docs/img/today.png)
 

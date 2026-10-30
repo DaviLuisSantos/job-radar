@@ -1,11 +1,11 @@
 @* One line of the triage list. An excluded one says, in one line, the rule that took it out. *@
-<li class="row @(Current ? "current" : "") @(Busy ? "busy" : "") @(Row.Score == 0 ? "excluded" : "")"
-    tabindex="-1" @onclick="OnSelect">
+<li class="row band-@Wording.Band(Row.Score) @(Current ? "current" : "") @(Busy ? "busy" : "") @(Row.Score == 0 ? "excluded" : "")"
+    tabindex="-1" aria-current="@(Current ? "true" : null)" @onclick="OnSelect">
     <ScoreBadge Value="Row.Score" />
     <div class="what">
         <a class="title" href="@Href">@Row.Title</a>
         <div class="meta">
-            <span>@(Row.Company ?? "Empresa não informada")</span>
+            <span class="company">@(Row.Company ?? "Empresa não informada")</span>
             <span>@Wording.Location(Row.Location)@(Row.OtherLocations.Count > 0 ? $" +{Row.OtherLocations.Count} outros" : "")</span>
             @if (Wording.WorkType(Row.WorkType) is { Length: > 0 } wt)
             {
@@ -41,14 +41,22 @@
         }
     </div>
     <div class="actions" role="group" aria-label="Triagem de @Row.Title">
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" title="Boa (g)"
-                   OnClick="() => OnLabel.InvokeAsync(Verdict.Good)">Boa</MudButton>
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" title="Ruim (b)"
-                   OnClick="() => OnLabel.InvokeAsync(Verdict.Bad)">Ruim</MudButton>
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" title="Marcar como Candidatei"
-                   OnClick="() => OnStatus.InvokeAsync(ApplicationStatus.Applied)">Candidatei</MudButton>
-        <MudButton Size="Size.Small" Variant="Variant.Text" title="Não é para mim (conta como ruim)"
-                   OnClick="() => OnStatus.InvokeAsync(ApplicationStatus.Dismissed)">Descartar</MudButton>
+        <button type="button" class="act good @(Row.Verdict == Verdict.Good ? "on" : "")" title="Boa (g)"
+                aria-pressed="@(Row.Verdict == Verdict.Good ? "true" : "false")" @onclick="() => OnLabel.InvokeAsync(Verdict.Good)">
+            <Icon Path="@Icons.Material.Outlined.ThumbUp" /><span>Boa</span>
+        </button>
+        <button type="button" class="act bad @(Row.Verdict == Verdict.Bad ? "on" : "")" title="Ruim (b)"
+                aria-pressed="@(Row.Verdict == Verdict.Bad ? "true" : "false")" @onclick="() => OnLabel.InvokeAsync(Verdict.Bad)">
+            <Icon Path="@Icons.Material.Outlined.ThumbDown" /><span>Ruim</span>
+        </button>
+        <button type="button" class="act applied" title="Marcar como Candidatei (conta como boa)"
+                @onclick="() => OnStatus.InvokeAsync(ApplicationStatus.Applied)">
+            <Icon Path="@Icons.Material.Outlined.Send" /><span>Candidatei</span>
+        </button>
+        <button type="button" class="act dismiss" title="Descartar: não é para mim (conta como ruim)"
+                @onclick="() => OnStatus.InvokeAsync(ApplicationStatus.Dismissed)">
+            <Icon Path="@Icons.Material.Outlined.DoNotDisturbOn" /><span>Descartar</span>
+        </button>
     </div>
 </li>
 

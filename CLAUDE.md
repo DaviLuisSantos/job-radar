@@ -216,6 +216,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   operação). Injetar `TriageService` direto no componente prende um `DbContext` à aba inteira.
 - Web com prerender: `OnInitialized`/`OnParametersSet` rodam duas vezes (estático e interativo). Gravação que muda o que
   a própria página lê (a visita do "Hoje") vai em `OnAfterRenderAsync`, que só roda no interativo.
+- Web, cores: a paleta é uma só (`JobRadarTheme`). O `app.css` tira as cores das variáveis `--mud-palette-*`, e a paleta
+  escura vai no `<head>` (`JobRadarTheme.DarkCss`, sob `html[data-theme=dark]`, que um script no head põe antes da primeira
+  pintura): o HTML pré-renderizado já sai no tema certo. Cor nova entra na paleta, não como hex no CSS.
 - Esta máquina (TRABALHOPC) **é** a produção: o Postgres do `docker compose` é o banco de produção, e o auto-deploy
   implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Trabalhe num worktree. Para olhar o
   site com dados, rode-o contra uma cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à

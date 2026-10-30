@@ -7,6 +7,7 @@
 @if (_missing)
 {
     <section class="empty">
+        <span class="empty-icon"><Icon Path="@Icons.Material.Outlined.SearchOff" /></span>
         <h1>Vaga não encontrada</h1>
         <p>@Id nunca foi coletada.</p>
     </section>
@@ -15,147 +16,188 @@ else if (_detail is { } d)
 {
     var listing = d.Record.Listing;
     <article class="listing">
-        <header>
-            <h1>@listing.Title</h1>
-            <p class="meta">
-                <span>@(listing.Company ?? "Empresa não informada")</span>
-                <span>@Wording.Location(listing.Location)</span>
-                @if (Wording.WorkType(listing.WorkType) is { Length: > 0 } wt)
-                {
-                    <span>@wt</span>
-                }
-                @if (listing.SalaryText is { } salary)
-                {
-                    <span class="salary">@salary</span>
-                }
-            </p>
-            <div class="tags">
-                <ListingTags Conditions="ListingConditions.Read(listing.Summary)" Eligibility="@listing.Eligibility" />
-                <FactChips Facts="d.Facts" />
+        @if (d.Scores.Count > 0)
+        {
+            <a class="back" href="@($"triage/{Uri.EscapeDataString(d.Scores[0].Profile)}")">
+                <Icon Path="@Icons.Material.Rounded.ArrowBack" /> @d.Scores[0].Profile
+            </a>
+        }
+        <header class="listing-head">
+            @if (d.Scores.Count > 0)
+            {
+                <ScoreBadge Value="d.Scores[0].Score.Final" />
+            }
+            <div class="listing-title">
+                <h1>@listing.Title</h1>
+                <p class="meta">
+                    <span class="company">@(listing.Company ?? "Empresa não informada")</span>
+                    <span>@Wording.Location(listing.Location)</span>
+                    @if (Wording.WorkType(listing.WorkType) is { Length: > 0 } wt)
+                    {
+                        <span>@wt</span>
+                    }
+                    @if (listing.SalaryText is { } salary)
+                    {
+                        <span class="salary">@salary</span>
+                    }
+                </p>
+                <div class="tags">
+                    <ListingTags Conditions="ListingConditions.Read(listing.Summary)" Eligibility="@listing.Eligibility" />
+                    <FactChips Facts="d.Facts" />
+                </div>
+                <p class="dates">
+                    Publicada em @(listing.PostedAt is { } posted ? Wording.Date(posted) : "—") · vista pela primeira vez em @Wording.Date(d.Record.FirstSeenAt)
+                    @if (listing.SourceCategory is { } category)
+                    {
+                        <text> · @category</text>
+                    }
+                </p>
             </div>
-            <p class="muted">
-                Publicada em @(listing.PostedAt is { } posted ? Wording.Date(posted) : "—") · vista pela primeira vez em @Wording.Date(d.Record.FirstSeenAt)
-                @if (listing.SourceCategory is { } category)
-                {
-                    <text> · @category</text>
-                }
-            </p>
         </header>
-
-        @* Stays on screen while the page scrolls: deciding is what this page is for. *@
-        <MudPaper Elevation="2" Class="action-bar">
-            <div class="segmented" role="group" aria-label="Avaliação">
-                <MudButton Size="Size.Small" Color="Color.Success" Variant="@(d.Label?.Verdict == Verdict.Good ? Variant.Filled : Variant.Outlined)"
-                           OnClick="() => LabelAsync(Verdict.Good)">Boa</MudButton>
-                <MudButton Size="Size.Small" Color="Color.Error" Variant="@(d.Label?.Verdict == Verdict.Bad ? Variant.Filled : Variant.Outlined)"
-                           OnClick="() => LabelAsync(Verdict.Bad)">Ruim</MudButton>
-                @if (d.Label is not null)
-                {
-                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => LabelAsync(null)">Limpar</MudButton>
-                }
-            </div>
-            <MudSelect T="ApplicationStatus?" Value="d.Application?.Status" ValueChanged="StatusAsync" Label="Candidatura"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="status-select"
-                       ToStringFunc="StatusText">
-                @foreach (var status in Enum.GetValues<ApplicationStatus>())
-                {
-                    <MudSelectItem T="ApplicationStatus?" Value="status">@Wording.Status(status)</MudSelectItem>
-                }
-            </MudSelect>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Href="@listing.Url.ToString()" Target="_blank"
-                       rel="noopener noreferrer" EndIcon="@Icons.Material.Outlined.OpenInNew">Abrir no @listing.Id.Source</MudButton>
-        </MudPaper>
 
         @if (_error is { } error)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@error</MudAlert>
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" ShowCloseIcon="true" CloseIconClicked="() => _error = null">@error</MudAlert>
         }
 
-        <section class="panel why-score">
-            <h2>Por que esta nota</h2>
-            @if (d.Scores.Count == 0)
-            {
-                <p class="muted">Ainda sem nota.</p>
-            }
-            @foreach (var s in d.Scores)
-            {
-                <details open="@(s == d.Scores[0])">
-                    <summary><ScoreBadge Value="s.Score.Final" /> @s.Profile</summary>
-                    <Explanation Score="s.Score" />
-                    <p class="muted small">Nota calculada em @Wording.When(s.ScoredAt)</p>
-                </details>
-            }
-        </section>
-
-        @if (d.Terms.Count > 0)
-        {
-            <section>
-                <h2>Encontrado no anúncio inteiro</h2>
-                <p class="chips">
-                    @foreach (var term in d.Terms)
+        <div class="listing-layout">
+            <div class="listing-main">
+                <section class="panel why-score">
+                    <h2>Por que esta nota</h2>
+                    @if (d.Scores.Count == 0)
                     {
-                        <span class="chip term">“@term”</span>
+                        <p class="muted">Ainda sem nota.</p>
                     }
-                </p>
-            </section>
-        }
+                    @foreach (var s in d.Scores)
+                    {
+                        <details open="@(s == d.Scores[0])">
+                            <summary>
+                                <ScoreBadge Value="s.Score.Final" /> <span>@s.Profile</span>
+                                <span class="when">calculada em @Wording.When(s.ScoredAt)</span>
+                                <Icon Path="@Icons.Material.Rounded.ExpandMore" Class="chevron" />
+                            </summary>
+                            <Explanation Score="s.Score" />
+                        </details>
+                    }
+                </section>
 
-        <section class="full-ad">
-            <h2>Anúncio inteiro</h2>
-            @if (d.Description is { } desc)
-            {
-                <p class="muted small">
-                    Capturado em @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin) · @Wording.Number(desc.Text.Length) caracteres
-                </p>
-                <pre class="ad">@desc.Text</pre>
-            }
-            else
-            {
-                @if (listing.Summary is { } summary)
+                @if (d.Terms.Count > 0)
                 {
-                    <ul class="summary">
-                        @foreach (var part in summary.Split(" | "))
-                        {
-                            <li>@part</li>
-                        }
-                    </ul>
+                    <section class="panel terms">
+                        <h2>Encontrado no anúncio inteiro</h2>
+                        <p class="chips">
+                            @foreach (var term in d.Terms)
+                            {
+                                <span class="chip term">“@term”</span>
+                            }
+                        </p>
+                    </section>
                 }
-                <p class="muted">Não capturado. Abra o anúncio e clique em <a href="capture">Enviar ao JobRadar</a>, ou cole o texto abaixo.</p>
-            }
-            <details open="@(d.Description is null)">
-                <summary>@(d.Description is null ? "Colar o texto do anúncio inteiro" : "Trocar por outro texto")</summary>
-                <label class="notes">
-                    <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Texto do anúncio inteiro"></textarea>
-                </label>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SaveDescriptionAsync"
-                           Disabled="@string.IsNullOrWhiteSpace(_pasted)">Salvar e recalcular a nota</MudButton>
-            </details>
-        </section>
 
-        <section class="panel">
-            <h2>Candidatura</h2>
-            @if (d.Application?.AppliedAt is { } applied)
-            {
-                <p class="muted">Candidatura em @Wording.Date(applied)</p>
-            }
-            <label class="notes">
-                Notas
-                <textarea rows="4" @bind="_notes" placeholder="Recrutador, contatos, próximo passo…"></textarea>
-            </label>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SaveNotesAsync"
-                       Disabled="@(_notes == d.Application?.Notes)">Salvar notas</MudButton>
-
-            @if (d.Application is { History.Count: > 0 } app)
-            {
-                <h3>Histórico</h3>
-                <ol class="history">
-                    @foreach (var change in app.History.Reverse())
+                <section class="panel full-ad">
+                    <h2>Anúncio inteiro</h2>
+                    @if (d.Description is { } desc)
                     {
-                        <li><time>@Wording.When(change.At)</time> @Wording.Status(change.To)</li>
+                        <p class="muted small">
+                            Capturado em @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin) · @Wording.Number(desc.Text.Length) caracteres
+                        </p>
+                        <pre class="ad">@desc.Text</pre>
                     }
-                </ol>
-            }
-        </section>
+                    else
+                    {
+                        @if (listing.Summary is { } summary)
+                        {
+                            <ul class="summary">
+                                @foreach (var part in summary.Split(" | "))
+                                {
+                                    <li>@part</li>
+                                }
+                            </ul>
+                        }
+                        <p class="notice">Não capturado. Abra o anúncio e clique em <a href="capture">Enviar ao JobRadar</a>, ou cole o texto abaixo.</p>
+                    }
+                    <details class="paste" open="@(d.Description is null)">
+                        <summary>
+                            @(d.Description is null ? "Colar o texto do anúncio inteiro" : "Trocar por outro texto")
+                            <Icon Path="@Icons.Material.Rounded.ExpandMore" Class="chevron" />
+                        </summary>
+                        <label class="notes">
+                            <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Texto do anúncio inteiro"></textarea>
+                        </label>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="SaveDescriptionAsync"
+                                   Disabled="@string.IsNullOrWhiteSpace(_pasted)">Salvar e recalcular a nota</MudButton>
+                    </details>
+                </section>
+            </div>
+
+            @* Stays on screen while the ad scrolls: deciding is what this page is for. *@
+            <aside class="listing-side">
+                <section class="panel decide" aria-label="Decisão">
+                    <div class="verdicts" role="group" aria-label="Avaliação">
+                        <button type="button" class="act good @(d.Label?.Verdict == Verdict.Good ? "on" : "")"
+                                aria-pressed="@(d.Label?.Verdict == Verdict.Good ? "true" : "false")" @onclick="() => LabelAsync(Verdict.Good)">
+                            <Icon Path="@Icons.Material.Outlined.ThumbUp" /><span>Boa</span>
+                        </button>
+                        <button type="button" class="act bad @(d.Label?.Verdict == Verdict.Bad ? "on" : "")"
+                                aria-pressed="@(d.Label?.Verdict == Verdict.Bad ? "true" : "false")" @onclick="() => LabelAsync(Verdict.Bad)">
+                            <Icon Path="@Icons.Material.Outlined.ThumbDown" /><span>Ruim</span>
+                        </button>
+                    </div>
+                    @if (d.Label is not null)
+                    {
+                        <button type="button" class="link-button clear" @onclick="() => LabelAsync(null)">Limpar avaliação</button>
+                    }
+                    <MudSelect T="ApplicationStatus?" Value="d.Application?.Status" ValueChanged="StatusAsync" Label="Candidatura"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="status-select"
+                               ToStringFunc="StatusText">
+                        @foreach (var status in Enum.GetValues<ApplicationStatus>())
+                        {
+                            <MudSelectItem T="ApplicationStatus?" Value="status">@Wording.Status(status)</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@listing.Url.ToString()" Target="_blank" FullWidth="true"
+                               rel="noopener noreferrer" EndIcon="@Icons.Material.Outlined.OpenInNew" DropShadow="false">Abrir no @listing.Id.Source</MudButton>
+                </section>
+
+                <section class="panel application">
+                    <h2>Candidatura</h2>
+                    @if (d.Application?.AppliedAt is { } applied)
+                    {
+                        <p class="muted small">Candidatura em @Wording.Date(applied)</p>
+                    }
+                    <label class="notes">
+                        Notas
+                        <textarea rows="4" @bind="_notes" @bind:event="oninput" placeholder="Recrutador, contatos, próximo passo…"></textarea>
+                    </label>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="SaveNotesAsync"
+                               Disabled="@(_notes == d.Application?.Notes)">Salvar notas</MudButton>
+
+                    @if (d.Application is { History.Count: > 0 } app)
+                    {
+                        <h3>Histórico</h3>
+                        <ol class="timeline">
+                            @foreach (var change in app.History.Reverse())
+                            {
+                                <li><time>@Wording.When(change.At)</time> <span class="chip status-@change.To.ToString().ToLowerInvariant()">@Wording.Status(change.To)</span></li>
+                            }
+                        </ol>
+                    }
+                </section>
+            </aside>
+        </div>
+
+        @* On a phone the panel is far down the page: the decision stays at hand at the bottom. *@
+        <nav class="decide-bar" aria-label="Decisão rápida">
+            <button type="button" class="act good @(d.Label?.Verdict == Verdict.Good ? "on" : "")" @onclick="() => LabelAsync(Verdict.Good)">
+                <Icon Path="@Icons.Material.Outlined.ThumbUp" /><span>Boa</span>
+            </button>
+            <button type="button" class="act bad @(d.Label?.Verdict == Verdict.Bad ? "on" : "")" @onclick="() => LabelAsync(Verdict.Bad)">
+                <Icon Path="@Icons.Material.Outlined.ThumbDown" /><span>Ruim</span>
+            </button>
+            <a class="act open" href="@listing.Url.ToString()" target="_blank" rel="noopener noreferrer">
+                <Icon Path="@Icons.Material.Outlined.OpenInNew" /><span>Abrir</span>
+            </a>
+        </nav>
     </article>
 }
 

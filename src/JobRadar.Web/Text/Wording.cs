@@ -24,6 +24,15 @@ public static class Wording
     public const string StatusPage = "Status";
     public const string SomethingWentWrong = "Algo deu errado.";
     public const string Reload = "Recarregar";
+    public const string Close = "Fechar";
+
+    /// <summary>The theme button says what it is now: automatic (the system's), light or dark.</summary>
+    public static string ThemeTitle(string theme) => theme switch
+    {
+        "light" => "Tema claro (clique para escuro)",
+        "dark" => "Tema escuro (clique para automático)",
+        _ => "Tema automático, como o sistema (clique para claro)",
+    };
 
     public static string ProfilesOf(string market) => $"Perfis de {market}";
 
@@ -35,10 +44,13 @@ public static class Wording
 
     public static string NewListings(int count) => count == 1 ? "1 vaga nova" : $"{count.ToString("N0", Culture)} vagas novas";
 
+    /// <summary>The words after a big number: "1 / vaga nova", "7 / vagas novas".</summary>
+    public static string NewListingsWord(int count) => count == 1 ? "vaga nova" : "vagas novas";
+
+    public static string ApplicationsMovedWord(int count) => count == 1 ? "candidatura mudou" : "candidaturas mudaram";
+
     public static string SinceVisit(DateTimeOffset since, bool firstVisit) =>
         firstVisit ? "Primeira visita: o que chegou nos últimos 7 dias." : $"Desde a sua última visita, em {When(since)}.";
-
-    public static string NewInMarket(string market, int count) => count == 0 ? market : $"{market} ({count.ToString("N0", Culture)})";
 
     public static string StatusMove(ApplicationStatus? from, ApplicationStatus to) =>
         from is { } f ? $"{Status(f)} → {Status(to)}" : Status(to);

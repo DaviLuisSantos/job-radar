@@ -36,6 +36,8 @@ public class ComponentTests : BunitContext
         Assert.Contains("título", lines[1]);
         Assert.Contains("Nota final", lines[3]);
         Assert.Equal(2, cut.FindAll("li.plus").Count);
+        // Each step's bar against the largest step, at least 25 points: +16 is 64%, +8 half of it.
+        Assert.Equal(["width: 64%", "width: 32%"], cut.FindAll("li.plus .bar span").Select(b => b.GetAttribute("style")));
     }
 
     [Fact]
@@ -127,6 +129,16 @@ public class ComponentTests : BunitContext
         Assert.Contains("excluded", cut.Find("li.row").ClassList);
         Assert.Equal("Palavra do título que este perfil descarta: júnior", cut.Find(".excluded-by").TextContent);
         Assert.Equal(Wording.ExcludedReasonUnknown, RenderRow(Row(0)).Find(".excluded-by").TextContent);
+    }
+
+    [Fact]
+    public void A_row_marks_its_own_verdict_as_pressed()
+    {
+        var cut = RenderRow(Row(72) with { Verdict = Verdict.Good });
+
+        Assert.Equal("true", cut.Find(".act.good").GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.Find(".act.bad").GetAttribute("aria-pressed"));
+        Assert.Contains("on", cut.Find(".act.good").ClassList);
     }
 
     [Fact]

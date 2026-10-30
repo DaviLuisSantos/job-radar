@@ -50,7 +50,9 @@ public class MainLayoutTests : BunitContext
         var cut = RenderWith(("dotnet", In("AU")), ("fifo", In("AU")), ("dotnet-br", In("BR")));
 
         Assert.Contains("page body", cut.Markup);
-        Assert.Equal(["Austrália", "Brasil"], cut.FindAll(".mud-toggle-item").Select(i => i.TextContent.Trim()));
+        Assert.Equal(["Austrália", "Brasil"], cut.FindAll(".markets a").Select(i => i.TextContent.Trim()));
+        Assert.Equal(["hoje/au", "hoje/br"], cut.FindAll(".markets a").Select(a => a.GetAttribute("href")));
+        Assert.Equal("true", cut.Find(".markets a.active").GetAttribute("aria-current"));
         Assert.Equal(["Hoje", "dotnet", "fifo"], cut.FindAll(".profile-bar a").Select(a => a.TextContent.Trim()));
     }
 
@@ -59,7 +61,7 @@ public class MainLayoutTests : BunitContext
     {
         var cut = RenderWith(("dotnet", In("AU")));
 
-        Assert.Empty(cut.FindAll(".mud-toggle-item"));
+        Assert.Empty(cut.FindAll(".markets"));
         Assert.Equal(["Hoje", "dotnet"], cut.FindAll(".profile-bar a").Select(a => a.TextContent.Trim()));
     }
 

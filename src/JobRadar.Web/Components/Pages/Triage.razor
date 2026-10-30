@@ -7,97 +7,134 @@
 
 <PageTitle>@Profile · Triagem · JobRadar</PageTitle>
 
-<div class="page-head">
-    <h1>@Profile</h1>
-    <p class="muted">@HeadCount</p>
-    @if (_page is { Excluded: > 0 } || _filter.Excluded)
-    {
-        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary" Class="excluded-toggle"
-                   title="@(_filter.Excluded ? null : Wording.ShowExcluded)" OnClick="ToggleExcludedAsync">
-            @(_filter.Excluded ? Wording.BackToOpen : Wording.Excluded(_page?.Excluded ?? 0))
-        </MudButton>
-    }
+<header class="page-head">
+    <div class="page-title">
+        <p class="eyebrow">Triagem · @MarketLabel</p>
+        <h1>@Profile</h1>
+    </div>
+    <div class="head-stats">
+        <span>@HeadCount</span>
+        @if (_page is { Excluded: > 0 } || _filter.Excluded)
+        {
+            <button type="button" class="link-button excluded-toggle" title="@(_filter.Excluded ? null : Wording.ShowExcluded)" @onclick="ToggleExcludedAsync">
+                @(_filter.Excluded ? Wording.BackToOpen : Wording.Excluded(_page?.Excluded ?? 0))
+            </button>
+        }
+    </div>
     @if (_judged is { } judged)
     {
-        <p class="progress" title="Suas avaliações, mais Candidatei (conta como boa) e Descartada (conta como ruim)">
-            Avaliadas: <b>@judged.Good</b> boas · <b>@judged.Bad</b> ruins, meta @Calibration.LabelGoal
-        </p>
+        <div class="goal" title="Suas avaliações, mais Candidatei (conta como boa) e Descartada (conta como ruim)">
+            <span class="progress">Avaliadas: <b>@judged.Good</b> boas · <b>@judged.Bad</b> ruins, meta @Calibration.LabelGoal</span>
+            <span class="goal-bar" aria-hidden="true">
+                <span class="good" style="width: @GoalShare(judged.Good)"></span><span class="bad" style="width: @GoalShare(judged.Bad)"></span>
+            </span>
+        </div>
     }
-</div>
+</header>
 
-<form class="filters" @onsubmit="SearchAsync" @onsubmit:preventDefault>
-    <MudTextField T="string" @bind-Value="_text" Placeholder="Título ou empresa" aria-label="Buscar por título ou empresa"
-                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Search" OnAdornmentClick="SearchAsync"
+<form class="toolbar" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+    <MudTextField T="string" @bind-Value="_text" Placeholder="Buscar título ou empresa" aria-label="Buscar por título ou empresa"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" OnAdornmentClick="SearchAsync"
+                  Clearable="true" OnClearButtonClick="SearchAsync"
                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="search" />
-    @if (!_filter.Excluded)
-    {
-        <MudSelect T="int" @bind-Value="_minScore" @bind-Value:after="FiltersChangedAsync" Label="Nota mínima"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="narrow">
-            <MudSelectItem Value="0">qualquer</MudSelectItem>
-            <MudSelectItem Value="50">50+</MudSelectItem>
-            <MudSelectItem Value="65">65+</MudSelectItem>
-            <MudSelectItem Value="80">80+</MudSelectItem>
-        </MudSelect>
-        <MudSelect T="TriageOrder" @bind-Value="_order" @bind-Value:after="FiltersChangedAsync" Label="Ordem"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="wide"
-                   title="Por faixa de nota distribui algumas vagas de cada faixa por página, para as avaliações não virem só do topo">
-            <MudSelectItem Value="TriageOrder.BestFirst">melhores primeiro</MudSelectItem>
-            <MudSelectItem Value="TriageOrder.AcrossScores">por faixa de nota, para avaliar</MudSelectItem>
-        </MudSelect>
-    }
-    @if (IsRemote)
-    {
-        <MudSelect T="Engagement?" @bind-Value="_engagement" @bind-Value:after="FiltersChangedAsync" Label="Regime"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="narrow" Clearable="true"
-                   ToStringFunc="@(e => e is { } v ? Wording.EngagementName(v) : "")">
-            @foreach (var e in new[] { Engagement.Contractor, Engagement.Eor, Engagement.Direct, Engagement.Unknown })
-            {
-                <MudSelectItem T="Engagement?" Value="e">@Wording.EngagementName(e)</MudSelectItem>
-            }
-        </MudSelect>
-    }
-    <MudSwitch T="bool" @bind-Value="_showHandled" @bind-Value:after="FiltersChangedAsync" Label="Mostrar tratadas" Color="Color.Primary" />
+    <div class="filter-row">
+        @if (!_filter.Excluded)
+        {
+            <div class="segmented" role="group" aria-label="Nota mínima">
+                @foreach (var (value, label) in MinScores)
+                {
+                    <button type="button" class="@(_minScore == value ? "on" : "")" aria-pressed="@(_minScore == value ? "true" : "false")"
+                            @onclick="() => SetMinScoreAsync(value)">@label</button>
+                }
+            </div>
+            <div class="segmented" role="group" aria-label="Ordem"
+                 title="Por faixa de nota distribui algumas vagas de cada faixa por página, para as avaliações não virem só do topo">
+                <button type="button" class="@(_order == TriageOrder.BestFirst ? "on" : "")" aria-pressed="@(_order == TriageOrder.BestFirst ? "true" : "false")"
+                        @onclick="() => SetOrderAsync(TriageOrder.BestFirst)">Melhores primeiro</button>
+                <button type="button" class="@(_order == TriageOrder.AcrossScores ? "on" : "")" aria-pressed="@(_order == TriageOrder.AcrossScores ? "true" : "false")"
+                        @onclick="() => SetOrderAsync(TriageOrder.AcrossScores)">Por faixa de nota</button>
+            </div>
+        }
+        @if (IsRemote)
+        {
+            <MudSelect T="Engagement?" @bind-Value="_engagement" @bind-Value:after="FiltersChangedAsync" Label="Regime"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="narrow" Clearable="true"
+                       ToStringFunc="@(e => e is { } v ? Wording.EngagementName(v) : "")">
+                @foreach (var e in new[] { Engagement.Contractor, Engagement.Eor, Engagement.Direct, Engagement.Unknown })
+                {
+                    <MudSelectItem T="Engagement?" Value="e">@Wording.EngagementName(e)</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        <MudSwitch T="bool" @bind-Value="_showHandled" @bind-Value:after="FiltersChangedAsync" Label="Mostrar tratadas" Color="Color.Primary" Class="handled" />
+    </div>
 </form>
 
 @if (_error is { } error)
 {
-    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@error</MudAlert>
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" ShowCloseIcon="true" CloseIconClicked="() => _error = null">@error</MudAlert>
+}
+
+@if (_page is null)
+{
+    <ul class="rows skeleton" aria-busy="true" aria-label="Carregando">
+        @for (var i = 0; i < 5; i++)
+        {
+            <li class="row"><span class="score"></span><div class="what"><span class="line w60"></span><span class="line w40"></span></div></li>
+        }
+    </ul>
+}
+else if (_page.Rows.Count == 0)
+{
+    <section class="empty">
+        <span class="empty-icon"><Icon Path="@Icons.Material.Outlined.Inbox" /></span>
+        <h2>Nada por aqui</h2>
+        <p>@(_filter.Excluded ? "Nenhuma vaga excluída com estes filtros." : _filter.OnlyUntriaged ? "Todas as vagas desta visão já foram tratadas." : "Nenhuma vaga atende a estes filtros.")</p>
+        @if (_filter.OnlyUntriaged && !_filter.Excluded)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ShowHandledAsync">Mostrar as tratadas</MudButton>
+        }
+    </section>
+}
+else
+{
+    <div class="list-frame @(_loading ? "loading" : "")">
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Size="Size.Small" Class="list-progress" />
+        }
+        <ul class="rows" @onkeydown="KeyAsync">
+            @foreach (var (row, index) in _page.Rows.Select((r, i) => (r, i)))
+            {
+                <TriageRowView @key="row.Id" Row="row" Href="@ListingLink(row.Id)" Now="Time.GetUtcNow()"
+                               Current="index == _cursor" Busy="_busy.Contains(row.Id)"
+                               OnSelect="() => _cursor = index"
+                               OnLabel="v => LabelAsync(row, v)" OnStatus="s => StatusAsync(row, s)" />
+            }
+        </ul>
+    </div>
+
+    @if (Pages > 1)
+    {
+        <nav class="pager" aria-label="Páginas">
+            <MudPagination Count="Pages" Selected="_filter.Page" SelectedChanged="GoToAsync" Size="Size.Small" Color="Color.Primary" />
+        </nav>
+    }
+
+    <p class="keys">
+        Teclado, com uma linha selecionada: <kbd>j</kbd> <kbd>k</kbd> movem · <kbd>g</kbd> boa · <kbd>b</kbd> ruim · <kbd>u</kbd> desfaz · <kbd>o</kbd> abre
+    </p>
 }
 
 @if (_undo is { } undo)
 {
-    <p class="undo" role="status">
-        <span>“@undo.Row.Title” marcada como @Wording.Verdict(undo.Verdict).ToLowerInvariant().</span>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="UndoAsync">Desfazer</MudButton>
-    </p>
-}
-
-@if (_page is { Rows.Count: 0 })
-{
-    <section class="empty">
-        <h2>Nada por aqui</h2>
-        <p>@(_filter.Excluded ? "Nenhuma vaga excluída com estes filtros." : _filter.OnlyUntriaged ? "Todas as vagas desta visão já foram tratadas." : "Nenhuma vaga atende a estes filtros.")</p>
-    </section>
-}
-else if (_page is not null)
-{
-    <p class="keys muted small">
-        Teclas, com uma linha selecionada: <kbd>j</kbd> <kbd>k</kbd> movem · <kbd>g</kbd> boa · <kbd>b</kbd> ruim · <kbd>u</kbd> desfaz · <kbd>o</kbd> abre
-    </p>
-
-    <ul class="rows" @onkeydown="KeyAsync">
-        @foreach (var (row, index) in _page.Rows.Select((r, i) => (r, i)))
-        {
-            <TriageRowView @key="row.Id" Row="row" Href="@ListingLink(row.Id)" Now="Time.GetUtcNow()"
-                           Current="index == _cursor" Busy="_busy.Contains(row.Id)"
-                           OnSelect="() => _cursor = index"
-                           OnLabel="v => LabelAsync(row, v)" OnStatus="s => StatusAsync(row, s)" />
-        }
-    </ul>
-
-    <nav class="pager" aria-label="Páginas">
-        <MudPagination Count="Pages" Selected="_filter.Page" SelectedChanged="GoToAsync" Size="Size.Small" Color="Color.Primary" />
-    </nav>
+    <div class="toast undo" role="status">
+        <Icon Path="@(undo.Verdict == Verdict.Good ? Icons.Material.Outlined.ThumbUp : Icons.Material.Outlined.ThumbDown)"
+              Class="@(undo.Verdict == Verdict.Good ? "good" : "bad")" />
+        <span class="toast-text">“@undo.Row.Title” marcada como @Wording.Verdict(undo.Verdict).ToLowerInvariant().</span>
+        <button type="button" class="toast-action" @onclick="UndoAsync">Desfazer <kbd>u</kbd></button>
+        <button type="button" class="icon-button" aria-label="@Wording.Close" @onclick="() => _undo = null"><Icon Path="@Icons.Material.Rounded.Close" /></button>
+    </div>
 }
 
 @code {
@@ -121,14 +158,25 @@ else if (_page is not null)
 
     private int Pages => _page is null ? 1 : Math.Max(1, (int)Math.Ceiling(_page.Total / (double)_filter.PageSize));
 
+    private static readonly (int Value, string Label)[] MinScores = [(0, "Todas"), (50, "50+"), (65, "65+"), (80, "80+")];
+
     private int _minScore;
     private TriageOrder _order;
     private bool _showHandled;
     private Engagement? _engagement;
 
     /// <summary>A remote market's profile: its ads say how they hire, and the list can filter on it.</summary>
-    private bool IsRemote => Catalog.Profiles.FirstOrDefault(p => string.Equals(p.Name, Profile, StringComparison.OrdinalIgnoreCase))?.Market
-        is JobMarket.LatamRemote or JobMarket.GlobalRemote;
+    private bool IsRemote => Market is JobMarket.LatamRemote or JobMarket.GlobalRemote;
+
+    private JobMarket? Market => Catalog.Profiles.FirstOrDefault(p => string.Equals(p.Name, Profile, StringComparison.OrdinalIgnoreCase))?.Market;
+
+    private string MarketLabel => ProfileMenu.Label(Market ?? JobMarket.AU);
+
+    /// <summary>A share of the label goal, as a CSS width.</summary>
+    private static string GoalShare(int count) =>
+        $"{Math.Min(100.0, 100.0 * count / Calibration.LabelGoal).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}%";
+
+    private bool _loading;
 
     private string HeadCount => _page is null ? "Carregando…"
         : _filter.Excluded ? $"{Wording.Excluded(_page.Total)}, fora da lista"
@@ -140,7 +188,7 @@ else if (_page is not null)
             return;
         _filter = new TriageFilter(Profile);
         (_text, _minScore, _order, _showHandled, _engagement) = (null, 0, TriageOrder.BestFirst, false, null);
-        (_cursor, _undo) = (0, null);
+        (_cursor, _undo, _page, _judged) = (0, null, null, null);
         await LoadAsync();
     }
 
@@ -159,10 +207,42 @@ else if (_page is not null)
             Text = _text, MinScore = _minScore, Order = _order, OnlyUntriaged = !_showHandled, Engagement = _engagement, Page = 1,
         };
         _cursor = 0;
-        return LoadAsync();
+        return LoadShowingProgressAsync();
     }
 
     private Task SearchAsync() => FiltersChangedAsync();
+
+    private Task SetMinScoreAsync(int value)
+    {
+        _minScore = value;
+        return FiltersChangedAsync();
+    }
+
+    private Task SetOrderAsync(TriageOrder order)
+    {
+        _order = order;
+        return FiltersChangedAsync();
+    }
+
+    private Task ShowHandledAsync()
+    {
+        _showHandled = true;
+        return FiltersChangedAsync();
+    }
+
+    /// <summary>A load the user asked for: the list dims and a bar runs above it until the new page is in.</summary>
+    private async Task LoadShowingProgressAsync()
+    {
+        _loading = true;
+        try
+        {
+            await LoadAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
 
     private Task ToggleExcludedAsync()
     {
@@ -174,7 +254,7 @@ else if (_page is not null)
     {
         _filter = _filter with { Page = page };
         _cursor = 0;
-        return LoadAsync();
+        return LoadShowingProgressAsync();
     }
 
     private async Task LoadAsync()
