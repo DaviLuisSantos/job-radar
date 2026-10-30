@@ -63,6 +63,15 @@ public class CliCommandTests
     }
 
     [Fact]
+    public void Tech_count_defaults_to_Brazil_and_this_month()
+    {
+        Assert.Equal(new CliCommand.TechCount(Country.BR, null), Parse("tech-count"));
+        Assert.Equal(new CliCommand.TechCount(Country.AU, null), Parse("tech-count", "au"));
+        Assert.Equal(new CliCommand.TechCount(Country.BR, "2026-10"), Parse("tech-count", "2026-10"));
+        Assert.Equal(new CliCommand.TechCount(Country.AU, "2026-09"), Parse("tech-count", "AU", "2026-09"));
+    }
+
+    [Fact]
     public void Copy_database_names_the_target_provider_by_name()
     {
         Assert.Equal(new CliCommand.CopyDatabase(DatabaseProvider.SqlServer, "Server=x"), Parse("copy-database", "sqlserver", "Server=x"));
@@ -97,6 +106,8 @@ public class CliCommandTests
     [InlineData("market-report", "2026-13")]
     [InlineData("market", "now")]
     [InlineData("copy-database", "Oracle", "Server=x")]
+    [InlineData("tech-count", "NZ", "2026-10")]
+    [InlineData("tech-count", "outubro")]
     [InlineData("copy-database", "", "Server=x")]
     [InlineData("copy-database", "SqlServer")]
     [InlineData("status", "seek:1", "hired")]

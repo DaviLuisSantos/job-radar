@@ -189,9 +189,18 @@ janela incremental não se aplica e cada passada lê as páginas da busca. Resum
 Testes com uma resposta fictícia no formato real, e `LiveGupyTests` contra a API (passou em 2026-10-29). Perfil de exemplo `dotnet-br` em
 `appsettings.Local.example.json`.
 
-**2.6 Triagem e contagem do Brasil.** Filtro por país na triagem (hoje um perfil já separa: só pontua as vagas das
-suas buscas). Contagem mensal de tecnologias pedidas nas vagas BR (comando e página de uso próprio), lendo as
-descrições.
+**2.6 Triagem e contagem do Brasil.** ✅ A triagem já separa por país: um perfil só mostra as vagas das suas buscas, e
+um perfil BR só busca nas fontes do Brasil. O site marca o país ao lado dos perfis que não são da Austrália (e a
+marca "JobRadar AU" que sobrou do rename saiu do topo). Contagem de tecnologias: `tech-count [AU|BR] [YYYY-MM]`
+(padrão: BR, este mês), lendo título e anúncio das vagas do país vistas pela primeira vez no mês (mês em UTC). Cada
+vaga conta uma vez por tecnologia; só entram as que têm o anúncio inteiro, porque um título sozinho faria as fatias
+mentirem. O catálogo (`TechnologyCount.Catalog`) cobre o que o plano de entrevistas acompanha: linguagens, front-end,
+dados, nuvem, mensageria, arquitetura, prática e inglês. Página no site: não fiz; o comando basta para alimentar o
+`Requisitos das vagas.md` do vault.
+
+**Pronto da fase 2** (§3.5 do original): vagas BR na passada diária, pontuadas pelas regras BR ✅ no código (falta a
+primeira passada real com um perfil BR); equivalência do score AU **a conferir com a paridade no trabalhopc**; triagem
+por país ✅; relatório mensal separado ✅ (o Raio-X segue só AU); contagem de tecnologias ✅.
 
 **Pronto:** §3.5 do original. O Raio-X público continua só AU (decisão 1).
 

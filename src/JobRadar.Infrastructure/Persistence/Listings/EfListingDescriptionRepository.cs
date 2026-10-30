@@ -39,6 +39,21 @@ internal sealed class EfListingDescriptionRepository(JobRadarDbContext db) : ILi
         return row is null ? null : new ListingDescription(id, row.Text, ToOrigin(row.Origin), row.CapturedAt);
     }
 
+    public async Task<IReadOnlyList<(string Title, string? Description)>> ListAdsFirstSeenAsync(
+        Country country, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default)
+    {
+        var code = ListingMapper.ToColumn(country);
+        var (start, end) = (from.ToUniversalTime(), to.ToUniversalTime());
+        var rows = await (
+                from l in db.Listings
+                where l.Country == code && l.FirstSeenAt >= start && l.FirstSeenAt < end
+                join d in db.ListingDescriptions on new { l.Source, l.SourceId } equals new { d.Source, d.SourceId } into ds
+                from d in ds.DefaultIfEmpty()
+                select new { l.Title, Text = (string?)d.Text })
+            .ToListAsync(ct);
+        return rows.Select(r => (r.Title, (string?)r.Text)).ToList();
+    }
+
     public async Task<IReadOnlyDictionary<ListingId, string>> GetTextsAsync(IReadOnlyCollection<ListingId> ids, CancellationToken ct = default)
     {
         var result = new Dictionary<ListingId, string>();

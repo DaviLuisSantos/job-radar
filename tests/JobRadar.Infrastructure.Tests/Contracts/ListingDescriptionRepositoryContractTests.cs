@@ -22,6 +22,37 @@ public abstract class ListingDescriptionRepositoryContractTests(DatabaseFixture 
     private EfListingDescriptionRepository Repo(Infrastructure.Persistence.JobRadarDbContext ctx) => new(ctx);
 
     [DatabaseFact]
+    public async Task The_ads_of_a_country_first_seen_in_a_period_come_with_their_text_when_there_is_one()
+    {
+        await db.ResetAsync();
+        var october = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        Listing Br(string id, string title) => ListingMapperTests.Sample(id, title) with
+        {
+            Id = new ListingId("gupy", id),
+            Location = new ListingLocation(Country.BR, null, "Rio de Janeiro", "RJ", null),
+        };
+        async Task RecordAsync(DateTimeOffset at, params Listing[] listings)
+        {
+            await using var ctx = db.NewContext();
+            await new EfListingRepository(ctx).RecordObservationsAsync(
+                listings.Select(l => new SourcedListing(l, $$"""{"id":"{{l.Id.SourceId}}"}""")).ToList(), "dev @ rio (br)", at, Ct);
+        }
+        await RecordAsync(october.AddDays(-1), Br("9", "Seen in September"));
+        await RecordAsync(october.AddDays(3), Br("1", "Desenvolvedor .NET"), Br("2", "Desenvolvedor C#"));
+        await RecordAsync(october.AddMonths(1), Br("8", "Seen in November"));
+        await SeedAsync("1");   // Australian, first seen in October too
+        await using (var ctx = db.NewContext())
+            await Repo(ctx).SaveAsync(new ListingDescription(new ListingId("gupy", "1"), "C#, .NET e SQL Server", DescriptionOrigin.Source, october), Ct);
+
+        await using var read = db.NewContext();
+        var ads = await Repo(read).ListAdsFirstSeenAsync(Country.BR, october, october.AddMonths(1), Ct);
+
+        Assert.Equal(
+            [("Desenvolvedor .NET", "C#, .NET e SQL Server"), ("Desenvolvedor C#", null)],
+            ads.OrderBy(a => a.Title, StringComparer.Ordinal).ToList());
+    }
+
+    [DatabaseFact]
     public async Task A_capture_is_stored_and_a_new_one_replaces_it()
     {
         await db.ResetAsync();

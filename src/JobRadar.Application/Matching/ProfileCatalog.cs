@@ -12,6 +12,9 @@ public sealed record ProfileDefinition(MatchingProfile Profile, IReadOnlyList<Li
 {
     public string Name => Profile.Name;
 
+    /// <summary>The market the profile searches and scores.</summary>
+    public Country Country { get; init; } = Country.AU;
+
     /// <summary>
     /// Keys whose listings this profile scores: its searches, plus <see cref="ProfileCatalog.DirectKey"/> for
     /// listings attached to the profile without a search (imported from the prototype).
@@ -64,7 +67,7 @@ public sealed class ProfileCatalog
             .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Country: country)))
             .DistinctBy(s => s.Key)
             .ToList();
-        return new ProfileDefinition(profile, searches, RulesHash(profile, policy));
+        return new ProfileDefinition(profile, searches, RulesHash(profile, policy)) { Country = country };
     }
 
     /// <summary>

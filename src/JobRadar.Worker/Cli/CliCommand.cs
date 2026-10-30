@@ -24,6 +24,7 @@ public abstract record CliCommand
           collect [--full]                run the daily pass now (--full: ignore the incremental windows)
           market                          take the market snapshot (Raio-X) now
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
+          tech-count [AU|BR] [YYYY-MM]    technologies the month's full ads asked for (default: BR, this month)
           import-prototype <jobs.db> [--dry-run]  bring the Python prototype history in (safe to repeat)
           copy-database Postgres|SqlServer <connection-string>  every row of this database into another, empty and
                                           migrated (dotnet ef database update)
@@ -38,6 +39,7 @@ public abstract record CliCommand
     public sealed record TakeMarketSnapshot : CliCommand;
     public sealed record Collect(bool FullHistory) : CliCommand;
     public sealed record MarketReport(string? Month, string? OutputFile) : CliCommand;
+    public sealed record TechCount(Country Country, string? Month) : CliCommand;
     public sealed record ImportPrototype(string Path, bool DryRun) : CliCommand;
     public sealed record ListRequirements : CliCommand;
     /// <param name="State">Null puts the item back to the default of its kind.</param>
@@ -49,7 +51,7 @@ public abstract record CliCommand
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
     public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype",
-        "requirements", "requirement", "import-candidate", "experience", "copy-database"];
+        "requirements", "requirement", "import-candidate", "experience", "copy-database", "tech-count"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -81,6 +83,10 @@ public abstract record CliCommand
                 "import-candidate" when args.Length == 2 && args[1] != "--dry-run" => new ImportCandidate(args[1], DryRun: false),
                 "import-candidate" when args.Length == 3 && args[2] == "--dry-run" => new ImportCandidate(args[1], DryRun: true),
                 "copy-database" when args.Length == 3 => new CopyDatabase(ParseProvider(args[1]), args[2]),
+                "tech-count" when args.Length == 1 => new TechCount(Country.BR, null),
+                "tech-count" when args.Length == 2 && TryCountry(args[1]) is { } only => new TechCount(only, null),
+                "tech-count" when args.Length == 2 => new TechCount(Country.BR, ParseMonth(args[1])),
+                "tech-count" when args.Length == 3 => new TechCount(TryCountry(args[1]) ?? throw new FormatException($"Unknown country '{args[1]}': AU or BR."), ParseMonth(args[2])),
                 "market-report" when args.Length <= 3 => new MarketReport(
                     args.Length > 1 ? ParseMonth(args[1]) : null, args.Length > 2 ? args[2] : null),
                 _ => Fail($"Wrong arguments for '{name}'.", out error),
@@ -100,6 +106,9 @@ public abstract record CliCommand
     }
 
     private static ListingId ParseId(string value) => ListingId.Parse(value);
+
+    private static Country? TryCountry(string value) =>
+        Enum.GetValues<Country>().Cast<Country?>().FirstOrDefault(c => c.ToString()!.Equals(value, StringComparison.OrdinalIgnoreCase));
 
     private static DatabaseProvider ParseProvider(string value)
     {

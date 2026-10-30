@@ -14,6 +14,13 @@ public interface IListingDescriptionRepository
     Task<IReadOnlyDictionary<ListingId, string>> GetTextsAsync(IReadOnlyCollection<ListingId> ids, CancellationToken ct = default);
 
     /// <summary>
+    /// The title and full ad (null when none was stored) of every listing of <paramref name="country"/> first seen
+    /// from <paramref name="from"/> up to, not including, <paramref name="to"/>: what a month's ads asked for.
+    /// </summary>
+    Task<IReadOnlyList<(string Title, string? Description)>> ListAdsFirstSeenAsync(
+        Country country, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default);
+
+    /// <summary>
     /// Listings of <paramref name="source"/> with no text yet, posted (or first seen, when the date is
     /// unknown) since <paramref name="postedSince"/>, whose best score in any profile is at least
     /// <paramref name="minScore"/>: best score first, then most recent. Before them, whatever their age

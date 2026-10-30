@@ -72,7 +72,7 @@ pre { background: var(--surface-2); padding: .75rem 1rem; border-radius: var(--r
 }
 .brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--text); }
 .brand:hover { text-decoration: none; }
-.brand span { color: var(--accent); }
+.topbar nav .country { margin-left: .35rem; font-size: .7rem; font-weight: 600; color: var(--accent); }
 .brand svg { width: 24px; height: 24px; fill: none; stroke: var(--accent); stroke-width: 3; }
 .brand svg .dot { fill: var(--accent); stroke: none; }
 .topbar nav { display: flex; gap: .25rem; flex-wrap: wrap; }
