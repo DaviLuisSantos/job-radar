@@ -1,5 +1,3 @@
-using static JobRadar.Domain.Matching.ListingPatterns;
-
 namespace JobRadar.Domain.Matching;
 
 /// <summary>
@@ -16,6 +14,9 @@ namespace JobRadar.Domain.Matching;
 ///    licence, no sponsorship (when required), age.
 /// 5. Qualification cap: a listing that needs a qualification the candidate lacks stays
 ///    visible below the ones they can apply to.
+///
+/// The phases are the same in every country; the phrases each one reads are the listing's market's
+/// (<see cref="CountryRules"/>), and the weights the policy's.
 /// </summary>
 public static class FitScorer
 {
@@ -30,6 +31,7 @@ public static class FitScorer
         ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today, CandidateRequirements? candidate = null)
     {
         candidate ??= CandidateRequirements.None;
+        var rules = CountryRules.For(job.Country);
         var title = job.Title.ToLowerInvariant();
         var body = string.Join(" ", job.Summary ?? "", job.LocationLabel ?? "", job.WorkTypeLabel ?? "").ToLowerInvariant();
         var full = $"{title} {body}";
@@ -50,31 +52,31 @@ public static class FitScorer
         var groups = FullTextHits(job.FullTextTerms, policy.FullTextGroups);
 
         // ── 1. Exclusions ─────────────────────────────────────────────────
-        if (CitizenshipRequired.Match(full) is { Success: true } citizen)
+        if (rules.CitizenshipRequired.Match(full) is { Success: true } citizen)
             return Excluded(ScoreRule.CitizenshipRequired, citizen.Value, ScoreWhere.Text);
-        if (WorkRightsIncompatible.Match(full) is { Success: true } rights)
+        if (rules.WorkRightsIncompatible.Match(full) is { Success: true } rights)
             return Excluded(ScoreRule.WorkRightsIncompatible, rights.Value, ScoreWhere.Text);
         // Specific enough to exclude on the full ad too. Citizenship is not: "Australian or New Zealand
         // citizens, PR or valid working visa holders" welcomes a WHV; it is weighed below.
-        if (described && WorkRightsIncompatible.Match(desc) is { Success: true } descRights)
+        if (described && rules.WorkRightsIncompatible.Match(desc) is { Success: true } descRights)
             return Excluded(ScoreRule.WorkRightsIncompatible, descRights.Value, ScoreWhere.Description);
         if (groups.TryGetValue(FullTextGroup.Exclude, out var excludeHits))
             return Excluded(ScoreRule.WorkRightsIncompatible, excludeHits[0], ScoreWhere.FullText);
-        if (IdentifiedRole.Match(title) is { Success: true } identified)
+        if (rules.IdentifiedRole.Match(title) is { Success: true } identified)
             return Excluded(ScoreRule.IdentifiedRole, identified.Value, ScoreWhere.Title);
-        if (profile.ExcludedLocations.FirstOrDefault(l => Signal(l).IsMatch(job.LocationLabel ?? "")) is { } excludedAt)
+        if (profile.ExcludedLocations.FirstOrDefault(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? "")) is { } excludedAt)
             return Excluded(ScoreRule.LocationExcluded, excludedAt, ScoreWhere.Location);
 
-        var juniorTitle = JuniorTitle.IsMatch(title);
+        var juniorTitle = rules.JuniorTitle.IsMatch(title);
         if (policy.ExcludeSeniorTitles && !juniorTitle)
         {
-            if (LeadershipTitle.Match(title) is { Success: true } lead)
+            if (rules.LeadershipTitle.Match(title) is { Success: true } lead)
                 return Excluded(ScoreRule.LeadershipTitle, lead.Value, ScoreWhere.Title);
-            if (!profile.AllowSenior && SeniorRank.Match(title) is { Success: true } senior)
+            if (!profile.AllowSenior && rules.SeniorRank.Match(title) is { Success: true } senior)
                 return Excluded(ScoreRule.SeniorTitle, senior.Value, ScoreWhere.Title);
         }
 
-        var trainingTitle = TrainingTitle.IsMatch(title);
+        var trainingTitle = rules.TrainingTitle.IsMatch(title);
         var score = FitScore.Base;
 
         void Add(ScoreRule rule, string detail, ScoreWhere where, int points)
@@ -84,54 +86,54 @@ public static class FitScorer
         }
 
         // "Senior" subtracts for profiles that allow it; "Mid to Senior" does not.
-        if (profile.AllowSenior && !juniorTitle && SeniorRank.IsMatch(title) && !MidTitle.IsMatch(title))
+        if (profile.AllowSenior && !juniorTitle && rules.SeniorRank.IsMatch(title) && !rules.MidTitle.IsMatch(title))
             Add(ScoreRule.SeniorPenalty, "senior", ScoreWhere.Title, -policy.SeniorPenalty);
 
         // ── 2. Points ─────────────────────────────────────────────────────
         foreach (var signal in profile.PositiveSignals)
         {
-            if (MatchesUnnegated(signal, title))
+            if (ListingPatterns.MatchesUnnegated(signal, title))
                 Add(ScoreRule.PositiveSignal, signal, ScoreWhere.Title, policy.PositiveSignalTitleBonus);
-            else if (MatchesUnnegated(signal, body))
+            else if (ListingPatterns.MatchesUnnegated(signal, body))
                 Add(ScoreRule.PositiveSignal, signal, ScoreWhere.Body, policy.PositiveSignalBodyBonus);
         }
 
         foreach (var signal in profile.NegativeSignals)
         {
-            if (trainingTitle && QualificationWords.Any(w => signal.Contains(w, StringComparison.OrdinalIgnoreCase)))
+            if (trainingTitle && rules.QualificationWords.Any(w => signal.Contains(w, StringComparison.OrdinalIgnoreCase)))
                 continue;
-            if (Signal(signal).IsMatch(title))
+            if (ListingPatterns.Signal(signal).IsMatch(title))
                 Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Title, -policy.NegativeSignalTitlePenalty);
-            else if (Signal(signal).IsMatch(body))
+            else if (ListingPatterns.Signal(signal).IsMatch(body))
                 Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Body, -policy.NegativeSignalBodyPenalty);
         }
 
         // "sponsor" as a substring also covers "sponsorship", "sponsored"; the offered phrases
         // are substrings too ("no sponsorship available" contains one), so both are gated by
         // the denial pattern.
-        var sponsorDenied = SponsorshipDenied.IsMatch(full);
-        var sponsorConfirmed = !sponsorDenied && SponsorshipOffered.Any(full.Contains);
+        var sponsorDenied = rules.SponsorshipDenied.IsMatch(full);
+        var sponsorConfirmed = !sponsorDenied && rules.SponsorshipOffered.Any(full.Contains);
         if (sponsorConfirmed || (full.Contains("sponsor", StringComparison.Ordinal) && !sponsorDenied))
             Add(ScoreRule.SponsorshipMentioned, "sponsor", ScoreWhere.Text, policy.SponsorBonus);
         else if (sponsorDenied)
             Add(ScoreRule.SponsorshipDenied, "sponsor", ScoreWhere.Text, 0);
 
-        if (profile.RewardRemote && Signal("remote").IsMatch(full))
+        if (profile.RewardRemote && ListingPatterns.Signal(rules.Remote).IsMatch(full))
             Add(ScoreRule.Remote, "remote", ScoreWhere.Text, policy.RemoteBonus);
-        else if (profile.RewardRemote && Signal("hybrid").IsMatch(full))
+        else if (profile.RewardRemote && ListingPatterns.Signal(rules.Hybrid).IsMatch(full))
             Add(ScoreRule.Hybrid, "hybrid", ScoreWhere.Text, policy.HybridBonus);
 
         // Not twice when the profile already rewards FIFO as a signal.
         var fifoInProfile = profile.PositiveSignals.Any(s =>
             s.Contains("fifo", StringComparison.OrdinalIgnoreCase) || s.Contains("fly-in", StringComparison.OrdinalIgnoreCase));
-        if (!fifoInProfile && (Signal("fifo").IsMatch(full) || Signal("fly-in fly-out").IsMatch(full)))
+        if (!fifoInProfile && rules.Fifo.Any(f => ListingPatterns.Signal(f).IsMatch(full)))
             Add(ScoreRule.Fifo, "fifo", ScoreWhere.Text, policy.FifoBonus);
 
         if (profile.EntryLevelBoost)
         {
-            foreach (var phrase in NoExperience)
+            foreach (var phrase in rules.NoExperience)
             {
-                if (MatchesUnnegated(phrase, full))
+                if (ListingPatterns.MatchesUnnegated(phrase, full))
                     Add(ScoreRule.EntryLevel, phrase, ScoreWhere.Text, policy.EntryLevelBonus);
             }
         }
@@ -141,8 +143,8 @@ public static class FitScorer
         // A captured ad has the context the search lacks: it replaces the searched WHV phrases, and its
         // mention counts unless negated just before ("unable to accept working holiday visas"); a
         // refusal after it ("working holiday visa holders will not") was excluded above.
-        var whvLocal = WorkingHolidayFriendly.Match(full);
-        var whvDescribed = described && WorkingHolidayFriendly.Match(desc) is { Success: true } inDesc && MatchesUnnegated(inDesc.Value, desc)
+        var whvLocal = rules.WorkingHolidayFriendly.Match(full);
+        var whvDescribed = described && rules.WorkingHolidayFriendly.Match(desc) is { Success: true } inDesc && ListingPatterns.MatchesUnnegated(inDesc.Value, desc)
             ? inDesc.Value
             : null;
         var whvDoubtful = groups.ContainsKey(FullTextGroup.WhvWithResidency);
@@ -156,11 +158,11 @@ public static class FitScorer
             Add(ScoreRule.WorkingHolidayFriendly, whvHits[0], ScoreWhere.FullText, policy.WorkingHolidayBonus);
 
         // Contract, temp and casual fit the six months per employer.
-        if (job.WorkTypeLabel is { } workType && FlexibleWorkType.IsMatch(workType))
+        if (job.WorkTypeLabel is { } workType && rules.FlexibleWorkType.IsMatch(workType))
             Add(ScoreRule.FlexibleWorkType, workType, ScoreWhere.WorkType, policy.FlexibleWorkTypeBonus);
 
         var location = job.LocationLabel ?? "";
-        if (profile.PreferredLocations.FirstOrDefault(l => Signal(l).IsMatch(location)) is { } preferred)
+        if (profile.PreferredLocations.FirstOrDefault(l => ListingPatterns.Signal(l).IsMatch(location)) is { } preferred)
             Add(ScoreRule.PreferredLocation, preferred, ScoreWhere.Location, policy.PreferredLocationBonus);
 
         // The profile's requirements the ad asks for, with the candidate's state on each. The context word only
@@ -169,8 +171,8 @@ public static class FitScorer
         // not say; there the phrase counts when not negated just before it ("no HR licence needed").
         var found = job.FullTextTerms.Select(t => new FullTextTerm(t).Phrases[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var asked = profile.Requirements.Terms()
-            .Select(r => (r.Kind, Truck: r.Kind == RequirementKind.Licence && TruckLicence.IsMatch(r.Phrase), r.Phrase,
-                Where: described ? (MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description : ScoreWhere.None)
+            .Select(r => (r.Kind, Truck: r.Kind == RequirementKind.Licence && rules.TruckLicence.IsMatch(r.Phrase), r.Phrase,
+                Where: described ? (ListingPatterns.MatchesUnnegated(r.Phrase, desc) ? ScoreWhere.Description : ScoreWhere.None)
                     : found.Contains(r.Phrase) ? ScoreWhere.FullText : ScoreWhere.None))
             .Where(r => r.Where != ScoreWhere.None)
             .Select(r => (r.Kind, r.Truck, r.Phrase, r.Where, State: candidate.Of(r.Kind, r.Phrase, policy)))
@@ -179,7 +181,7 @@ public static class FitScorer
         // work: the number decides instead of the item's state. Neither known, nothing changes. The number is a
         // requirement on its own: a profile that searches no experience phrase (tech) still weighs it once the
         // candidate gave their years for it.
-        if (YearsAsked(fullAndDesc) is { } yearsAsked
+        if (rules.YearsAsked(fullAndDesc) is { } yearsAsked
             && candidate.ExperienceState(profile.Name, yearsAsked) is { } experience)
         {
             var years = $"{yearsAsked} {(yearsAsked == 1 ? "year" : "years")} asked";
@@ -189,9 +191,9 @@ public static class FitScorer
                     .ToList();
             else
                 asked.Add((RequirementKind.Experience, false, $"experience ({years})",
-                    described && YearsAsked(desc) is not null ? ScoreWhere.Description : ScoreWhere.Text, experience));
+                    described && rules.YearsAsked(desc) is not null ? ScoreWhere.Description : ScoreWhere.Text, experience));
         }
-        var truckAsked = TruckLicenceAsked(fullAndDesc);
+        var truckAsked = rules.TruckLicenceAsked(fullAndDesc);
         var truckHeld = truckAsked is { } asksTruck && candidate.CoversTruck(asksTruck.Value);
         var truckGroupHit = !described && groups.TryGetValue(FullTextGroup.Licence, out var truckHits) ? truckHits[0] : null;
         var truckGroupHeld = truckGroupHit is not null && candidate.CoversTruck(truckGroupHit);
@@ -236,9 +238,9 @@ public static class FitScorer
 
         if (described)
         {
-            if (!whv && CitizenshipRequired.Match(desc) is { Success: true } descCitizen)
+            if (!whv && rules.CitizenshipRequired.Match(desc) is { Success: true } descCitizen)
                 Add(ScoreRule.FullTextCitizenship, descCitizen.Value, ScoreWhere.Description, -policy.CitizenshipPenalty);
-            if (policy.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => Signal(p).IsMatch(desc)) is { } ambiguous)
+            if (policy.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => ListingPatterns.Signal(p).IsMatch(desc)) is { } ambiguous)
                 Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -policy.AmbiguousRightsPenalty);
         }
 
@@ -272,10 +274,10 @@ public static class FitScorer
         if (policy.ApprenticeshipPenalty > 0 && trainingTitle)
             Add(ScoreRule.Apprenticeship, "apprentice", ScoreWhere.Title, -policy.ApprenticeshipPenalty);
 
-        if (policy.LongContractPenalty > 0 && LongContract.Match(fullAndDesc) is { Success: true } longContract)
+        if (policy.LongContractPenalty > 0 && rules.LongContract.Match(fullAndDesc) is { Success: true } longContract)
             Add(ScoreRule.LongContract, longContract.Value, ScoreWhere.Text, -policy.LongContractPenalty);
 
-        if (CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
+        if (rules.CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
             Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -policy.CommissionOnlyPenalty);
         if (truckAsked is { } truck && !truckHeld && (described || !groups.ContainsKey(FullTextGroup.Licence)))
         {
@@ -299,9 +301,9 @@ public static class FitScorer
 
         // ── 5. Qualification cap ──────────────────────────────────────────
         (string Detail, ScoreWhere Where)? reason = null;
-        if (!EntryTitle.IsMatch(title) && profile.QualifiedTitles.FirstOrDefault(t => QualifiedTitle(t).IsMatch(title)) is { } qualified)
+        if (!rules.EntryTitle.IsMatch(title) && profile.QualifiedTitles.FirstOrDefault(t => ListingPatterns.QualifiedTitle(t).IsMatch(title)) is { } qualified)
             reason = (qualified, ScoreWhere.Title);
-        if (reason is null && !trainingTitle && profile.DisqualifySignals.FirstOrDefault(s => Signal(s).IsMatch(full)) is { } disqualify)
+        if (reason is null && !trainingTitle && profile.DisqualifySignals.FirstOrDefault(s => ListingPatterns.Signal(s).IsMatch(full)) is { } disqualify)
             reason = (disqualify, ScoreWhere.Text);
         if (reason is { } r && score > policy.DisqualifyMaxScore)
             Add(ScoreRule.QualificationRequired, r.Detail, r.Where, policy.DisqualifyMaxScore - score);
