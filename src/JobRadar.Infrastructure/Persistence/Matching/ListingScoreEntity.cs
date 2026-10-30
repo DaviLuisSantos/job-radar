@@ -1,8 +1,8 @@
-using JobRadar.Infrastructure.Postgres.Listings;
+using JobRadar.Infrastructure.Persistence.Listings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Matching;
+namespace JobRadar.Infrastructure.Persistence.Matching;
 
 /// <summary>Row of <c>listing_scores</c>: one per (listing, profile), replaced on every scoring pass.</summary>
 public class ListingScoreEntity

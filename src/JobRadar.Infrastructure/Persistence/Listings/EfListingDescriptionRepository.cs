@@ -2,9 +2,9 @@ using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Listings;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
-internal sealed class PostgresListingDescriptionRepository(JobRadarDbContext db) : IListingDescriptionRepository
+internal sealed class EfListingDescriptionRepository(JobRadarDbContext db) : IListingDescriptionRepository
 {
     private const int Chunk = 5000;
 

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Market;
+namespace JobRadar.Infrastructure.Persistence.Market;
 
 /// <summary>Row of <c>market_snapshots</c>: one per source and day, with its quality status.</summary>
 public class MarketSnapshotEntity

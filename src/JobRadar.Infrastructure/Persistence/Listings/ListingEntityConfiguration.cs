@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
 public class ListingEntityConfiguration : IEntityTypeConfiguration<ListingEntity>
 {

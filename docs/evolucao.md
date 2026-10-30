@@ -8,8 +8,8 @@
 
 | # | Fase | PRs | Estado |
 |---|---|---|---|
-| 0 | Rename e decisões de escopo | 1 | 🔨 decisões aceitas em 2026-10-29 |
-| 1 | SQL Server ao lado do Postgres | 5 | ⏳ |
+| 0 | Rename e decisões de escopo | 1 | ✅ 2026-10-29 (PR 1; passada seguinte não conferida antes de seguir) |
+| 1 | SQL Server ao lado do Postgres | 5 | 🔨 |
 | 2 | País BR + Gupy | 5 | ⏳ |
 | 3 | Observabilidade | 3 | ⏳ |
 | 4 | Mensageria | 4 | ⏳ (só com 2+ fontes rodando) |
@@ -83,7 +83,8 @@ Trocar junto, de uma vez, sem mudar mais nada da integração.
 
 **1.1 Infrastructure neutra, sem mudança de comportamento.** `Infrastructure.Postgres.*` → `Infrastructure.Persistence.*`;
 `Postgres*Repository` → `Ef*Repository`; `AddPostgresInfrastructure` → `AddPersistence`. Só rename, os testes de
-contrato passam iguais. Mantém `PostgresStorageHealth` (o "esperar o banco" é por provider).
+contrato passam iguais. Mantém `PostgresStorageHealth` (o "esperar o banco" é por provider). As migrations
+ficam em `Postgres/Migrations` (são do Postgres) até a 1.2 as levar para o assembly próprio.
 
 **1.2 Provider por configuração e migrations em assemblies próprios.**
 - `Database:Provider` = `Postgres` (padrão, na classe de opções, como `SeekOptions`) | `SqlServer`.

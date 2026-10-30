@@ -1,12 +1,12 @@
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Market;
 using JobRadar.Domain.Matching;
-using JobRadar.Infrastructure.Postgres.Listings;
+using JobRadar.Infrastructure.Persistence.Listings;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Market;
+namespace JobRadar.Infrastructure.Persistence.Market;
 
-internal sealed class PostgresMarketRepository(JobRadarDbContext db) : IMarketRepository
+internal sealed class EfMarketRepository(JobRadarDbContext db) : IMarketRepository
 {
     private const string NoTerm = "";
 

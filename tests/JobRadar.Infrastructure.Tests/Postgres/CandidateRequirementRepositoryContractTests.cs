@@ -1,5 +1,5 @@
 using JobRadar.Domain.Matching;
-using JobRadar.Infrastructure.Postgres.Matching;
+using JobRadar.Infrastructure.Persistence.Matching;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
@@ -9,7 +9,7 @@ public class CandidateRequirementRepositoryContractTests(PostgresFixture db)
     private static readonly DateTimeOffset Monday = new(2026, 10, 19, 6, 0, 0, TimeSpan.FromHours(8));
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static PostgresCandidateRequirementRepository Repo(Infrastructure.Postgres.JobRadarDbContext ctx) => new(ctx);
+    private static EfCandidateRequirementRepository Repo(Infrastructure.Persistence.JobRadarDbContext ctx) => new(ctx);
 
     [DatabaseFact]
     public async Task Nothing_set_means_no_states()

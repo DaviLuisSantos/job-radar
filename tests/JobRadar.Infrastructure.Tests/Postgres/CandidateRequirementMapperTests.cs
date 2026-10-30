@@ -1,5 +1,5 @@
 using JobRadar.Domain.Matching;
-using JobRadar.Infrastructure.Postgres.Matching;
+using JobRadar.Infrastructure.Persistence.Matching;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 

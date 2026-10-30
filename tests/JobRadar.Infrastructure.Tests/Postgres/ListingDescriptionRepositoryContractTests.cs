@@ -1,5 +1,5 @@
 using JobRadar.Domain.Listings;
-using JobRadar.Infrastructure.Postgres.Listings;
+using JobRadar.Infrastructure.Persistence.Listings;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
@@ -13,12 +13,12 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
     private async Task SeedAsync(params string[] ids)
     {
         await using var ctx = db.NewContext();
-        await new PostgresListingRepository(ctx).RecordObservationsAsync(
+        await new EfListingRepository(ctx).RecordObservationsAsync(
             ids.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")).ToList(),
             "labourer @ perth wa", Monday, Ct);
     }
 
-    private PostgresListingDescriptionRepository Repo(Infrastructure.Postgres.JobRadarDbContext ctx) => new(ctx);
+    private EfListingDescriptionRepository Repo(Infrastructure.Persistence.JobRadarDbContext ctx) => new(ctx);
 
     [DatabaseFact]
     public async Task A_capture_is_stored_and_a_new_one_replaces_it()
@@ -59,7 +59,7 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
         var posted = ListingMapperTests.Sample("1").PostedAt!.Value;
         await using (var ctx = db.NewContext())
         {
-            await new PostgresListingRepository(ctx).RecordObservationsAsync(
+            await new EfListingRepository(ctx).RecordObservationsAsync(
             [
                 .. new[] { "1", "2", "3", "4" }.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")),
                 new SourcedListing(ListingMapperTests.Sample("5") with { PostedAt = posted.AddDays(-60) }, """{"id":"5"}"""),
@@ -69,7 +69,7 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
         {
             static Domain.Matching.ListingScore Score(string id, string profile, int final) =>
                 new(new ListingId("seek", id), profile, new Domain.Matching.FitScore(final, []), "aaaa", Monday);
-            await new Infrastructure.Postgres.Matching.PostgresListingScoreRepository(ctx).SaveAsync(
+            await new Infrastructure.Persistence.Matching.EfListingScoreRepository(ctx).SaveAsync(
             [
                 Score("1", "fifo", 45), Score("1", "trades", 80),   // best 80
                 Score("2", "fifo", 60),
@@ -96,7 +96,7 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
         var posted = ListingMapperTests.Sample("1").PostedAt!.Value;
         await using (var ctx = db.NewContext())
         {
-            await new PostgresListingRepository(ctx).RecordObservationsAsync(
+            await new EfListingRepository(ctx).RecordObservationsAsync(
             [
                 .. new[] { "1", "2", "3" }.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")),
                 new SourcedListing(ListingMapperTests.Sample("4") with { PostedAt = posted.AddDays(-60) }, """{"id":"4"}"""),
@@ -106,12 +106,12 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
         {
             static Domain.Matching.ListingScore Score(string id, int final) =>
                 new(new ListingId("seek", id), "fifo", new Domain.Matching.FitScore(final, []), "aaaa", Monday);
-            await new Infrastructure.Postgres.Matching.PostgresListingScoreRepository(ctx).SaveAsync(
+            await new Infrastructure.Persistence.Matching.EfListingScoreRepository(ctx).SaveAsync(
                 [Score("1", 90), Score("2", 10), Score("4", 95)], Ct);   // 3 has no score at all
         }
         await using (var ctx = db.NewContext())
         {
-            var tracking = new Infrastructure.Postgres.Tracking.PostgresTrackingRepository(ctx);
+            var tracking = new Infrastructure.Persistence.Tracking.EfTrackingRepository(ctx);
             await tracking.SetLabelAsync(new ListingId("seek", "2"),
                 new Domain.Tracking.ListingLabel(new ListingId("seek", "2"), Domain.Tracking.Verdict.Good, null, Monday), Ct);
             await tracking.SaveApplicationAsync(
@@ -132,11 +132,11 @@ public class ListingDescriptionRepositoryContractTests(PostgresFixture db)
         await db.ResetAsync();
         await SeedAsync("1");
         await using (var ctx = db.NewContext())
-            await new PostgresListingRepository(ctx).RecordObservationsAsync(
+            await new EfListingRepository(ctx).RecordObservationsAsync(
                 [new SourcedListing(ListingMapperTests.Sample("1"), """{"id":"1"}""")], "offsider @ perth wa", Monday, Ct);
 
         await using var read = db.NewContext();
         Assert.Equal(["labourer @ perth wa", "offsider @ perth wa"],
-            (await new PostgresListingRepository(read).GetSearchKeysAsync(One, Ct)).Order(StringComparer.Ordinal));
+            (await new EfListingRepository(read).GetSearchKeysAsync(One, Ct)).Order(StringComparer.Ordinal));
     }
 }

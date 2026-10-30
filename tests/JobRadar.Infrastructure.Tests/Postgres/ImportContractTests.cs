@@ -1,7 +1,7 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Market;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Market;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
@@ -17,10 +17,10 @@ public class ImportContractTests(PostgresFixture db)
         new(new SourcedListing(ListingMapperTests.Sample(id, "Imported title"), $$$"""{"importedFrom":"job-tracker","row":{"id":"seek_{{{id}}}"}}"""),
             firstSeen, firstSeen, keys);
 
-    private async Task<T> Listings<T>(Func<PostgresListingRepository, Task<T>> work)
+    private async Task<T> Listings<T>(Func<EfListingRepository, Task<T>> work)
     {
         await using var ctx = db.NewContext();
-        return await work(new PostgresListingRepository(ctx));
+        return await work(new EfListingRepository(ctx));
     }
 
     [DatabaseFact]
@@ -73,13 +73,13 @@ public class ImportContractTests(PostgresFixture db)
         var day = new DateOnly(2026, 10, 1);
         await using (var ctx = db.NewContext())
         {
-            var repo = new PostgresMarketRepository(ctx);
+            var repo = new EfMarketRepository(ctx);
             await repo.SaveSnapshotAsync(new MarketSnapshot("seek", day, SnapshotStatus.Ok, 1, 1, 0, []), [new("HVAC-R", "Perth WA", null, 72)], [], Ct);
         }
 
         await using (var ctx = db.NewContext())
         {
-            var repo = new PostgresMarketRepository(ctx);
+            var repo = new EfMarketRepository(ctx);
             Assert.False(await repo.ImportSnapshotAsync(new MarketSnapshot("seek", day, SnapshotStatus.Ok, 1, 1, 0, []), [new("HVAC-R", "Perth WA", null, 999)], Ct));
             Assert.True(await repo.ImportSnapshotAsync(new MarketSnapshot("seek", day.AddDays(-1), SnapshotStatus.Ok, 1, 1, 0, []), [new("HVAC-R", "Perth WA", null, 70)], Ct));
 
@@ -89,7 +89,7 @@ public class ImportContractTests(PostgresFixture db)
         }
 
         await using var read = db.NewContext();
-        var readRepo = new PostgresMarketRepository(read);
+        var readRepo = new EfMarketRepository(read);
         Assert.Equal([70, 72], (await readRepo.GetGoodCountsAsync("seek", day.AddDays(-1), day, Ct)).OrderBy(c => c.Date).Select(c => c.Total));
         var seen = Assert.Single(await readRepo.GetListingsSeenAsync("seek", new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), Ct));
         Assert.Equal((new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 20), 100_000), (seen.FirstSeen, seen.LastSeen, seen.AnnualMin!.Value));

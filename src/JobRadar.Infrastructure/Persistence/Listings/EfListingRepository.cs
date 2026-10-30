@@ -2,9 +2,9 @@ using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Listings;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
-internal sealed class PostgresListingRepository(JobRadarDbContext db) : IListingRepository
+internal sealed class EfListingRepository(JobRadarDbContext db) : IListingRepository
 {
     public async Task<ObservationResult> RecordObservationsAsync(
         IReadOnlyCollection<SourcedListing> listings, string searchKey, DateTimeOffset observedAt, CancellationToken ct = default)

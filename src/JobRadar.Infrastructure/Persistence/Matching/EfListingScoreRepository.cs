@@ -5,13 +5,13 @@ using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
 using JobRadar.Domain.Triage;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Tracking;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Tracking;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Matching;
+namespace JobRadar.Infrastructure.Persistence.Matching;
 
-internal sealed class PostgresListingScoreRepository(JobRadarDbContext db) : IListingScoreRepository
+internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingScoreRepository
 {
     private const int Chunk = 1000;
 

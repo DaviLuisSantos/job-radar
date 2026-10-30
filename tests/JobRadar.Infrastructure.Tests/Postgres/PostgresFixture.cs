@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using JobRadar.Infrastructure.Postgres;
+using JobRadar.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 

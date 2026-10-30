@@ -1,4 +1,4 @@
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
 /// <summary>Row of <c>listings</c>, column by column. Only the mapper turns it into domain.</summary>
 public class ListingEntity

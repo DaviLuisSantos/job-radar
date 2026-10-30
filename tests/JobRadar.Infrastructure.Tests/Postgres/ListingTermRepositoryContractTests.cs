@@ -1,6 +1,6 @@
 using JobRadar.Domain.Listings;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Matching;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Matching;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
@@ -13,7 +13,7 @@ public class ListingTermRepositoryContractTests(PostgresFixture db)
     private async Task SeedAsync(DateTimeOffset at, params (string Id, DateTimeOffset? Posted)[] listings)
     {
         await using var ctx = db.NewContext();
-        await new PostgresListingRepository(ctx).RecordObservationsAsync(
+        await new EfListingRepository(ctx).RecordObservationsAsync(
             listings.Select(l => new SourcedListing(ListingMapperTests.Sample(l.Id) with { PostedAt = l.Posted }, $$"""{"id":"{{l.Id}}"}""")).ToList(),
             "search @ perth", at, Ct);
     }
@@ -21,13 +21,13 @@ public class ListingTermRepositoryContractTests(PostgresFixture db)
     private async Task<int> RecordAsync(string term, params string[] ids)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingTermRepository(ctx).RecordAsync("seek", term, ids, Monday, Ct);
+        return await new EfListingTermRepository(ctx).RecordAsync("seek", term, ids, Monday, Ct);
     }
 
     private async Task<IReadOnlyDictionary<ListingId, IReadOnlyList<string>>> TermsAsync(params string[] ids)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingTermRepository(ctx).GetTermsAsync(ids.Select(i => new ListingId("seek", i)).ToList(), Ct);
+        return await new EfListingTermRepository(ctx).GetTermsAsync(ids.Select(i => new ListingId("seek", i)).ToList(), Ct);
     }
 
     [DatabaseFact]
@@ -55,7 +55,7 @@ public class ListingTermRepositoryContractTests(PostgresFixture db)
         await SeedAsync(Monday.AddDays(2), ("a", Monday.AddDays(-12)), ("b", Monday.AddDays(-3)), ("undated", null));
 
         await using var ctx = db.NewContext();
-        var repo = new PostgresListingRepository(ctx);
+        var repo = new EfListingRepository(ctx);
 
         Assert.Equal(Monday.AddDays(-12), await repo.GetOldestPostedAmongFirstSeenSinceAsync("seek", Monday.AddDays(1), Ct));
         Assert.Null(await repo.GetOldestPostedAmongFirstSeenSinceAsync("seek", Monday.AddDays(5), Ct));

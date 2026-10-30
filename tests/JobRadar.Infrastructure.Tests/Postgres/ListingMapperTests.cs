@@ -1,5 +1,5 @@
 using JobRadar.Domain.Listings;
-using JobRadar.Infrastructure.Postgres.Listings;
+using JobRadar.Infrastructure.Persistence.Listings;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 

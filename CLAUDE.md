@@ -73,7 +73,7 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 ```
 src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/, Tracking/) — sem EF, HTTP ou integração
 src/JobRadar.Application     serviços (Collection/, Matching/, Tracking/) + portas em Abstractions/
-src/JobRadar.Infrastructure  Postgres/<Agregado>/: Entity → Configuration → Mapper → Repository
+src/JobRadar.Infrastructure  Persistence/<Agregado>/: Entity → Configuration → Mapper → Ef<Agregado>Repository; migrations em Postgres/Migrations
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
@@ -172,7 +172,7 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   vagas depois de duas passadas. Inclua o campo em `SeekSearchClient.VolatileFields`.
 - `listing_payloads.payload` é jsonb, que normaliza espaços e ordem das chaves: o hash é do texto recebido
   (já sem os campos voláteis), não do que o banco devolve.
-- O `DbContext` vive o pass inteiro de coleta (um escopo): `PostgresListingRepository` limpa o
+- O `DbContext` vive o pass inteiro de coleta (um escopo): `EfListingRepository` limpa o
   `ChangeTracker` depois de cada gravação, com sucesso ou falha. Sem isso, uma falha derrubava o registro da
   execução e centenas de buscas acumulavam entidades rastreadas.
 - `appsettings.Local.json` é adicionado depois das fontes padrão; por isso o `Program.cs` reaplica variáveis
@@ -194,7 +194,7 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Serviço do Windows inicia antes do Docker Desktop (que sobe no login): o `DailyPipelineJob` espera o banco
   (`IStorageHealth`) e recupera a passada perdida. Não remova a espera achando que é lentidão.
 - `EF.Functions.ILike` com padrão escapado precisa do terceiro argumento (`@""`): sem ele o Npgsql usa
-  `ESCAPE ''` (`PostgresListingScoreRepository.ListForTriageAsync`).
+  `ESCAPE ''` (`EfListingScoreRepository.ListForTriageAsync`).
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
   todas as cópias (`TriageRow.AllIds`).
 - Paralelismo: chamadas ao Seek podem rodar em paralelo à vontade, o `SeekPacingHandler` segura o total
@@ -205,7 +205,7 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Contagem do Raio-X só com `Seek:PageSize = 100`: o `totalCount` inclui os promovidos repetidos em cada página
   (`SeekMarketSource.CountAsync` recusa outro valor).
 - `Market` na configuração: cada lista presente **substitui** o padrão do código (`MarketDefaults`), não soma.
-- Parâmetro chamado `from` dentro de consulta LINQ precisa de `@from` (`PostgresMarketRepository`).
+- Parâmetro chamado `from` dentro de consulta LINQ precisa de `@from` (`EfMarketRepository`).
 - Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
   antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
 - `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no

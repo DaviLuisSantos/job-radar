@@ -2,9 +2,9 @@ using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Matching;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Matching;
+namespace JobRadar.Infrastructure.Persistence.Matching;
 
-internal sealed class PostgresCandidateRequirementRepository(JobRadarDbContext db) : ICandidateRequirementRepository
+internal sealed class EfCandidateRequirementRepository(JobRadarDbContext db) : ICandidateRequirementRepository
 {
     public async Task<CandidateRequirements> GetAsync(CancellationToken ct = default)
     {

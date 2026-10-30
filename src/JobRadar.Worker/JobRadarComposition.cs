@@ -1,5 +1,5 @@
 using JobRadar.Application;
-using JobRadar.Infrastructure.Postgres;
+using JobRadar.Infrastructure.Persistence;
 using JobRadar.Integrations.Prototype;
 using JobRadar.Integrations.Seek;
 
@@ -14,7 +14,7 @@ public static class JobRadarComposition
     public static IServiceCollection AddJobRadar(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddApplication(configuration);
-        services.AddPostgresInfrastructure(configuration);
+        services.AddPersistence(configuration);
         services.AddSeekIntegration(configuration);
         // One-off import command: the archive reader and the service that uses it live only in the worker.
         services.AddPrototypeImport();

@@ -1,9 +1,9 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Matching;
-using JobRadar.Infrastructure.Postgres.Tracking;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Persistence.Tracking;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
@@ -18,17 +18,17 @@ public class TrackingRepositoryContractTests(PostgresFixture db)
     private async Task SeedAsync(params string[] ids)
     {
         await using var ctx = db.NewContext();
-        await new PostgresListingRepository(ctx).RecordObservationsAsync(
+        await new EfListingRepository(ctx).RecordObservationsAsync(
             ids.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")).ToList(), "s @ p", Monday, Ct);
     }
 
-    private async Task<T> WithRepo<T>(Func<PostgresTrackingRepository, Task<T>> work)
+    private async Task<T> WithRepo<T>(Func<EfTrackingRepository, Task<T>> work)
     {
         await using var ctx = db.NewContext();
-        return await work(new PostgresTrackingRepository(ctx));
+        return await work(new EfTrackingRepository(ctx));
     }
 
-    private Task Do(Func<PostgresTrackingRepository, Task> work) => WithRepo(async r => { await work(r); return 0; });
+    private Task Do(Func<EfTrackingRepository, Task> work) => WithRepo(async r => { await work(r); return 0; });
 
     [DatabaseFact]
     public async Task An_application_round_trips_with_its_whole_history()
@@ -99,7 +99,7 @@ public class TrackingRepositoryContractTests(PostgresFixture db)
         await SeedAsync("1", "2", "3", "4");
         await using (var ctx = db.NewContext())
         {
-            await new PostgresListingScoreRepository(ctx).SaveAsync(
+            await new EfListingScoreRepository(ctx).SaveAsync(
                 new[] { "1", "2", "3", "4" }.Select(id => new ListingScore(new ListingId("seek", id), "tech",
                     new FitScore(60, [new ScoreItem(ScoreRule.PositiveSignal, "C#", ScoreWhere.Title, 16)]), "h", Monday)).ToList(), Ct);
         }
@@ -113,7 +113,7 @@ public class TrackingRepositoryContractTests(PostgresFixture db)
         await Do(r => r.SaveApplicationAsync(JobApplication.Start(four, ApplicationStatus.Reviewed, Monday), Ct));
 
         await using var read = db.NewContext();
-        var judged = (await new PostgresListingScoreRepository(read).ListJudgedAsync(Ct)).OrderBy(j => j.Id.SourceId).ToList();
+        var judged = (await new EfListingScoreRepository(read).ListJudgedAsync(Ct)).OrderBy(j => j.Id.SourceId).ToList();
 
         Assert.Equal([("1", Verdict.Good), ("2", Verdict.Bad), ("3", Verdict.Bad)],
             judged.Select(j => (j.Id.SourceId, j.Verdict)));
