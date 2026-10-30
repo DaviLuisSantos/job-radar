@@ -263,6 +263,16 @@ mexer no que funciona na Austrália, e investir na interface antes que quatro me
 - **Interface em português.** O código segue em inglês; os textos já moram em `Text/Wording.cs`. Os prints do README são
   refeitos.
 - **Escopo da UI, completo:** navegação por mercado, linha da triagem mais rica, página da vaga, tela "Hoje" e celular.
+- **Deploy:** cada passo vai para a produção (push na `main`, sem PR); cada push deixa o site funcionando, mesmo com a
+  interface meio a meio por alguns dias.
+- **LATAM x global, pela restrição:** LATAM = vagas restritas a uma região que inclui o Brasil (LATAM, Americas, South
+  America, Brazil); global = abertas ao mundo (Worldwide, Anywhere). Uma vaga cai em um só.
+- **Fuso:** não pesa no score; só aparece como etiqueta.
+- **Senioridade no remoto:** igual ao perfil BR (júnior e estágio excluem, pleno ganha, sênior penaliza, liderança exclui).
+- **Excluídas:** fora da lista, com uma contagem que abre a lista delas, cada uma com o motivo.
+- **Perfis remotos:** começam como cópia do `dotnet-br` (mesmos sinais, palavras-chave em inglês), um por mercado.
+- **"Hoje":** a última visita por mercado fica no banco, para valer entre celular e PC.
+- **Regime e salário no remoto: em aberto** (contractor penaliza? piso em dólar?). Até decidir, só etiqueta.
 - **Biblioteca de componentes: MudBlazor** (9.11.0, MIT, .NET 10), para tema claro e escuro, layout responsivo, chips,
   toggles, avisos e gaveta no celular. Alternativa, se o MudBlazor atrapalhar: Microsoft Fluent UI Blazor.
 
