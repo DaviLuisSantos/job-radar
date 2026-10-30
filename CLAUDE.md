@@ -59,8 +59,8 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`, em `Contracts/`) são classes abstratas com uma
   derivada por banco: sobem Postgres 18 **e** SQL Server 2022 via Testcontainers e só rodam com `JOBRADAR_DB_TESTS=1`.
   O CI roda os dois. Contrato novo ganha as duas derivadas no fim do arquivo.
-- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek pela composição completa.
-  Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou quando a coleta começar a falhar.
+- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek e da Gupy pela composição completa.
+  Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou `Integrations.Gupy`, ou quando a coleta começar a falhar.
 - Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
   fora do repo (são anúncios reais). **Mexeu em `Domain/Matching`? Rode.** Mudança de regra intencional
   quebra a paridade: aí registre no `docs/plano.md` e incremente `FitScorer.RulesVersion`.
@@ -84,6 +84,7 @@ src/JobRadar.Infrastructure  Persistence/<Agregado>/: Entity → Configuration �
 src/JobRadar.Infrastructure.Migrations.Postgres  migrations do Postgres (EF não compartilha migrations entre bancos)
 src/JobRadar.Infrastructure.Migrations.SqlServer  migrations do SQL Server, geradas do mesmo modelo
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
+src/JobRadar.Integrations.Gupy  IJobSource da Gupy (Brasil): busca do portal, tradutor; o anúncio inteiro vem na busca
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
 src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
@@ -107,11 +108,14 @@ src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRad
 do Raio-X.
 
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
-1. para cada fonte e busca, calcula a janela incremental pelo último sucesso;
+1. para cada fonte e cada busca **do país da fonte** (`IJobSource.Country`, `Country` do perfil), calcula a janela
+   incremental pelo último sucesso;
 2. `IJobSource.SearchAsync`, que devolve as vagas únicas e diz se a busca veio completa;
 3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas, guarda o
    payload só quando o conteúdo mudou e registra que aquela busca achou a vaga (`listing_search_hits`);
-4. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
+4. grava em `listing_descriptions` o anúncio inteiro que a própria busca devolve (`SourcedListing.Description`: a Gupy
+   devolve, o Seek não), só quando o texto muda;
+5. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
 
 **Termos** — `FullTextTermService.TagAsync`: cada frase de `ScoringPolicy.FullTextGroups` (21 hoje) e dos requisitos de cada perfil
 (`ProfileRequirements`: "frase + palavra de contexto", para caber no teto de 500; os grupos de

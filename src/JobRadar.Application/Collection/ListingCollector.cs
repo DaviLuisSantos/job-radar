@@ -16,6 +16,7 @@ namespace JobRadar.Application.Collection;
 public sealed class ListingCollector(
     IEnumerable<IJobSource> sources,
     IListingRepository listings,
+    IListingDescriptionRepository descriptions,
     ICollectionRunRepository runs,
     IOptions<CollectionOptions> options,
     TimeProvider time,
@@ -30,7 +31,7 @@ public sealed class ListingCollector(
     public async Task<CollectionSummary> CollectAsync(IReadOnlyList<ListingSearch> searches, bool fullHistory, CancellationToken ct)
     {
         var done = new ConcurrentBag<CollectionRun>();
-        var work = sources.SelectMany(source => searches.Select(search => (source, search)));
+        var work = sources.SelectMany(source => searches.Where(s => s.Country == source.Country).Select(search => (source, search)));
         var parallel = new ParallelOptions { MaxDegreeOfParallelism = options.Value.MaxParallelSearches, CancellationToken = ct };
 
         await Parallel.ForEachAsync(work, parallel, async (item, token) =>
@@ -62,6 +63,7 @@ public sealed class ListingCollector(
         {
             var result = await source.SearchAsync(search with { PostedWithinDays = window }, ct);
             var observed = await StoredAsync(() => listings.RecordObservationsAsync(result.Listings, search.Key, started, ct), ct);
+            await StoredAsync(() => SaveDescriptionsAsync(result.Listings, started, ct), ct);
             return new CollectionRun(source.Name, search.Key, window, started, time.GetUtcNow(),
                 result.Listings.Count, observed.New, result.Complete, Error: null);
         }
@@ -70,6 +72,27 @@ public sealed class ListingCollector(
             log.LogError(ex, "Search {SearchKey} on {Source} failed", search.Key, source.Name);
             return new CollectionRun(source.Name, search.Key, window, started, time.GetUtcNow(),
                 Found: 0, New: 0, Complete: false, Error: $"{ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// The full ads a search returned with its listings: stored as fetched from the source, replacing an older
+    /// text only when it changed.
+    /// </summary>
+    private async Task SaveDescriptionsAsync(IReadOnlyList<SourcedListing> found, DateTimeOffset at, CancellationToken ct)
+    {
+        var texts = found
+            .Select(l => (l.Listing.Id, Text: ListingDescription.Normalize(l.Description)))
+            .Where(l => l.Text is not null)
+            .DistinctBy(l => l.Id)
+            .ToList();
+        if (texts.Count == 0)
+            return;
+        var stored = await descriptions.GetTextsAsync(texts.Select(t => t.Id).ToList(), ct);
+        foreach (var (id, text) in texts)
+        {
+            if (!stored.TryGetValue(id, out var old) || old != text)
+                await descriptions.SaveAsync(new ListingDescription(id, text!, DescriptionOrigin.Source, at), ct);
         }
     }
 

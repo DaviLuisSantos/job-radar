@@ -56,8 +56,12 @@ public sealed class ProfileCatalog
             ExcludedTitles = o.ExcludedTitles,
             OnSiteLocations = o.OnSiteLocations,
         };
+        var country = Enum.GetValues<Country>().Cast<Country?>()
+                .FirstOrDefault(c => c.ToString()!.Equals(o.Country?.Trim(), StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException(
+                $"Profile '{name}': unknown country '{o.Country}' (Matching:Profiles:{name}:Country). Use one of: {string.Join(", ", Enum.GetNames<Country>())}.");
         var searches = o.Keywords
-            .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l)))
+            .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Country: country)))
             .DistinctBy(s => s.Key)
             .ToList();
         return new ProfileDefinition(profile, searches, RulesHash(profile, policy));

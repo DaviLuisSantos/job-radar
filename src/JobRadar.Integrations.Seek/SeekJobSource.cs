@@ -11,6 +11,8 @@ internal sealed class SeekJobSource(
     IOptions<SeekOptions> options,
     ILogger<SeekJobSource> log) : IJobSource
 {
+    public Country Country => Country.AU;
+
     public string Name => SeekListingTranslator.SourceName;
 
     public async Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default)

@@ -5,6 +5,7 @@
     <Project Path="src/JobRadar.Infrastructure/JobRadar.Infrastructure.csproj" />
     <Project Path="src/JobRadar.Infrastructure.Migrations.Postgres/JobRadar.Infrastructure.Migrations.Postgres.csproj" />
     <Project Path="src/JobRadar.Infrastructure.Migrations.SqlServer/JobRadar.Infrastructure.Migrations.SqlServer.csproj" />
+    <Project Path="src/JobRadar.Integrations.Gupy/JobRadar.Integrations.Gupy.csproj" />
     <Project Path="src/JobRadar.Integrations.Prototype/JobRadar.Integrations.Prototype.csproj" />
     <Project Path="src/JobRadar.Integrations.Seek/JobRadar.Integrations.Seek.csproj" />
     <Project Path="src/JobRadar.Web/JobRadar.Web.csproj" />
@@ -14,6 +15,7 @@
     <Project Path="tests/JobRadar.Application.Tests/JobRadar.Application.Tests.csproj" />
     <Project Path="tests/JobRadar.Domain.Tests/JobRadar.Domain.Tests.csproj" />
     <Project Path="tests/JobRadar.Infrastructure.Tests/JobRadar.Infrastructure.Tests.csproj" />
+    <Project Path="tests/JobRadar.Integrations.Gupy.Tests/JobRadar.Integrations.Gupy.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Prototype.Tests/JobRadar.Integrations.Prototype.Tests.csproj" />
     <Project Path="tests/JobRadar.Integrations.Seek.Tests/JobRadar.Integrations.Seek.Tests.csproj" />
     <Project Path="tests/JobRadar.Web.Tests/JobRadar.Web.Tests.csproj" />

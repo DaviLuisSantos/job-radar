@@ -8,8 +8,8 @@ using Microsoft.Extensions.Hosting;
 namespace JobRadar.Worker.Tests;
 
 /// <summary>
-/// Hits the real Seek API through the real composition. Opt-in and never in CI: it depends on
-/// a third party, and its job is to notice when Seek changes the API under us.
+/// Hits a real source API (Seek, Gupy) through the real composition. Opt-in and never in CI: it depends on
+/// a third party, and its job is to notice when a source changes its API under us.
 /// </summary>
 public sealed class LiveFactAttribute : FactAttribute
 {
@@ -17,7 +17,7 @@ public sealed class LiveFactAttribute : FactAttribute
         : base(sourceFilePath, sourceLineNumber)
     {
         if (Environment.GetEnvironmentVariable("JOBRADAR_LIVE_TESTS") != "1")
-            Skip = "Set JOBRADAR_LIVE_TESTS=1 to call the real Seek API.";
+            Skip = "Set JOBRADAR_LIVE_TESTS=1 to call the real Seek and Gupy APIs.";
     }
 }
 
@@ -38,7 +38,7 @@ public class LiveSeekTests
         // Runs ValidateOnStart, like production boot.
         await host.StartAsync(TestContext.Current.CancellationToken);
 
-        var source = host.Services.GetRequiredService<IJobSource>();
+        var source = host.Services.GetServices<IJobSource>().Single(s => s.Name == "seek");
         var listings = (await source.SearchAsync(new ListingSearch("developer", "Perth"), TestContext.Current.CancellationToken)).Listings;
 
         Assert.NotEmpty(listings);

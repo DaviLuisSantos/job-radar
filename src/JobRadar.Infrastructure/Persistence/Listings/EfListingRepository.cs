@@ -43,7 +43,7 @@ internal sealed class EfListingRepository(JobRadarDbContext db) : IListingReposi
         }
 
         var added = 0;
-        foreach (var (listing, raw) in batch)
+        foreach (var (listing, raw, _) in batch)
         {
             var key = (listing.Id.Source, listing.Id.SourceId);
             if (known.TryGetValue(key, out var row))
@@ -114,7 +114,7 @@ internal sealed class EfListingRepository(JobRadarDbContext db) : IListingReposi
         var added = 0;
         foreach (var imported in batch)
         {
-            var (listing, raw) = imported.Listing;
+            var (listing, raw, _) = imported.Listing;
             var key = (listing.Id.Source, listing.Id.SourceId);
             var first = imported.FirstSeenAt.ToUniversalTime();
             if (known.TryGetValue(key, out var row))
