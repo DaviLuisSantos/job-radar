@@ -180,6 +180,13 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-29 — Regras do Brasil (`RulesVersion` 14)
+Fase 2.4 da [evolução](evolucao.md). O scorer lê cada vaga pelas regras do país dela (`CountryRules`); o Brasil ganhou
+as suas, escritas para o projeto, sem paridade nem rótulos ainda. Duas listas novas no perfil, `ExcludedTitles` e
+`OnSiteLocations`, e um peso, `EnglishRequiredPenalty`. Para a Austrália nada dispara (os perfis não usam as listas
+e os padrões novos não casam), mas a versão sobe e os scores são recalculados na passada seguinte. Paridade a rodar no
+trabalhopc antes de implantar.
+
 ### 2026-10-29 — Rename para JobRadar (fase 0 da evolução)
 O repositório vira `job-radar` (o GitHub redireciona o nome antigo). Decidido: Brasil só no Matching, de uso
 próprio; o Raio-X segue só da Austrália (`visao.md`). O User-Agent do Seek passa a `JobRadar/0.1` com o link

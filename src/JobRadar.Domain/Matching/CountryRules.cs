@@ -40,6 +40,10 @@ public sealed record CountryRules
     public required Regex TruckLicence { get; init; }
     public required Func<string, (string Value, bool Desirable)?> TruckLicenceAsked { get; init; }
     public required Func<string, int?> YearsAsked { get; init; }
+    /// <summary>English as a condition of the job, where the ads are not in English.</summary>
+    public required Regex EnglishRequired { get; init; }
+    /// <summary>Work at the employer's site, for <see cref="MatchingProfile.OnSiteLocations"/>.</summary>
+    public required Regex OnSite { get; init; }
 
     /// <summary>The rules ported from the prototype: English, a working holiday visa, Australian licences.</summary>
     public static CountryRules Australia { get; } = new()
@@ -68,12 +72,49 @@ public sealed record CountryRules
         TruckLicence = ListingPatterns.TruckLicence,
         TruckLicenceAsked = ListingPatterns.TruckLicenceAsked,
         YearsAsked = ListingPatterns.YearsAsked,
+        EnglishRequired = BrazilPatterns.Never,
+        OnSite = BrazilPatterns.Never,
     };
 
-    /// <summary>The rules of a listing's market. Brazil has none yet: its listings cannot be scored.</summary>
+    /// <summary>
+    /// Portuguese, CLT or PJ, no visa: what is Australian (working holiday, citizenship, truck licences, FIFO,
+    /// six months per employer) never matches. Written for this project and not yet calibrated.
+    /// </summary>
+    public static CountryRules Brazil { get; } = new()
+    {
+        Country = Country.BR,
+        CitizenshipRequired = BrazilPatterns.Never,
+        WorkRightsIncompatible = BrazilPatterns.Never,
+        IdentifiedRole = BrazilPatterns.Never,
+        LeadershipTitle = BrazilPatterns.LeadershipTitle,
+        SeniorRank = BrazilPatterns.SeniorRank,
+        MidTitle = BrazilPatterns.MidTitle,
+        JuniorTitle = BrazilPatterns.JuniorTitle,
+        SponsorshipDenied = BrazilPatterns.Never,
+        SponsorshipOffered = [],
+        Remote = "remoto",
+        Hybrid = "híbrido",
+        Fifo = [],
+        NoExperience = BrazilPatterns.NoExperience,
+        WorkingHolidayFriendly = BrazilPatterns.Never,
+        FlexibleWorkType = BrazilPatterns.Never,
+        TrainingTitle = BrazilPatterns.TrainingTitle,
+        EntryTitle = BrazilPatterns.TrainingTitle,
+        QualificationWords = ["certifica"],
+        LongContract = BrazilPatterns.Never,
+        CommissionOnly = BrazilPatterns.CommissionOnly,
+        TruckLicence = BrazilPatterns.Never,
+        TruckLicenceAsked = _ => null,
+        YearsAsked = BrazilPatterns.YearsAsked,
+        EnglishRequired = BrazilPatterns.EnglishRequired,
+        OnSite = BrazilPatterns.OnSite,
+    };
+
+    /// <summary>The rules of a listing's market. A market without rules is refused, never read as another.</summary>
     public static CountryRules For(Country country) => country switch
     {
         Country.AU => Australia,
-        _ => throw new NotSupportedException($"No scoring rules for {country} yet."),
+        Country.BR => Brazil,
+        _ => throw new NotSupportedException($"No scoring rules for {country}."),
     };
 }

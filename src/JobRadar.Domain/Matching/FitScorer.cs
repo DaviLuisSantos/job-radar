@@ -5,13 +5,14 @@ namespace JobRadar.Domain.Matching;
 ///
 /// Order matters and is part of the rules:
 /// 1. Exclusions (score 0): citizenship/PR, work rights a WHV cannot give, identified roles, a location
-///    the profile rules out, leadership and (for most profiles) senior titles.
+///    or a title word the profile rules out, on-site work outside where the profile accepts it, leadership
+///    and (for most profiles) senior titles.
 /// 2. Points from base 50: profile signals (title worth twice the body), sponsorship, remote,
 ///    FIFO, entry level, WHV-friendly, flexible work type, preferred location.
 /// 3. Compression above a threshold, so the best listings keep their order instead of tying at 100.
 /// 4. Restrictions and penalties after compression, so a listing with points to spare cannot
-///    absorb them: full-text phrases, apprenticeships, long contracts, commission only, truck
-///    licence, no sponsorship (when required), age.
+///    absorb them: full-text phrases, apprenticeships, long contracts, commission only, English as a
+///    condition, truck licence, no sponsorship (when required), age.
 /// 5. Qualification cap: a listing that needs a qualification the candidate lacks stays
 ///    visible below the ones they can apply to.
 ///
@@ -21,7 +22,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 13;
+    public const int RulesVersion = 14;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
@@ -66,6 +67,11 @@ public static class FitScorer
             return Excluded(ScoreRule.IdentifiedRole, identified.Value, ScoreWhere.Title);
         if (profile.ExcludedLocations.FirstOrDefault(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? "")) is { } excludedAt)
             return Excluded(ScoreRule.LocationExcluded, excludedAt, ScoreWhere.Location);
+        if (profile.ExcludedTitles.FirstOrDefault(t => ListingPatterns.Signal(t).IsMatch(title)) is { } excludedTitle)
+            return Excluded(ScoreRule.TitleExcluded, excludedTitle, ScoreWhere.Title);
+        if (profile.OnSiteLocations.Count > 0 && rules.OnSite.IsMatch(full)
+            && !profile.OnSiteLocations.Any(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? "")))
+            return Excluded(ScoreRule.OnSiteElsewhere, job.LocationLabel ?? "", ScoreWhere.Location);
 
         var juniorTitle = rules.JuniorTitle.IsMatch(title);
         if (policy.ExcludeSeniorTitles && !juniorTitle)
@@ -279,6 +285,8 @@ public static class FitScorer
 
         if (rules.CommissionOnly.Match(fullAndDesc) is { Success: true } commission && !groups.ContainsKey(FullTextGroup.Commission))
             Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -policy.CommissionOnlyPenalty);
+        if (rules.EnglishRequired.Match(fullAndDesc) is { Success: true } english)
+            Add(ScoreRule.EnglishRequired, english.Value, ScoreWhere.Text, -policy.EnglishRequiredPenalty);
         if (truckAsked is { } truck && !truckHeld && (described || !groups.ContainsKey(FullTextGroup.Licence)))
         {
             if (truck.Desirable)

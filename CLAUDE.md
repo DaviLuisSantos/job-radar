@@ -239,7 +239,8 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   vêm do protótipo, e a paridade depende delas. Desde a `RulesVersion` 8 a carteira de caminhão diverge do
   protótipo de propósito (−40, não −20), e desde a 9 "Assistant … Manager" é liderança: o teste de paridade conta
   esses casos à parte. `ExcludedLocations` de um perfil exclui pelo local (o regional exclui Perth: os 88 dias não
-  contam lá).
+  contam lá); `ExcludedTitles`, por uma palavra do título (júnior, Java); `OnSiteLocations`, quando a vaga é presencial
+  fora delas (`CountryRules.OnSite`). Regra que é do candidato vai para o perfil; o que uma frase quer dizer, para o país.
 
 ## Convenções
 
