@@ -25,7 +25,8 @@ public class ListingEntityConfiguration : IEntityTypeConfiguration<ListingEntity
         b.Property(e => e.Url).HasColumnName("url").HasMaxLength(500);
         b.Property(e => e.SourceCategory).HasColumnName("source_category").HasMaxLength(200);
         b.Property(e => e.Summary).HasColumnName("summary");
-        b.Property(e => e.Eligibility).HasColumnName("eligibility").HasMaxLength(512);
+        // No limit: remote boards list dozens of countries, and cutting the list could drop the one that decides.
+        b.Property(e => e.Eligibility).HasColumnName("eligibility");
         b.Property(e => e.FirstSeenAt).HasColumnName("first_seen_at");
         b.Property(e => e.LastSeenAt).HasColumnName("last_seen_at");
 

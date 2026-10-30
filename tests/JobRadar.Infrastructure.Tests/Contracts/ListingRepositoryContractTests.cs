@@ -69,7 +69,8 @@ public abstract class ListingRepositoryContractTests(DatabaseFixture db)
         {
             Id = new ListingId("himalayas", "example-co/backend-developer"),
             Location = ListingLocation.Unknown(Country.Remote),
-            Eligibility = "Brazil, Colombia, Mexico",
+            // Himalayas lists dozens of countries: longer than the first column (512) held.
+            Eligibility = string.Join(", ", Enumerable.Repeat("Brazil, Colombia, Mexico, Argentina, Chile, Peru", 20)),
         };
 
         await RecordAsync(Monday, listing);

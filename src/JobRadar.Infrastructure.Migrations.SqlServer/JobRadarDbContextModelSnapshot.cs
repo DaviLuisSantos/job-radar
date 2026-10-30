@@ -137,8 +137,7 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                         .HasColumnName("country");
 
                     b.Property<string>("Eligibility")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("eligibility");
 
                     b.Property<DateTimeOffset>("FirstSeenAt")

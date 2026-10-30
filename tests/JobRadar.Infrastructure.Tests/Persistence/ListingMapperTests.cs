@@ -32,6 +32,16 @@ public class ListingMapperTests
     }
 
     [Fact]
+    public void Text_longer_than_its_column_is_cut_instead_of_failing_the_batch()
+    {
+        var e = ListingMapper.ToNewEntity(Sample() with { Title = new string('t', 400), SalaryText = new string('$', 301) }, Perth);
+
+        Assert.Equal((300, '…'), (e.Title.Length, e.Title[^1]));
+        Assert.Equal(300, e.SalaryText!.Length);
+        Assert.Equal("Acme", e.Company);   // what fits stays as it is
+    }
+
+    [Fact]
     public void Timestamps_are_stored_in_utc()
     {
         var e = ListingMapper.ToNewEntity(Sample(), Perth);

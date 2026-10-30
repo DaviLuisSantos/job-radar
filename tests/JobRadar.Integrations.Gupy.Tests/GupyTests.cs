@@ -137,4 +137,13 @@ public class GupyTests
     [InlineData("Lisboa", null)]
     public void States_are_written_as_two_letter_codes(string state, string? code) =>
         Assert.Equal(code, GupyListingTranslator.StateCode(state));
+
+    [Fact]
+    public void A_link_that_does_not_parse_falls_back_to_the_vacancy_page()
+    {
+        // A real vacancy once had one: it failed the whole search.
+        var job = new GupyJob(77, "Dev", null, "Acme", "vacancy_type_effective", null, null, null, null, "https://acme gupy.io/job x");
+
+        Assert.Equal(new Uri("https://portal.gupy.io/job/77"), GupyListingTranslator.ToListing(job).Url);
+    }
 }

@@ -16,7 +16,7 @@ internal static class GupyListingTranslator
         WorkType: WorkType(job.Type),
         SalaryText: null,
         PostedAt: job.PublishedDate,
-        Url: new Uri(job.JobUrl ?? $"https://portal.gupy.io/job/{job.Id}"),
+        Url: ListingUrl.Choose(job.JobUrl, $"https://portal.gupy.io/job/{job.Id}"),
         SourceCategory: null,
         Summary: Summary(job));
 

@@ -22,7 +22,7 @@ internal static class HimalayasListingTranslator
         WorkType: WorkType(job.EmploymentType),
         SalaryText: Salary(job),
         PostedAt: job.PubDate is { } unix ? DateTimeOffset.FromUnixTimeSeconds(unix) : null,
-        Url: new Uri(Blank(job.ApplicationLink) ?? Blank(job.Guid) ?? "https://himalayas.app/jobs"),
+        Url: ListingUrl.Choose(job.ApplicationLink, job.Guid, "https://himalayas.app/jobs"),
         SourceCategory: null,
         Summary: Summary(job),
         Eligibility: Eligibility(job.LocationRestrictions));

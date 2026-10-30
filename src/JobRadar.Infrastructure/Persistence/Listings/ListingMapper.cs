@@ -23,19 +23,20 @@ internal static class ListingMapper
     /// <summary>Copies the latest details from the source; never touches <c>FirstSeenAt</c>.</summary>
     internal static void Refresh(ListingEntity e, Listing listing, DateTimeOffset observedAt)
     {
-        e.Title = listing.Title;
-        e.Company = listing.Company;
+        // Text from a source can be longer than its column, and one long value would fail the whole batch: fit it.
+        e.Title = Fit(listing.Title, 300)!;
+        e.Company = Fit(listing.Company, 300);
         e.Country = ToColumn(listing.Location.Country);
-        e.Suburb = listing.Location.Suburb;
-        e.Region = listing.Location.Region;
+        e.Suburb = Fit(listing.Location.Suburb, 120);
+        e.Region = Fit(listing.Location.Region, 120);
         e.State = listing.Location.State;
         e.Postcode = listing.Location.Postcode;
         e.WorkType = ToColumn(listing.WorkType);
-        e.SalaryText = listing.SalaryText;
+        e.SalaryText = Fit(listing.SalaryText, 300);
         // Npgsql only writes timestamptz from offset 0.
         e.PostedAt = listing.PostedAt?.ToUniversalTime();
         e.Url = listing.Url.ToString();
-        e.SourceCategory = listing.SourceCategory;
+        e.SourceCategory = Fit(listing.SourceCategory, 200);
         e.Summary = listing.Summary;
         e.Eligibility = listing.Eligibility;
         e.LastSeenAt = observedAt.ToUniversalTime();
@@ -56,6 +57,10 @@ internal static class ListingMapper
             Eligibility: e.Eligibility),
         FirstSeenAt: e.FirstSeenAt,
         LastSeenAt: e.LastSeenAt);
+
+    /// <summary>The text cut to <paramref name="max"/> characters, with an ellipsis when cut.</summary>
+    internal static string? Fit(string? text, int max) =>
+        text is null || text.Length <= max ? text : string.Concat(text.AsSpan(0, max - 1), "…");
 
     internal static string ToColumn(Country country) => country switch
     {

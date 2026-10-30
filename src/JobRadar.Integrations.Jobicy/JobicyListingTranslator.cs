@@ -17,7 +17,7 @@ internal static class JobicyListingTranslator
         WorkType: WorkType(job.JobType),
         SalaryText: Salary(job),
         PostedAt: job.PubDate,
-        Url: new Uri(Blank(job.Url) ?? $"https://jobicy.com/jobs/{job.Id}"),
+        Url: ListingUrl.Choose(job.Url, $"https://jobicy.com/jobs/{job.Id}"),
         SourceCategory: null,
         Summary: string.Join(" | ", new[] { HtmlText.ToPlain(job.JobExcerpt), "Remote" }.Where(p => !string.IsNullOrWhiteSpace(p))),
         Eligibility: Eligibility(job.JobGeo));
