@@ -17,6 +17,9 @@
     While the services are down on purpose it holds -Target\deploying.lock, so watchdog.ps1 leaves them be.
     A deploy that fails keeps the lock: the watchdog starts the services again only after an hour.
     Publishes ReadyToRun (win-x64): about half the start-up time, which matters at boot.
+    Before anything else, when -ParityFile exists, runs the scoring parity test against it: a change that moves the
+    scores of the real listings stops the deploy before the services are touched (the file only lives here, so
+    this is the one place it can run on every change).
     See docs/producao.md.
 #>
 param(
@@ -25,7 +28,9 @@ param(
     # Collection:DailyAt in Australia/Perth; the pass takes ~15 min, so the window below is generous.
     [timespan] $PassAt = '06:00',
     [switch] $Force,
-    [switch] $Rollback
+    [switch] $Rollback,
+    # Real listings exported from the prototype; only on this machine, never in the repository.
+    [string] $ParityFile = 'D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -118,6 +123,21 @@ if ($Rollback) {
 $commit = (& git -C $repo rev-parse --short HEAD)
 $dirty = [bool](& git -C $repo status --porcelain --untracked-files=no)
 if ($dirty) { Write-Warning 'The working tree has uncommitted changes: they go to production too.' }
+
+if (Test-Path $ParityFile) {
+    Write-Host '== Scoring parity' -ForegroundColor Cyan
+    $env:JOBRADAR_PARITY_FILE = $ParityFile
+    try {
+        # No --nologo: the testing platform hands it to the test app, which then runs zero tests and fails.
+        $parity = dotnet test --project (Join-Path $repo 'tests\JobRadar.Domain.Tests') 2>&1
+        if ($LASTEXITCODE) {
+            $parity | Select-Object -Last 30 | Write-Host
+            throw 'Scoring parity failed: the real listings would score differently. Not deploying.'
+        }
+    }
+    finally { Remove-Item Env:JOBRADAR_PARITY_FILE -ErrorAction SilentlyContinue }
+}
+else { Write-Warning "No parity file at ${ParityFile}: deploying without the parity check." }
 
 Write-Host '== Publishing' -ForegroundColor Cyan
 foreach ($s in $services) {
