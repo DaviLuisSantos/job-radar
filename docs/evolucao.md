@@ -2,13 +2,14 @@
 
 > Plano de implementação de `JobRadar-plano-de-evolucao.md` (vault), conferido contra o código em 2026-10-29.
 > Uma fase por vez; cada fase só fecha com o critério de pronto. A passada diária da Austrália não para.
-> Ao fechar uma fase: ✅ com a data aqui, Diário em [plano.md](plano.md), e as atualizações do vault (§8 do original).
+> Ao fechar uma fase: ✅ com a data aqui, Diário (fora do repositório, `docs/private/`), e as atualizações do vault (§8 do original).
 
 ## Estado
 
 | # | Fase | PRs | Estado |
 |---|---|---|---|
 | 0 | Rename e decisões de escopo | 1 | ✅ 2026-10-29 (passadas seguintes conferidas em 2026-10-30: mesmo volume, nenhum erro) |
+| 0b | Repositório público sem o vocabulário do primeiro mercado | 5 commits | 🔨 2026-10-30: pronto na branch `refactor/neutral-eligibility`; a produção precisa do bloco local antes do merge (abaixo) |
 | 1 | SQL Server ao lado do Postgres | 5 (PRs 2–6) | ✅ 2026-10-30 (1.5 medida: [perf-sqlserver.md](perf-sqlserver.md)) |
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
@@ -38,14 +39,14 @@ classe da Infrastructure (`Infrastructure.Postgres.*`, `Postgres*Repository`, `A
 
 **O domínio é australiano por construção** (afeta a fase 2):
 - `ListingLocation` tem `AustralianState State` (enum NSW…NT) e `Postcode` de 4 dígitos.
-- `FitScorer` é o score de um WHV: cidadania/PR, direito de trabalho, 88 dias, FIFO, carteira de caminhão.
+- `FitScorer` era o score de um só mercado: quem pode se candidatar, FIFO, carteira de caminhão.
   Os padrões (`ListingPatterns`) são em inglês.
 - `Salary` anualiza por 2080 h, sem moeda.
 - "Market" já é nome ocupado: é o Raio-X (`Domain/Market`, `MarketSnapshot`, configuração `Market:`).
   O "mercado AU/BR" do plano original vira **`Country`** (código ISO, `AU`/`BR`).
 
 **Conflitos com os documentos do projeto** (resolver na fase 0):
-- [visao.md](visao.md) tem "Só Austrália" nos não-objetivos e o propósito é o WHV.
+- [visao.md](visao.md) tinha "Só Austrália" nos não-objetivos e o propósito era só o mercado australiano.
 - [plano.md](plano.md): "fontes novas esperam" a calibragem, e a primeira fonte nova seria o Adzuna. A Gupy não
   mexe nos dados da calibragem da Austrália (país separado), então não fere a regra, mas a ordem precisa ser
   decidida e registrada.
@@ -81,6 +82,32 @@ Trocar junto, de uma vez, sem mudar mais nada da integração.
 - `visao.md` e `plano.md` com as decisões 1 e 4.
 - **Pronto:** CI verde; o auto-deploy da produção puxa do repo novo; passada seguinte igual à anterior
   (`/status`: mesmo número de execuções e nenhuma busca nova incompleta).
+
+## Fase 0b — Repositório público sem o vocabulário do primeiro mercado (2026-10-30)
+
+Pedido do autor: nada do vocabulário de status legal no código público. Quem pode se candidatar às vagas de um mercado
+virou **dado**: o bloco `Matching:Markets:<mercado>:Eligibility` do `appsettings.Local.json` (`EligibilityRules`: padrões
+de status reservado, de condição que o perfil não atende, de vaga reservada, de boas-vindas e de apoio do empregador, e as
+frases buscadas no anúncio inteiro por grupo neutro: exclude, doubt, ambiguous, welcome, welcome_retracted, tenure). O
+motor continua um só (`FitScorer`), com as mesmas fases e os mesmos pontos; regras e pesos ganharam nomes neutros
+(`RulesVersion` 16). O AU não sobe sem o bloco; os remotos só acrescentam um padrão às frases de residência do código. Os
+termos do Raio-X também saíram do código (`Market:Terms`, local, com os mesmos nomes de antes, que são a chave das
+contagens gravadas).
+
+1. Explicações gravadas lidas com tolerância (`ScoreRule.Unknown`); termos do Raio-X na configuração.
+2. Bloco de elegibilidade lido da configuração, com as regras de antes como transição; `eligibility <mercado>` imprime o
+   bloco em uso. O bloco real foi gerado assim e provado igual às regras de antes por teste.
+3. Nomes neutros; testes públicos com um mercado fictício (`TestMarkets`); os casos com texto real foram para
+   `scoring-cases.Local.json`, ao lado do arquivo local (`LocalScoringCasesTests`).
+4. Regras apagadas do código; AU sem bloco para a subida e a paridade; exemplo, esquema do candidato e skill sem o
+   vocabulário.
+5. Docs neutros; o Diário e a visão original foram para `docs/private/` (fora do git); `PublicVocabularyTests` impede a
+   volta.
+
+**Pronto:** a guarda passa nos arquivos versionados; perfis e regras reais fora do Git; CI verde com o exemplo; paridade
+e os casos locais verdes com o bloco real. **Antes do merge**, o arquivo local da produção precisa do bloco
+(`Matching:Markets` com AU, LatamRemote e GlobalRemote) e de `Market:Terms`: sem eles o worker e o site não sobem, e o
+deploy para na paridade. O histórico do Git guarda o vocabulário antigo: reescrevê-lo é outra decisão.
 
 ## Fase 1 — SQL Server ao lado do Postgres (5 PRs)
 
@@ -157,7 +184,7 @@ desconhecido no banco falha em vez de ser adivinhado. A paridade não rodou nest
 trabalhopc); `FormatLocation` produz o mesmo texto de antes.
 
 **2.3 Regras por país no `FitScorer`.** ✅ `CountryRules`: tudo o que o scorer lê e depende de idioma ou país
-(cidadania, WHV, senioridade, contrato, carteira de caminhão, anos pedidos, remoto/híbrido/FIFO). `CountryRules.Australia`
+(quem pode se candidatar, senioridade, contrato, carteira de caminhão, anos pedidos, remoto/híbrido/FIFO). `CountryRules.Australia`
 aponta para os mesmos padrões de `ListingPatterns`; o scorer escolhe pelo `Country` da vaga e as fases não mudaram
 (o diff do `FitScorer` só troca de onde vem cada padrão). Sem `RulesVersion` nova. Um país sem regras é recusado
 (`NotSupportedException`), em vez de lido como australiano. A paridade não rodou nesta máquina: rodar no trabalhopc.
@@ -166,7 +193,7 @@ aponta para os mesmos padrões de `ListingPatterns`; o scorer escolhe pelo `Coun
 a etapa falharia.) ✅ `RulesVersion` 14. `CountryRules.Brazil` (padrões em `BrazilPatterns`): sênior penaliza e
 "pleno/sênior" não, liderança (tech lead, coordenador, gerente…) exclui, remoto e híbrido em português, comissão,
 anos de experiência ("5+ anos de experiência", "experiência mínima de 3 anos"), inglês como condição (−10,
-`EnglishRequiredPenalty`: marca o que treinar, não exclui). O que é australiano (WHV, cidadania, carteira de caminhão,
+`EnglishRequiredPenalty`: marca o que treinar, não exclui). O que é australiano (quem pode se candidatar, carteira de caminhão,
 FIFO, os seis meses por empregador) nunca casa. O que é **do candidato** foi para o perfil, valendo para qualquer país:
 `ExcludedTitles` (júnior, estágio, Java como stack principal) e `OnSiteLocations` (presencial fora de onde ele aceita
 exclui). No AU as regras novas nunca disparam: perfis sem as listas, padrões que não casam.
@@ -299,7 +326,7 @@ mesma vaga pode servir ao mercado LATAM e ao global.
   cada mercado que a buscou.
 - **`Country` da vaga** continua: onde ela fica, quando fica em algum lugar.
 - **Elegibilidade da vaga** (nova): de onde a empresa aceita gente (`Worldwide`, `LATAM`, `Americas`, `Brazil`, `US only`,
-  `Europe`...), como a fonte informa. É o que decide se a vaga serve, como a cidadania decide na Austrália.
+  `Europe`...), como a fonte informa. É o que decide se a vaga serve, como as regras de elegibilidade decidem na Austrália.
 
 ### Passos
 

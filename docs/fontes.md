@@ -7,17 +7,17 @@
 
 - **Domínio comum, peculiaridades por integração.** O núcleo não conhece nenhum site; cada um
   entra como `Integrations/<Site>` traduzindo para o modelo neutro.
-- **v1: só Seek.** **v2: Adzuna primeiro, Workforce Australia junto com os 88 dias.**
+- **v1: só Seek.** **v2: Adzuna primeiro, Workforce Australia junto com o recorte por região.**
 - **Fora:** Indeed e LinkedIn (sem API de busca, anti-bot, risco jurídico). Jora não planejado.
 
 ## Candidatas
 
-| Fonte | Acesso | Valor para o público WHV | Risco | Quando |
+| Fonte | Acesso | Valor para o Raio-X | Risco | Quando |
 |---|---|---|---|---|
-| **Seek** | API de busca não documentada (JSON); páginas de vaga atrás de Cloudflare | maior volume; busca no texto completo (termos de direito de trabalho) | termos proíbem acesso automatizado; só agregado em público | v1 |
+| **Seek** | API de busca não documentada (JSON); páginas de vaga atrás de Cloudflare | maior volume; busca no texto completo (termos de elegibilidade) | termos proíbem acesso automatizado; só agregado em público | v1 |
 | **Adzuna** | API pública oficial com chave (*verificar* termos para uso em newsletter) | agregador com categoria e salário; base legal melhor para números publicados | baixo | v2 (primeira nova fonte) |
-| **Workforce Australia** (governo, inclui Harvest Trail) | site público (*verificar* se há API ou feed) | trabalho rural e colheita, que conversa com os 88 dias | baixo (dado público) | v2, junto dos 88 dias |
-| **Quadros para backpackers** | sites pequenos (*verificar* um a um) | vagas casuais que não aparecem no Seek | variável | v2, se o Raio-X pedir |
+| **Workforce Australia** (governo, inclui Harvest Trail) | site público (*verificar* se há API ou feed) | trabalho rural e colheita | baixo (dado público) | v2, junto do recorte por região |
+| **Quadros de trabalho temporário** | sites pequenos (*verificar* um a um) | vagas casuais que não aparecem no Seek | variável | v2, se o Raio-X pedir |
 | **Jora** | pertence ao Seek; agregador | pouco além do Seek | o mesmo do Seek | não planejado |
 | **Indeed** | sem API pública para busca; anti-bot forte | volume alto | alto | fora |
 | **LinkedIn** | anti-scraping agressivo, histórico de processos | vagas de tecnologia | alto | fora |
@@ -47,7 +47,7 @@
 3. **Taxonomia própria.** Categorias de cada site são mapeadas para uma taxonomia do
    sistema (base na classificação oficial de ocupações australiana, *verificar* se
    ANZSCO ou OSCA). O mapeamento é dado, com teste.
-4. **Local normalizado.** Cidade, estado e postcode canônicos; pré-requisito para os 88 dias.
+4. **Local normalizado.** Cidade, estado e postcode canônicos; pré-requisito para recortes por região.
 5. **Identidade por fonte, agrupamento entre fontes.** O ID é `fonte + id da fonte`. A mesma
    vaga em dois sites forma um grupo (título, empresa, local, data); nunca se apaga uma das duas.
 6. **Números do Raio-X por fonte.** Cada fonte tem seu retrato e seu status de qualidade.

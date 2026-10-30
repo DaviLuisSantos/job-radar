@@ -27,7 +27,7 @@ causa da explicação, o SQL Server lia cada linha de `listing_scores` inteira (
 | trades | 8.386 | 458 | 307 |
 | fifo | 7.201 | 402 | 259 |
 | tech | 4.509 | 310 | 192 |
-| regional | 790 | 193 | 102 |
+| farm | 790 | 193 | 102 |
 
 Leituras lógicas no banco (construction): `listing_scores` 2.243 → 473; `listings` 3.381 → 3.381.
 

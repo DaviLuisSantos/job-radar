@@ -13,7 +13,7 @@
 | 3 | Coleta: serviço que roda as buscas configuradas, grava vagas + payload bruto, job agendado no Worker, log de execuções | ✅ 2026-10-21 |
 | 4a | Score: regras do protótipo portadas como domínio puro (`FitScorer`) com explicação tipada; `Listing.Summary`; paridade com o Python | ✅ 2026-10-21 |
 | 4b | Score em uso: perfis na configuração com as buscas de cada um; registro de qual busca achou cada vaga; score gravado por vaga × perfil, recalculado todo dia | ✅ 2026-10-21 |
-| 5 | Termos do texto completo: busca por frase no Seek (direito de trabalho, cidadania, WHV), aplicados ao score | ✅ 2026-10-21 |
+| 5 | Termos do texto completo: busca por frase no Seek (quem pode se candidatar, requisitos), aplicados ao score | ✅ 2026-10-21 |
 | 6 | Candidaturas e rótulos: status, datas, notas; rótulos bom/ruim e calibragem do score | ✅ 2026-10-21 |
 | 7 | Triagem: interface para revisar vagas novas, ver a explicação do score, rotular e marcar candidatura | ✅ 2026-10-21 |
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
@@ -23,9 +23,9 @@
 Pendências conhecidas, com a etapa onde entram:
 - **Etapa 9:** as 9.593 vagas importadas ganham score na passada de 2026-10-24 (19:00 de Brasília). Conferir na
   triagem que aparecem nos 5 perfis.
-- **v2 (newsletter):** áreas, cidades e termos do Raio-X ainda são os do protótipo (HVAC-R, Elétrica,
-  Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
-  substitui o padrão).
+- **v2 (newsletter):** áreas e cidades do Raio-X ainda são as do protótipo (HVAC-R, Elétrica,
+  Desenvolvimento; Perth + Austrália). Mudar = configurar `Market` (cada lista configurada substitui o padrão). Os
+  termos não têm padrão no código desde 2026-10-30: só `Market:Terms`, no arquivo local.
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
 - **Voltar sem login ([#29](https://github.com/DaviLuisSantos/job-radar/issues/29)), decidido em 2026-10-30:** o autor quis
   uma solução que não dependa de SO. Tudo virou containers (`docker compose --profile prod`, scripts em PowerShell 7), igual
@@ -35,8 +35,8 @@ Pendências conhecidas, com a etapa onde entram:
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
-- **Termos de cidadania e direito de trabalho:** corrigido em 2026-10-22 com a palavra de contexto; tech e
-  regional ganharam as suas em 2026-10-23 (ver Diário). A busca do termo sozinho segue incompleta todo dia, sem
+- **Termos de elegibilidade:** corrigido em 2026-10-22 com a palavra de contexto; tech e o perfil de fazenda
+  ganharam as suas em 2026-10-23 (ver Diário). A busca do termo sozinho segue incompleta todo dia, sem
   efeito: todo perfil agora tem contexto. A passada de 2026-10-24 (Perth) **ainda não tinha** os novos: 412
   execuções, o mesmo de antes (seriam ~452), e as palavras entraram às 19:14 de Brasília, depois do início
   dela. Elas moram no `appsettings.Local.json`, que só chega à produção pelo `deploy.ps1`. Depois de implantar,
@@ -82,14 +82,14 @@ entra pelo navegador do próprio autor, que abre a vaga como qualquer pessoa:
 2. **Campo "colar"** na página da vaga: a mesma coisa, manual.
 3. O texto fica em `listing_descriptions` (separado do `Summary`) e a vaga é repontuada na hora
    (`DescriptionService` → `ListingScoringService.ScoreOneAsync`); a passada diária também o lê.
-   Lido **só** pelas regras de requisito e de direito de trabalho (ver Diário 2026-10-22).
+   Lido **só** pelas regras de requisito e de elegibilidade (ver Diário 2026-10-22).
 
 Cuidados: o texto fica só no banco do autor (uso pessoal); nunca entra no Raio-X, no repositório nem em
 fixture. A busca por frase (etapa 5) continua para as vagas sem descrição.
 
 ### v1.x — Perfil a partir do currículo (decidido 2026-10-23)
 
-Hoje o perfil mistura duas coisas: **fatos** sobre o candidato (visto, formação, carteiras, tickets, anos de
+Hoje o perfil mistura duas coisas: **fatos** sobre o candidato (formação, carteiras, tickets, anos de
 experiência), que vêm do currículo e mudam pouco, e **hipóteses** sobre o mercado (palavras-chave, palavras de
 contexto, sinais achados rotulando), que só os números confirmam. As duas camadas se separam:
 
@@ -116,16 +116,16 @@ formação, tickets) vira o **estado** de cada item do catálogo, e o `candidate
 ### v1.x — Requisitos e pesos configuráveis (decidido 2026-10-23)
 
 Os controles do score estão em quatro lugares: constantes no `FitScorer` (−40 carteira de caminhão, −10 ticket,
-−20 requisito, −55 cidadania, ±16/8 sinais…), a `ScoringPolicy` (só padrões do código), frases repetidas em cada
+−20 requisito, −55 elegibilidade, ±16/8 sinais…), a `ScoringPolicy` (só padrões do código), frases repetidas em cada
 perfil (`Requirements`, `QualifiedTitles`, `DisqualifySignals`) e regex em `ListingPatterns`. E nada sabe o que o
 candidato **tem**: que tiraria o HRWL e que o ARCtick está fora de alcance mora na cabeça dele. O Seek não filtra
 por isso. Três camadas:
 
 1. **Catálogo de requisitos** (repo, conhecimento de mercado, igual para todos): item com `id` (`white-card`,
-   `hrwl`, `forklift`, `truck-hr`, `arctick`, `trade-qualified`, `degree`, `experience-years`, `citizenship`…),
+   `hrwl`, `forklift`, `truck-hr`, `arctick`, `trade-qualified`, `degree`, `experience-years`…),
    tipo, frases como os anúncios escrevem, custo de obter (curso curto, anos, certificado), e se é buscado no
    Seek (custa uma busca por palavra de contexto em cada passada) ou só lido nas descrições. Itens com leitura
-   especial (carteira com "desirable", cidadania com negação) apontam para o detector que já existe.
+   especial (carteira com "desirable", elegibilidade com negação) apontam para o detector que já existe.
 2. **Estado do candidato em cada item** (banco, editado no site): `tenho` (bônus quando o anúncio pede),
    `tiraria` (leve, o −10 de hoje), `não tenho` (o −20), `fora de alcance` (forte ou teto, o −40). Mudou o
    estado, repontua na hora. No banco porque o site já grava rótulos lá e porque perfis não viajam entre o
@@ -166,7 +166,7 @@ Entra depois do passo 4 dos requisitos.
 Pré-requisito: **rótulos**. Hoje há zero; a meta é ~200–300 por perfil, com boas e ruins. A métrica e os
 atributos já existem: o acerto de pares da calibragem (etapa 6) e os itens da explicação do score.
 
-1. **Regras como trava**: exclusões (cidadania/PR, direito de trabalho incompatível com WHV, vaga reservada)
+1. **Regras como trava**: exclusões (status reservado, condição que o perfil não atende, vaga reservada)
    continuam decidindo; o modelo só ordena o que sobra.
 2. **Modelo simples e explicável primeiro**: regressão logística (ML.NET) sobre os itens da explicação + palavras
    do título/resumo (e da descrição completa, quando houver). Aprende os pesos que hoje são fixos.

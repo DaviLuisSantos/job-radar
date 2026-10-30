@@ -1,15 +1,15 @@
 # JobRadar
 
-Tracks the Australian job market for people arriving on a Working Holiday visa (subclass 417/462):
-which jobs they can actually take, and how the market moves month to month.
+Multi-market job radar with pluggable sources: Seek (Australia), Gupy (Brazil), Himalayas and Jobicy (remote).
+It collects every day, scores each listing for the profiles of its market and explains every score.
 
 Two products share one core:
 
-- **Matching** (private): ranks new listings against a candidate profile, explains every score,
-  and tracks applications.
-- **Market snapshot** (public): aggregated numbers only, such as listings per city and area,
-  the share that accepts working holiday makers, and the share that requires citizenship or PR.
-  It feeds a monthly newsletter in Portuguese for Brazilians moving to Australia.
+- **Matching** (private): ranks new listings against a candidate profile, per market, explains every score,
+  and tracks applications. Who may apply to a market's jobs is data the owner keeps in local configuration,
+  not code: the scoring engine is generic, and a fictional market shows its shape.
+- **Market snapshot** (public): aggregated numbers only, such as listings per city and area and how many
+  mention the terms the snapshot follows. It feeds a monthly newsletter in Portuguese about the Australian market.
 
 > **Status:** v1 running in production since October 2026. Daily collection from Seek, full-text clause
 > detection, full ad text for the listings that matter, scoring per profile, application tracking, a
@@ -62,7 +62,8 @@ dotnet run --project src/JobRadar.Worker
 ```
 
 Describe your profiles first: copy `src/JobRadar.Worker/appsettings.Local.example.json` to
-`appsettings.Local.json` (git-ignored). Every day at 06:00 Perth time the worker searches each
+`appsettings.Local.json` (git-ignored), with each market's eligibility rules (`Matching:Markets`): an Australian
+profile starts only with them, and the example's are fictional. Every day at 06:00 Perth time the worker searches each
 profile's keywords in its locations, then scores what each profile found. Set
 `Collection__RunOnStartup=true` to run a pass immediately.
 
@@ -91,7 +92,7 @@ lists where the score disagrees with you, with the rules that weighed most.
 ### Market snapshot (Raio-X)
 
 Every day the worker also counts open listings per official Seek category and city, and how many
-mention terms such as "sponsorship" or "working rights" anywhere in the ad. Each daily snapshot is
+mention the terms configured in `Market:Terms` anywhere in the ad. Each daily snapshot is
 checked (failed counts, cut listings, implausible swings) and only good ones feed the monthly
 report, written in Portuguese for the newsletter:
 

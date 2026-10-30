@@ -86,6 +86,10 @@ mudar nada: `pwsh deploy/auto-deploy.ps1 -DryRun`.
 
 **Perfis:** o `appsettings.Local.json` não está no git e é montado direto nos containers: uma mudança vale quando o
 worker e o site reiniciam (o próximo deploy, ou `docker compose -p job-radar-au --profile prod restart worker web`).
+Além dos perfis, ele guarda quem pode se candidatar em cada mercado (`Matching:Markets:<mercado>:Eligibility`) e os
+termos do Raio-X (`Market:Terms`): sem o bloco do AU, worker e site não sobem e a paridade do deploy falha. Para ver o
+bloco em uso: `dotnet run --project src/JobRadar.Worker -- eligibility AU`. Os casos com texto real que conferem o
+bloco ficam em `scoring-cases.Local.json`, ao lado; o deploy roda os dois com a paridade.
 
 ### Voltar a versão anterior
 

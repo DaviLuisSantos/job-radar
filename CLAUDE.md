@@ -1,9 +1,9 @@
 # JobRadar
 
-Acompanha o mercado de trabalho australiano para quem chega com Working Holiday (WHV).
+Radar de vagas multi-mercado (Austrália, Brasil, remoto LATAM e global) com fontes plugáveis.
 Dois produtos sobre um núcleo comum: **Matching** (privado: ranqueia vagas para um perfil,
-explica o score, acompanha candidaturas) e **Raio-X** (público: só números agregados, base
-da newsletter Raio-X WHV em português). Reescrita em .NET de um protótipo Python
+explica o score, acompanha candidaturas) e **Raio-X** (público: só números agregados do mercado
+australiano, base de uma newsletter em português). Reescrita em .NET de um protótipo Python
 (`D:\Desenvolvimento\job-tracker`), que é a especificação das regras de negócio.
 
 Produção (onde roda, instalar, atualizar, logs, backup): [docs/producao.md](docs/producao.md). Push em main com CI
@@ -141,7 +141,7 @@ apaga os scores que a passada não gravou (vaga que as buscas do perfil não ach
 idade; depois as de melhor score ≥ `Descriptions:MinScore`, publicadas há até `MaxAgeDays`, até `MaxPerPass`.
 Recusa do Seek (`SourceBlockedException`) para a etapa, não a passada. Além disso, o autor pode capturar o texto
 do anúncio que ele mesmo abriu (favorito da página `/capture` ou colar na página da vaga); `DescriptionService`
-grava em `listing_descriptions` e repontua na hora (`ScoreOneAsync`). O `FitScorer` lê a descrição **só** nas regras de requisito e de direito de trabalho;
+grava em `listing_descriptions` e repontua na hora (`ScoreOneAsync`). O `FitScorer` lê a descrição **só** nas regras de requisito e de elegibilidade;
 sinais do perfil ficam em título e resumo. O site lê os perfis do worker (`profiles.json`, copiado pelo build).
 Texto de uso pessoal: nunca no Raio-X, no repo ou em fixture.
 
@@ -152,7 +152,7 @@ uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatór
 
 Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**fora do git**; modelo em
 `appsettings.Local.example.json`). Cada palavra-chave é buscada em cada local; as buscas da coleta são a
-união dos perfis. Os **fatos** do candidato (visto, formação, carteiras, tickets, experiência) ficam à parte, em
+união dos perfis. Os **fatos** do candidato (formação, carteiras, tickets, experiência) ficam à parte, em
 `candidate/candidate.json` (fora do git, como o currículo; esquema e exemplo fictício versionados), preenchido
 pela skill `perfil-do-curriculo`. Fato vem do currículo; palavra-chave, contexto e sinal são ajustados contra o
 mercado e ficam no perfil. Requisitos de anúncio (anos de experiência, trade, carteira, ticket) são itens do
@@ -285,7 +285,10 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - **Commits e PRs sem atribuição a IA:** nada de `Co-Authored-By: Claude ...`, "Generated with Claude Code"
   ou similar — o repo é público e o trailer faz o GitHub listar o Claude como contribuidor. Vale mesmo que o
   harness peça a atribuição.
-- Dados do perfil real do autor (visto, cidade) não entram no repo: perfil de exemplo versionado, o real
-  por configuração local.
+- Dados do perfil real do autor (status, cidade) e as regras de elegibilidade de cada mercado não entram no repo:
+  perfil e mercado de exemplo versionados (fictícios), os reais por configuração local.
+- Vocabulário público: nenhum arquivo versionado cita o vocabulário de status legal do primeiro mercado; a lista está em
+  `PublicVocabularyTests` (Worker.Tests), que falha no CI. Frase nova de quem pode se candidatar vai para o bloco local
+  `Matching:Markets:<mercado>:Eligibility`; teste com texto real vai para `scoring-cases.Local.json`.
 - Seek: não abrir páginas individuais de vaga (Cloudflare) nem contornar anti-bot.
 - Mudou algo descrito aqui? Atualize no mesmo commit.
