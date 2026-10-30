@@ -75,6 +75,8 @@ Só para o Matching de uso próprio: nada do Brasil vai ao Raio-X público ([vis
   Mesma situação do Seek, cujos termos também proíbem acesso automatizado e que o projeto usa com ritmo baixo e só
   agregado em público.
 
+**Decidido (2026-10-29): Gupy primeiro, nas regras do Seek** (uso pessoal, ritmo baixo, nada público).
+
 **Adzuna** (agregador com API oficial e chave grátis): os termos permitem "personal job search" e pesquisa pessoal;
 pedem crédito à Adzuna ao publicar. Existe `adzuna.com.br`; *verificar* com uma chave se a API responde para `br`
 (sem chave a autenticação falha antes de olhar o país). Já é a primeira fonte nova planejada para a Austrália: uma

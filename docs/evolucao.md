@@ -142,9 +142,9 @@ só um dos bancos; o CI roda os dois no mesmo job.
 **2.1 Spike da Gupy (sem código no repo).** ✅ 2026-10-29, detalhes em [fontes.md](fontes.md#brasil-spike-de-2026-10-29-fase-2-da-evolução).
 A busca do portal (`portal.gupy.io/api/job-search/jobs`) é JSON aberto e já traz o anúncio inteiro, o regime e o
 modelo de trabalho; o endpoint antigo do plano original não existe mais. Os termos proíbem "agregar, copiar ou
-duplicar partes" da plataforma, como os do Seek proíbem acesso automatizado. **Decisão do autor pendente:** Gupy
-nas mesmas regras do Seek (uso pessoal, ritmo baixo, nada público), ou Adzuna (API oficial, termos permitem busca
-pessoal, serve também à Austrália; falta confirmar com uma chave que cobre o Brasil).
+duplicar partes" da plataforma, como os do Seek proíbem acesso automatizado. **Decidido pelo autor (2026-10-29): Gupy**, nas
+mesmas regras do Seek: uso pessoal, ritmo baixo, nada do Brasil em público, anúncio inteiro só no banco local. O
+Adzuna segue como próxima fonte da Austrália (e, se a API cobrir o Brasil, uma segunda fonte daqui).
 
 **2.2 `Country` e local neutro, sem mudança de comportamento.** `Country` na vaga (padrão `AU` para o
 histórico), `ListingLocation` com subdivisão em texto (decisão 3). Migration nos dois providers.
