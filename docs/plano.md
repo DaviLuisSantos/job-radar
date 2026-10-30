@@ -180,6 +180,15 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-30 — Prints do README refeitos; mensageria fica de fora
+`docs/img/triage.png`, `listing.png` e a nova `today.png`: o caminho do dia 23, num banco descartável `jobradar_demo` no
+SQL Server local (nunca no Postgres da produção), com 13 vagas inventadas ligadas às buscas do perfil de exemplo, a
+passada do Worker com as fontes num endereço inválido (só o score roda) e Chrome sem tela a 2×, em tema claro. Atenção
+para quem repetir: **argumento de comando não vira configuração** (`collect --ConnectionStrings:...` é ignorado);
+configure por variável de ambiente. A captura em tema escuro saiu com a barra do topo clara e chips sem cor quase
+invisíveis: é o HTML pré-renderizado antes de o MudBlazor saber que o sistema está escuro; no navegador some quando o
+circuito conecta. A fase 4 (mensageria) foi reavaliada com os números e não precisou (ver [evolucao.md](evolucao.md)).
+
 ### 2026-10-30 — Mercados remotos: Himalayas, Jobicy e as regras (5.6 e 5.7, `RulesVersion` 15)
 Duas fontes novas para os mercados remotos e as regras que leem as vagas a partir do Brasil. Uma passada de ensaio contra
 as APIs reais (sem gravar nada) mostrou o que as regras fazem: no LATAM, 192 vagas, 24 excluídas por serem do outro mercado

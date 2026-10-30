@@ -8,14 +8,14 @@
 
 | # | Fase | PRs | Estado |
 |---|---|---|---|
-| 0 | Rename e decisões de escopo | 1 | ✅ 2026-10-29 (PR 1; passada seguinte não conferida antes de seguir) |
+| 0 | Rename e decisões de escopo | 1 | ✅ 2026-10-29 (passadas seguintes conferidas em 2026-10-30: mesmo volume, nenhum erro) |
 | 1 | SQL Server ao lado do Postgres | 5 (PRs 2–6) | ✅ 2026-10-30 (1.5 medida: [perf-sqlserver.md](perf-sqlserver.md)) |
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
-| 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras ([#28](https://github.com/DaviLuisSantos/job-radar/issues/28)) |
-| 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7); faltam os prints do README |
+| 4 | Mensageria | 0 | ✅ 2026-10-30: não precisou, pelos números (abaixo); reavaliar se o gatilho disparar |
+| 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7, prints do README refeitos) |
 
-**O que falta, como issues:** prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
+**O que falta, como issues:** pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
 
 ## O que a auditoria mudou no plano original
 
@@ -252,6 +252,15 @@ fase 3 mostrar que uma fonte lenta não atrasa as outras de forma que importe, a
 4. Métricas de fila no `Meter` da fase 3; teste que reprocessa a fila de mortos sem duplicar.
 
 **Pronto:** §5.3 do original.
+
+**Reavaliação (2026-10-30): não precisou.** Os números de `collection_runs` dos últimos 10 dias (só o Seek tinha perfis
+em produção): 256 a 512 buscas por passada, 1,2 s em média cada, a coleta inteira em ~1 min e os termos em ~2 min,
+**nenhum erro** em 10 dias. O coletor já roda todas as buscas de todas as fontes num pool de 6 em paralelo, cada fonte
+com o seu orçamento, e uma busca que falha é registrada sem parar as outras; as etapas também falham isoladas. As
+fontes novas somam, pelos orçamentos, Gupy ~4 buscas a 1 req/s, Himalayas ~32 páginas a 0,5 req/s, Jobicy ~10 a 0,5
+req/s: 1 a 2 minutos a mais numa passada de ~3, uma vez por dia, sem ninguém esperando por ela. Uma fila (outbox,
+RabbitMQ, consumidores) resolveria um atraso que não existe. **Gatilho para reabrir:** uma passada acima de 30 min, ou
+uma fonte bloqueada segurando as outras (aparece na `/status` e em `jobradar.stage.duration`).
 
 ## Fase 5 — Mercados remotos e interface (planejada em 2026-10-30)
 

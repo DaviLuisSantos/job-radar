@@ -17,9 +17,13 @@ Two products share one core:
 > 5,388 real listings. Left for v1: importing the prototype history.
 > Scope: [docs/visao.md](docs/visao.md) · roadmap: [docs/plano.md](docs/plano.md) (Portuguese).
 
-![Triage: new listings for a profile, best first, with one-key labelling](docs/img/triage.png)
+![Triage of a remote profile: best first, with who may apply, time zones and how the job hires, one-key labelling](docs/img/triage.png)
 
-![A listing: the score explained step by step, labelling and application status](docs/img/listing.png)
+![A listing: the score explained step by step, the full ad, and the decision bar that stays on screen](docs/img/listing.png)
+
+![Today: what arrived for each profile of a market since the last visit](docs/img/today.png)
+
+The interface is in Portuguese (the author's language); code, docs for contributors and this README are in English.
 
 <sub>Screenshots use fictitious listings and the example profile from
 `src/JobRadar.Worker/appsettings.Local.example.json`.</sub>
