@@ -6,6 +6,8 @@ explica o score, acompanha candidaturas) e **Raio-X** (público: só números ag
 australiano, base de uma newsletter em português). Reescrita em .NET de um protótipo Python
 (`D:\Desenvolvimento\job-tracker`), que é a especificação das regras de negócio.
 
+**Antes de explorar o código, leia [docs/repo_map.md](docs/repo_map.md)** (entradas, módulos, testes, áreas sensíveis).
+
 Produção (onde roda, instalar, atualizar, logs, backup): [docs/producao.md](docs/producao.md). Push em main com CI
 verde é implantado sozinho em até 15 min (`deploy/auto-deploy.ps1`); voltar: `deploy.ps1 -Rollback`.
 
@@ -14,6 +16,16 @@ Evolução para mais de um país (SQL Server, Brasil, observabilidade, mensageri
 
 **Onde estamos e o que vem a seguir: [docs/plano.md](docs/plano.md).** Ao fechar uma etapa, atualize o
 plano (estado) e o Diário (`docs/private/diario.md` no checkout principal, fora do git) e passe para a próxima na ordem.
+
+## Skills do projeto: leia a da área antes de mexer
+
+| Mexeu em | Skill |
+|---|---|
+| `Domain/Matching`, pesos, perfis, requisitos, elegibilidade, calibragem, paridade | `regras-do-score` |
+| entidade/configuration do EF, migration, repositório, `Infrastructure` | `banco-e-migrations` |
+| `Integrations.*`, coleta, termos, descrições, Raio-X, pacing | `fontes-de-vagas` |
+| `JobRadar.Web` (páginas, tema, textos, triagem) | `site-web` |
+| comandos do worker, configuração, passada local, deploy, telemetria | `operar-worker` |
 
 ## Comandos
 
@@ -34,10 +46,6 @@ JOBRADAR_LIVE_TESTS=1 dotnet test --project tests/JobRadar.Worker.Tests
 ```
 
 ```bash
-JOBRADAR_PARITY_FILE=D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json JOBRADAR_LOCAL_SETTINGS=D:\Desenvolvimento\job-radar-au\src\JobRadar.Worker\appsettings.Local.json dotnet test --project tests/JobRadar.Domain.Tests
-```
-
-```bash
 docker compose up -d
 ```
 
@@ -45,28 +53,12 @@ docker compose up -d
 dotnet run --project src/JobRadar.Web
 ```
 
-```bash
-dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations.Postgres --output-dir .
-```
-
-```bash
-dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations.SqlServer --output-dir .
-```
-
-- Mudou o modelo? Uma migration em **cada** projeto de migrations, com o mesmo nome. `DatabaseProviderTests` (sem banco)
-  falha se um deles ficar para trás.
 - Build: 0 erros, **0 warnings** — `TreatWarningsAsErrors` em `Directory.Build.props`.
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`, em `Contracts/`) são classes abstratas com uma
   derivada por banco: sobem Postgres 18 **e** SQL Server 2022 via Testcontainers e só rodam com `JOBRADAR_DB_TESTS=1`.
   O CI roda os dois. Contrato novo ganha as duas derivadas no fim do arquivo.
-- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek, da Gupy, do LinkedIn, do Himalayas e do Jobicy pela composição completa.
-  Fora do CI de propósito. Rode ao mexer numa `Integrations.*`, ou quando a coleta começar a falhar.
-- Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
-  fora do repo (são anúncios reais), pontuadas com o bloco de elegibilidade do arquivo local (`JOBRADAR_LOCAL_SETTINGS`;
-  no checkout principal ele é achado sozinho, num worktree aponte para o do checkout principal). **Mexeu em
-  `Domain/Matching`? Rode.** Mudança de regra intencional quebra a paridade: aí registre no `docs/plano.md` e incremente
-  `FitScorer.RulesVersion`. Os casos com texto real de elegibilidade ficam em `scoring-cases.Local.json`, ao lado do
-  arquivo local (`[LocalCasesFact]`, `JOBRADAR_LOCAL_CASES`); os testes públicos usam o mercado fictício de `TestMarkets`.
+- Ao vivo (`JOBRADAR_LIVE_TESTS=1`) e paridade do score ficam fora do CI: ver `fontes-de-vagas` e `regras-do-score`.
+- Mudou o modelo? Uma migration em **cada** projeto de migrations, com o mesmo nome (ver `banco-e-migrations`).
 - Testes usam Microsoft.Testing.Platform (opt-in em `global.json`), não VSTest.
 - Versões de pacote só em `Directory.Packages.props` (gerenciamento central, com pinning transitivo).
 
@@ -107,190 +99,21 @@ src/JobRadar.Web             triagem em Blazor + MudBlazor (JobRadarWebCompositi
 - Integração de site nova: projeto `JobRadar.Integrations.<Site>` com `Add<Site>Integration()`,
   traduzindo para `Listing`. O núcleo não conhece site nenhum.
 
-## Fluxo principal
+## Regras que valem sempre
 
-`DailyPipelineJob`, às `Collection:DailyAt` no fuso `Collection:TimeZone`, roda cinco etapas isoladas
-(uma falha não impede a seguinte): coleta → termos do texto completo → descrições completas → score → retrato
-do Raio-X.
-
-**Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
-1. para cada fonte e cada busca **de um mercado que a fonte serve** (`IJobSource.Markets`, `Market` do perfil), calcula a janela
-   incremental pelo último sucesso. Fonte opcional (`IJobSource.OptIn`, o LinkedIn) só roda as buscas dos perfis que a citam
-   em `ExtraSources`; nome desconhecido ali para a coleta;
-2. `IJobSource.SearchAsync`, que devolve as vagas únicas e diz se a busca veio completa;
-3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas, guarda o
-   payload só quando o conteúdo mudou e registra que aquela busca achou a vaga (`listing_search_hits`);
-4. grava em `listing_descriptions` o anúncio inteiro que a própria busca devolve (`SourcedListing.Description`: a Gupy
-   devolve, o Seek não), só quando o texto muda;
-5. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
-
-**Termos** — `FullTextTermService.TagAsync`: cada frase de `MarketRules.FullTextGroups` de cada mercado (as do código,
-comissão e carteira, mais as `Phrases` do bloco de elegibilidade do mercado) e dos requisitos de cada perfil
-(`ProfileRequirements`: "frase + palavra de contexto", para caber no teto de 500; os grupos de
-`ScoringPolicy.ContextGroups` também vão com cada palavra de contexto) é
-buscada na Austrália toda por cada fonte com a capacidade `IFullTextSearch` (o Seek tem: a busca dele cobre
-o anúncio inteiro). As vagas que já estão no banco ganham a marca em `listing_terms`. Cada termo é uma
-execução em `collection_runs` com chave `term: <frase>`. Janela: 31 dias na primeira vez; depois, dias desde o
-último sucesso + 2, alargada até a vaga mais antiga coletada desde então.
-
-**Score** — `ListingScoringService.ScoreAllAsync`: para cada perfil, pontua com `FitScorer` todas as
-vagas que **as buscas daquele perfil** acharam e grava em `listing_scores` (uma linha por vaga × perfil,
-com a explicação em jsonb e o `rules_hash`). Recalcula tudo todo dia, porque a idade muda o score, e no fim
-apaga os scores que a passada não gravou (vaga que as buscas do perfil não acham mais, perfil removido).
-
-**Descrição completa** — `DescriptionFetchService`, na passada, busca o texto pelo GraphQL `jobDetails` do Seek
-(`SeekJobDetailsClient`, mesmo orçamento da busca): primeiro as vagas rotuladas ou com status, qualquer score ou
-idade; depois as de melhor score ≥ `Descriptions:MinScore`, publicadas há até `MaxAgeDays`, até `MaxPerPass`.
-Recusa do Seek (`SourceBlockedException`) para a etapa, não a passada. Além disso, o autor pode capturar o texto
-do anúncio que ele mesmo abriu (favorito da página `/capture` ou colar na página da vaga); `DescriptionService`
-grava em `listing_descriptions` e repontua na hora (`ScoreOneAsync`). O `FitScorer` lê a descrição **só** nas regras de requisito e de elegibilidade;
-sinais do perfil ficam em título e resumo. O site lê os perfis do worker (`profiles.json`, copiado pelo build).
-Texto de uso pessoal: nunca no Raio-X, no repo ou em fixture.
-
-**Raio-X** — `MarketSnapshotService.TakeAsync(dia)`: por categoria (`Market:Categories`, código de cada fonte) e
-cidade, conta as vagas abertas e as que citam cada termo; nas `FullCities` lista todas. Contagem que falha tem
-uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatório mensal só usa `ok`**
-(`MarketReportService` + `RaioXMarkdown`). Só números agregados: nada de título, empresa ou link no texto.
-
-Perfis: `Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json` (**fora do git**; modelo em
-`appsettings.Local.example.json`). Cada palavra-chave é buscada em cada local; as buscas da coleta são a
-união dos perfis (busca de dois perfis roda uma vez, nas fontes extras dos dois). Os **fatos** do candidato (formação, carteiras, tickets, experiência) ficam à parte, em
-`candidate/candidate.json` (fora do git, como o currículo; esquema e exemplo fictício versionados), preenchido
-pela skill `perfil-do-curriculo`. Fato vem do currículo; palavra-chave, contexto e sinal são ajustados contra o
-mercado e ficam no perfil. Requisitos de anúncio (anos de experiência, trade, carteira, ticket) são itens do
-`RequirementCatalog`, que o perfil cita por id em `Requirements:Items`: frase nova de requisito entra no item, não
-no perfil, e vale para todo perfil que usa o item.
-
-**Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
-`label <id> good|bad|clear [nota]`, `calibrate [--rescore [--assume item=estado,years:perfil=n,...]]`, `market`, `market-report [YYYY-MM] [arquivo]`,
-`import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`), `tech-count [AU|BR] [YYYY-MM]`
-(tecnologias pedidas nos anúncios inteiros do mês; padrão BR), `copy-database Postgres|SqlServer <conexão>`
-(todas as linhas para outro banco vazio e migrado; abaixo dos repositórios, em `DatabaseCopy`), `requirements`,
-`requirement <item> have|obtainable|missing|out-of-reach|default`, `experience <perfil> <anos>|default`,
-`eligibility <mercado>` (o bloco de elegibilidade em uso, em JSON de configuração),
-`import-candidate <candidate.json> [--dry-run]`
-(estado do candidato em cada item do `RequirementCatalog`, em `candidate_requirements`; item sem estado fica com o
-padrão do tipo, que é o peso de antes; mudar um estado repontua na hora as vagas que podem pedir o item; no site,
-`/me` faz isso em linguagem simples e `/requirements` mostra o impacto de ter cada item). `<id>` = `fonte:id` (`seek:81234567`). Saída 0 = ok,
-1 = vaga nunca coletada, 2 = argumentos inválidos. Mudou peso ou regra? Rode `calibrate` (os scores gravados: o antes) e
-`calibrate --rescore` (pontua de novo em memória com as regras do build, sem gravar: o depois). Para medir uma
-branch contra os rótulos reais, rode-a num worktree no trabalhopc com o `appsettings.Local.json` copiado.
-
-Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure.Migrations.Postgres`,
-e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma prova leve).
-
-## Armadilhas
-
-- Npgsql só grava `timestamptz` com offset 0: o mapper converte com `ToUniversalTime()`
-  (`ListingMapper.Refresh`).
-- `ListingId` normaliza a fonte (`Trim` + minúsculas): `"SEEK"` e `"seek"` são a mesma fonte.
-- A máquina do autor tem uma fonte NuGet extra; `nuget.config` limpa e usa só nuget.org.
-- Seek repete anúncios promovidos em toda página: `SeekJobSource` deduplica por ID dentro da busca.
-  Por isso `totalCount` não bate com o número de vagas devolvidas.
-- Local do Seek: divida no **primeiro** `", "` (`SeekListingTranslator.ParseLocation`), porque há regiões
-  com vírgula no nome.
-- Padrões de opções ficam na classe (`SeekOptions`), não no `appsettings.json`.
-- O contexto só encontra o banco por `UseJobRadarDatabase` (`Database:Provider`, padrão Postgres), que aponta o assembly
-  de migrations do provider pelo nome. Quem aplica migrations (o bundle do `deploy.ps1`, a fixture dos testes) referencia
-  esse assembly; o site e o worker não aplicam e não precisam dele.
-- Migration gerada pelo EF pode escolher a renomeação errada. Leia antes de commitar
-  (`SplitLocationIntoSuburbAndRegion` foi corrigida à mão: `city` → `region`).
-- Campo novo e volátil no payload do Seek duplica `listing_payloads` a cada coleta. Sintoma: payloads >
-  vagas depois de duas passadas. Inclua o campo em `SeekSearchClient.VolatileFields`.
-- `listing_payloads.payload` é jsonb, que normaliza espaços e ordem das chaves: o hash é do texto recebido
-  (já sem os campos voláteis), não do que o banco devolve.
-- O `DbContext` vive o pass inteiro de coleta (um escopo): `EfListingRepository` limpa o
-  `ChangeTracker` depois de cada gravação, com sucesso ou falha. Sem isso, uma falha derrubava o registro da
-  execução e centenas de buscas acumulavam entidades rastreadas.
-- `appsettings.Local.json` é adicionado depois das fontes padrão; por isso o `Program.cs` reaplica variáveis
-  de ambiente e linha de comando em seguida, para elas continuarem vencendo.
-- Termos: a busca do Seek não dá o contexto da frase (a frase negada também casa). Por isso os
-  pesos dos grupos são moderados e só o grupo `exclude` elimina. A divisão por estado quando passa de 500 é
-  peculiaridade do Seek e fica em `SeekFullTextSearch`, não no serviço.
-- Rótulo vale para o estado do candidato quando foi dado: uma vaga ruim porque pedia carteira HR vira boa quando
-  ele tira a carteira (`requirement truck-hr have`). Mudou um estado para "tenho"? Reveja os rótulos das vagas que
-  pedem aquele item antes de ler a calibragem como regressão. `--assume` mostra quais sobem.
-- `Dismissed` (o candidato descartou) e `Declined` (o empregador recusou) não são a mesma coisa: na calibragem
-  o primeiro conta como ruim e o segundo como **boa**. Não junte os dois de novo.
-- Os argumentos de um comando não entram na configuração do host (`Program.cs`): o texto livre de `notes`
-  poderia ser lido como chave=valor.
-- Web: componente interativo chama serviço **só** por `Backend.RunAsync` (um escopo, e um `DbContext`, por
-  operação). Injetar `TriageService` direto no componente prende um `DbContext` à aba inteira.
-- Web com prerender: `OnInitialized`/`OnParametersSet` rodam duas vezes (estático e interativo). Gravação que muda o que
-  a própria página lê (a visita do "Hoje") vai em `OnAfterRenderAsync`, que só roda no interativo.
-- Web, cores: a paleta é uma só (`JobRadarTheme`). O `app.css` tira as cores das variáveis `--mud-palette-*`, e a paleta
-  escura vai no `<head>` (`JobRadarTheme.DarkCss`, sob `html[data-theme=dark]`, que um script no head põe antes da primeira
-  pintura): o HTML pré-renderizado já sai no tema certo. Cor nova entra na paleta, não como hex no CSS.
 - Esta máquina (TRABALHOPC) **é** a produção: o Postgres do `docker compose` é o banco de produção, e o auto-deploy
-  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Trabalhe num worktree. Para olhar o
-  site com dados, rode-o contra uma cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à
-  mão. Argumento de um **comando** do worker não é configuração (`collect --ConnectionStrings:...` é ignorado): use
-  variável de ambiente. Para testar a pilha de produção ao lado, use outro projeto e outras portas
-  (`docker compose -p jobradar-test --env-file <arquivo>` com `JOBRADAR_DB_PORT` e `JOBRADAR_PORT`).
-- Produção é `docker compose --profile prod` (desde 2026-10-30), igual em qualquer SO; nada de serviço, registro ou
-  firewall do Windows nos scripts, que são PowerShell 7. O que é da máquina fica no `.env` (`deploy/prod.env.example`).
-  O site escuta em `127.0.0.1:5380` e no IP da Tailscale, nunca em todas as interfaces, e só responde aos nomes de
-  `JOBRADAR_ALLOWED_HOSTS`. A 5080 é de outro serviço local do autor.
-- O worker pode subir antes do banco responder (boot, Docker voltando): o `DailyPipelineJob` espera o banco
-  (`IStorageHealth`) e recupera a passada perdida. Não remova a espera achando que é lentidão.
-- Dois bancos (`Database:Provider`): o mapeamento que difere por banco mora **só** no `ProviderModel` (jsonb e identity do
-  Postgres, collation do SQL Server); a configuração de cada entidade é a mesma para os dois. Sem `ILike` nem SQL cru:
-  busca de texto é `ToLower().Contains()`, que o EF escapa nos dois. O SQL Server usa collation sensível a caixa e
-  acento (`Latin1_General_100_CS_AS_SC_UTF8`), como o Postgres; ela só vale se o banco for **criado** pelas migrations
-  (`Migrate` num banco que não existe): a migration não altera a collation de um banco já criado.
-  A collation não basta: o provider do SQL Server compara chaves de texto **sem** caixa no change tracker, e o
-  `ProviderModel` troca por ordinal (`Text_keys_compare_by_case_and_accent_in_memory_too`). JSON no SQL Server é
-  `nvarchar(max)` com `CHECK (ISJSON(...) = 1)`, para recusar o que o jsonb recusa.
-- Telemetria (`JobRadarTelemetry`): só sai com `Telemetry:OtlpEndpoint` (local: Aspire, `--profile telemetry`). Tag de
-  métrica ou trace leva fonte, país, etapa, nunca título, empresa ou dado do candidato. O `Meter` é estático e do
-  processo: teste que escuta métricas filtra pela fonte que ele mesmo criou.
-- Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
-  todas as cópias (`TriageRow.AllIds`).
-- Paralelismo: chamadas ao Seek podem rodar em paralelo à vontade, o `SeekPacingHandler` segura o total
-  (4 simultâneas, 5/s). **Não** reintroduza pausas fixas nem aumente o orçamento sem motivo: rajada é o que
-  dispara anti-bot. Acesso ao banco dentro de um serviço paralelo passa pelo `SemaphoreSlim` (um `DbContext`
-  por escopo não aceita duas operações). O tempo de uma tentativa inclui a espera na fila do orçamento
-  (`AttemptTimeout` 60 s).
-- LinkedIn: fonte opcional, só nos perfis com `"ExtraSources": ["linkedin"]` (a primeira passada sem janela pode passar de
-  mil pedidos). Ligar num perfil não muda a chave das buscas: o histórico continua. Orçamento próprio (`LinkedInPacing`, 1/s, 2 simultâneas), separado do Seek. A primeira recusa (403, 429, 999 ou
-  redirecionamento para `/authwall`) bloqueia **todo** pedido ao LinkedIn por 6 horas: a coleta roda todas as buscas mesmo
-  quando uma falha, e insistir é o que vira bloqueio do IP. Local do Brasil em inglês (", Brazil"): "Brasil" e local
-  desconhecido caem nos EUA, e a busca falha dizendo que não reconheceu o local. Nada do LinkedIn vai ao Raio-X.
-- Contagem do Raio-X só com `Seek:PageSize = 100`: o `totalCount` inclui os promovidos repetidos em cada página
-  (`SeekMarketSource.CountAsync` recusa outro valor).
-- `Market` na configuração: cada lista presente **substitui** o padrão do código (`MarketDefaults`), não soma.
-- Parâmetro chamado `from` dentro de consulta LINQ precisa de `@from` (`EfMarketRepository`).
-- Um perfil só pontua as vagas que as buscas **dele** acharam. Mudou a lista de palavras-chave? As vagas
-  antigas continuam ligadas às buscas antigas pelo `search_key` (`"palavra @ local"` em minúsculas).
-- `ContentRootPath = AppContext.BaseDirectory` no `Program.cs`: sem isso, o `appsettings` é procurado no
-  diretório corrente.
-- Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer
-  que uma vaga saiu do ar.
-- Score: `FitScorer` é a **única** implementação, para todo país; a ordem das fases faz parte da regra (ver o comentário
-  da classe). O que uma frase quer dizer é do mercado do **perfil** (`MarketRules`, escolhida pelo `JobMarket`: AU, BR, LatamRemote,
-  GlobalRemote), não do país da vaga, que só diz onde ela fica; os padrões do AU
-  ficam em `ListingPatterns`, menos quem pode se candidatar: isso é dado, o bloco `Matching:Markets:<mercado>:Eligibility`
-  do arquivo local (`EligibilityRules`, impresso por `eligibility <mercado>`); os pesos, todos na `ScoringPolicy` (número solto
-  no `FitScorer` é regressão: peso novo entra na política, que está no `rules_hash`). `".NET"` não casa dentro de `"ASP.NET"`
-  (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
-  vêm do protótipo, e a paridade depende delas. Desde a `RulesVersion` 8 a carteira de caminhão diverge do
-  protótipo de propósito (−40, não −20), e desde a 9 "Assistant … Manager" é liderança: o teste de paridade conta
-  esses casos à parte. `ExcludedLocations` de um perfil exclui pelo local (o de fazenda exclui Perth);
-  `ExcludedTitles`, por uma palavra do título (júnior, Java); `OnSiteLocations`, quando a vaga é presencial
-  fora delas (`MarketRules.OnSite`). Regra que é do candidato vai para o perfil; o que uma frase quer dizer, para o mercado.
-  O enum se chama `JobMarket` porque `Market` colide com o namespace `JobRadar.Domain.Market` (o do Raio-X).
-- Remoto: a vaga fica em `Country.Remote` (gravado `ZZ`) e diz quem pode se candidatar em `Listing.Eligibility`
-  ("Worldwide", "LATAM", "Brazil, Colombia"), que `RemoteEligibility` classifica parte a parte ("North America" não é
-  "Americas"). Uma vaga cai num só mercado remoto: aberta ao mundo é do global, restrita a uma região com o Brasil é do
-  LATAM. Salário lido do **anúncio** só conta com palavra de salário logo antes e sem palavra de benefício
-  (`PayParser.Find`): vale-refeição, auxílio e rodada de investimento eram lidos como salário. O campo de salário da fonte
-  é lido direto (`PayParser.Parse`). Regime e salário só pesam em perfil com `Compensation`.
+  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Trabalhe num worktree e nunca
+  grave no banco de produção à mão (detalhes em `operar-worker`).
+- Seek: não abrir páginas individuais de vaga (Cloudflare) nem contornar anti-bot. Não reintroduza pausas fixas nem
+  aumente o orçamento de pedidos sem motivo.
+- Texto de anúncio de uso pessoal: nunca no Raio-X, no repo ou em fixture. O Raio-X só publica números agregados
+  (nada de título, empresa ou link), e nada do LinkedIn vai ao Raio-X.
+- `FitScorer` é a **única** implementação do score; peso novo entra na `ScoringPolicy`, nunca como número solto.
 
 ## Convenções
 
-- Idioma: código, identificadores e README em inglês (repo público, portfólio). `docs/`, este arquivo e **a interface do
-  site** em português (desde 2026-10-30): texto que o usuário lê mora em `Text/Wording.cs` ou no markup, com datas e
-  números em pt-BR (`Wording.Culture`); `InvariantCulture` só para o que não é exibido.
+- Idioma: código, identificadores e README em inglês (repo público, portfólio). `docs/`, este arquivo, as skills e
+  **a interface do site** em português (desde 2026-10-30).
 - Commits: Conventional Commits em inglês (`feat: ...`), imperativo, com o porquê no corpo.
 - **Commits e PRs sem atribuição a IA:** nada de `Co-Authored-By: Claude ...`, "Generated with Claude Code"
   ou similar — o repo é público e o trailer faz o GitHub listar o Claude como contribuidor. Vale mesmo que o
@@ -300,5 +123,4 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Vocabulário público: nenhum arquivo versionado cita o vocabulário de status legal do primeiro mercado; a lista está em
   `PublicVocabularyTests` (Worker.Tests), que falha no CI. Frase nova de quem pode se candidatar vai para o bloco local
   `Matching:Markets:<mercado>:Eligibility`; teste com texto real vai para `scoring-cases.Local.json`.
-- Seek: não abrir páginas individuais de vaga (Cloudflare) nem contornar anti-bot.
-- Mudou algo descrito aqui? Atualize no mesmo commit.
+- Mudou algo descrito aqui, no `docs/repo_map.md` ou numa skill do projeto? Atualize no mesmo commit.

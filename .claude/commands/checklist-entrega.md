@@ -10,4 +10,5 @@ Nao pule etapas; reporte cada uma com o resultado.
    rode tambem com `JOBRADAR_DB_TESTS=1` (precisa de Docker).
 3. Convencoes do CLAUDE.md que o diff pode ter violado (idioma, camadas, commit sem atribuicao a IA).
 4. Mudou entidade ou configuration do EF? Confira se existe migration nova no diff.
+   Confira tambem as regras da skill do projeto da area que o diff tocou (tabela no CLAUDE.md).
 5. Resumo: build, testes X/Y (contrato rodou ou nao), pendencias.
