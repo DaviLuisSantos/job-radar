@@ -155,7 +155,8 @@ no perfil, e vale para todo perfil que usa o item.
 
 **Comandos** (o mesmo executável; sem comando, roda o pipeline): `status <id> <status>`, `notes <id> <texto>`,
 `label <id> good|bad|clear [nota]`, `calibrate [--rescore [--assume item=estado,years:perfil=n,...]]`, `market`, `market-report [YYYY-MM] [arquivo]`,
-`import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`), `copy-database Postgres|SqlServer <conexão>`
+`import-prototype <jobs.db> [--dry-run]` (histórico do protótipo; ver `docs/producao.md`), `tech-count [AU|BR] [YYYY-MM]`
+(tecnologias pedidas nos anúncios inteiros do mês; padrão BR), `copy-database Postgres|SqlServer <conexão>`
 (todas as linhas para outro banco vazio e migrado; abaixo dos repositórios, em `DatabaseCopy`), `requirements`,
 `requirement <item> have|obtainable|missing|out-of-reach|default`, `experience <perfil> <anos>|default`,
 `import-candidate <candidate.json> [--dry-run]`

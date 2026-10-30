@@ -48,6 +48,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<MarketOptions>, MarketDefaults>();
         services.AddScoped<MarketSnapshotService>();
         services.AddScoped<MarketReportService>();
+        services.AddScoped<TechnologyReportService>();
         services.AddScoped<StatusService>();
         return services;
     }

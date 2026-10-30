@@ -82,6 +82,16 @@ public static class CliRunner
                 case CliCommand.ImportPrototype c:
                     WriteImport(await sp.GetRequiredService<PrototypeImportService>().ImportAsync(c.Path, c.DryRun, ct), c.DryRun, output);
                     break;
+                case CliCommand.TechCount c:
+                    var techMonth = c.Month ?? LocalToday(sp).ToString("yyyy-MM", CultureInfo.InvariantCulture);
+                    var tech = await sp.GetRequiredService<TechnologyReportService>().BuildAsync(c.Country, techMonth, ct);
+                    await output.WriteLineAsync(
+                        $"{c.Country} {tech.Month}: {tech.Listings:N0} listings first seen, {tech.Described:N0} with the full ad (counted).");
+                    foreach (var t in tech.Technologies)
+                        await output.WriteLineAsync($"  {t.Name,-22}{t.Group,-13}{t.Listings,6:N0}  {t.Share,6:P0}");
+                    if (tech.Described == 0)
+                        await output.WriteLineAsync("  No full ads this month: nothing to count.");
+                    break;
                 case CliCommand.CopyDatabase c:
                     await using (var target = new JobRadarDbContext(new DbContextOptionsBuilder<JobRadarDbContext>()
                                      .UseJobRadarDatabase(c.Provider, c.ConnectionString).Options))

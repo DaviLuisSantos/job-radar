@@ -101,6 +101,18 @@ internal sealed class InMemoryDescriptions : IListingDescriptionRepository
         Task.FromResult<IReadOnlyDictionary<ListingId, string>>(
             Saved.Where(s => ids.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value.Text));
 
+    /// <summary>What <see cref="ListAdsFirstSeenAsync"/> answers (the date and country rules are the real repository's).</summary>
+    public List<(string Title, string? Description)> Ads { get; } = [];
+
+    public (Country Country, DateTimeOffset From, DateTimeOffset To)? AdsAsked { get; private set; }
+
+    public Task<IReadOnlyList<(string Title, string? Description)>> ListAdsFirstSeenAsync(
+        Country country, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default)
+    {
+        AdsAsked = (country, from, to);
+        return Task.FromResult<IReadOnlyList<(string Title, string? Description)>>(Ads);
+    }
+
     /// <summary>What <see cref="ListToFetchAsync"/> answers (the selection rules are the real repository's, tested there).</summary>
     public List<ListingId> ToFetch { get; } = [];
 

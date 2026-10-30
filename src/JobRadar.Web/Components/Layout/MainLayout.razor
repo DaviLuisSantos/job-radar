@@ -1,15 +1,17 @@
 @inherits LayoutComponentBase
 @inject Backend Backend
+@inject ProfileCatalog Catalog
 
 <header class="topbar">
     <a class="brand" href="/">
         <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" /><circle cx="16" cy="16" r="4" class="dot" /></svg>
-        JobRadar <span>AU</span>
+        JobRadar
     </a>
     <nav aria-label="Profiles">
         @foreach (var profile in _profiles)
         {
-            <NavLink href="@($"triage/{Uri.EscapeDataString(profile)}")">@profile</NavLink>
+            <NavLink href="@($"triage/{Uri.EscapeDataString(profile)}")">@profile@if (CountryOf(profile) is { } country)
+                {<span class="country">@country</span>}</NavLink>
         }
         <NavLink href="capture" class="secondary">Capture</NavLink>
         <NavLink href="me" class="secondary">About you</NavLink>
@@ -34,4 +36,10 @@
 
     protected override async Task OnInitializedAsync() =>
         _profiles = await Backend.RunAsync<TriageService, IReadOnlyList<string>>(t => t.ProfilesAsync());
+
+    /// <summary>Australia is the default and goes unmarked; another market is named next to its profiles.</summary>
+    private string? CountryOf(string profile) =>
+        Catalog.Profiles.FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase)) is { Country: not Country.AU } p
+            ? p.Country.ToString()
+            : null;
 }
