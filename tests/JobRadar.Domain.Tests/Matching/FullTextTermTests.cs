@@ -7,8 +7,8 @@ public class FullTextTermTests
     [Fact]
     public void Plus_joins_phrases_that_must_all_appear()
     {
-        Assert.Equal(["12 months", "working rights"], new FullTextTerm("12 months + working rights").Phrases);
-        Assert.Equal(["backpackers"], new FullTextTerm("backpackers").Phrases);
+        Assert.Equal(["24 months", "guild standing"], new FullTextTerm("24 months + guild standing").Phrases);
+        Assert.Equal(["newcomers"], new FullTextTerm("newcomers").Phrases);
     }
 
     [Fact]

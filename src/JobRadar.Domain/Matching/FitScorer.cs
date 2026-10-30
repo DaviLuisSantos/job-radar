@@ -6,27 +6,29 @@ namespace JobRadar.Domain.Matching;
 /// Fit score of a listing for a profile. Pure: same input, same score.
 ///
 /// Order matters and is part of the rules:
-/// 1. Exclusions (score 0): citizenship/PR, work rights a WHV cannot give, identified roles, a location
-///    or a title word the profile rules out, on-site work outside where the profile accepts it, a remote job
-///    Brazil cannot apply to or of the other remote market, leadership and (for most profiles) senior titles.
-/// 2. Points from base 50: profile signals (title worth twice the body), sponsorship, remote,
-///    FIFO, entry level, WHV-friendly, flexible work type, preferred location, pay at the profile's target
-///    (and the engagement, as a label).
+/// 1. Exclusions (score 0): a status the market reserves the job for, a condition the profile's status cannot
+///    meet, a job reserved for a group, a location or a title word the profile rules out, on-site work outside
+///    where the profile accepts it, a remote job Brazil cannot apply to or of the other remote market,
+///    leadership and (for most profiles) senior titles.
+/// 2. Points from base 50: profile signals (title worth twice the body), the employer's assistance, remote,
+///    FIFO, entry level, a welcome to the profile's status, flexible work type, preferred location, pay at the
+///    profile's target (and the engagement, as a label).
 /// 3. Compression above a threshold, so the best listings keep their order instead of tying at 100.
 /// 4. Restrictions and penalties after compression, so a listing with points to spare cannot
 ///    absorb them: full-text phrases, apprenticeships, long contracts, commission only, English as a
-///    condition, truck licence, no sponsorship (when required), age, time zones out of reach, pay below the
+///    condition, truck licence, no assistance (when required), age, time zones out of reach, pay below the
 ///    profile's floor.
 /// 5. Qualification cap: a listing that needs a qualification the candidate lacks stays
 ///    visible below the ones they can apply to.
 ///
-/// The phases are the same in every country; the phrases each one reads are the listing's market's
-/// (<see cref="MarketRules"/>, the profile's market), and the weights the policy's.
+/// The phases are the same in every market; the phrases each one reads are the profile's market's
+/// (<see cref="MarketRules"/>, with its <see cref="EligibilityRules"/> from the configuration), and the weights the
+/// policy's.
 /// </summary>
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 15;
+    public const int RulesVersion = 16;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
@@ -42,8 +44,8 @@ public static class FitScorer
         var title = job.Title.ToLowerInvariant();
         var body = string.Join(" ", job.Summary ?? "", job.LocationLabel ?? "", job.WorkTypeLabel ?? "").ToLowerInvariant();
         var full = $"{title} {body}";
-        // The captured full ad, when there is one. Read only by the rules about requirements and work
-        // rights: profile signals stay on title and summary, or a listing with a description would
+        // The captured full ad, when there is one. Read only by the rules about requirements and eligibility:
+        // profile signals stay on title and summary, or a listing with a description would
         // score differently just for having more text ("report to the site manager").
         var desc = job.Description?.ToLowerInvariant() ?? "";
         var described = desc.Length > 0;
@@ -59,18 +61,18 @@ public static class FitScorer
         var groups = FullTextHits(job.FullTextTerms, rules.FullTextGroups);
 
         // ── 1. Exclusions ─────────────────────────────────────────────────
-        if (rules.CitizenshipRequired.Match(full) is { Success: true } citizen)
-            return Excluded(ScoreRule.CitizenshipRequired, citizen.Value, ScoreWhere.Text);
-        if (rules.WorkRightsIncompatible.Match(full) is { Success: true } rights)
-            return Excluded(ScoreRule.WorkRightsIncompatible, rights.Value, ScoreWhere.Text);
-        // Specific enough to exclude on the full ad too. Citizenship is not: "Australian or New Zealand
-        // citizens, PR or valid working visa holders" welcomes a WHV; it is weighed below.
-        if (described && rules.WorkRightsIncompatible.Match(desc) is { Success: true } descRights)
-            return Excluded(ScoreRule.WorkRightsIncompatible, descRights.Value, ScoreWhere.Description);
+        if (rules.Restricted.Match(full) is { Success: true } restricted)
+            return Excluded(ScoreRule.EligibilityRestricted, restricted.Value, ScoreWhere.Text);
+        if (rules.Incompatible.Match(full) is { Success: true } incompatible)
+            return Excluded(ScoreRule.EligibilityIncompatible, incompatible.Value, ScoreWhere.Text);
+        // Specific enough to exclude on the full ad too. A reserved status is not: a full ad often lists who else
+        // may apply in the same sentence that names it; it is weighed below.
+        if (described && rules.Incompatible.Match(desc) is { Success: true } descIncompatible)
+            return Excluded(ScoreRule.EligibilityIncompatible, descIncompatible.Value, ScoreWhere.Description);
         if (groups.TryGetValue(FullTextGroup.Exclude, out var excludeHits))
-            return Excluded(ScoreRule.WorkRightsIncompatible, excludeHits[0], ScoreWhere.FullText);
-        if (rules.IdentifiedRole.Match(title) is { Success: true } identified)
-            return Excluded(ScoreRule.IdentifiedRole, identified.Value, ScoreWhere.Title);
+            return Excluded(ScoreRule.EligibilityIncompatible, excludeHits[0], ScoreWhere.FullText);
+        if (rules.ReservedTitle.Match(title) is { Success: true } reserved)
+            return Excluded(ScoreRule.ReservedRole, reserved.Value, ScoreWhere.Title);
         if (profile.ExcludedLocations.FirstOrDefault(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? "")) is { } excludedAt)
             return Excluded(ScoreRule.LocationExcluded, excludedAt, ScoreWhere.Location);
         if (profile.ExcludedTitles.FirstOrDefault(t => ListingPatterns.Signal(t).IsMatch(title)) is { } excludedTitle)
@@ -134,15 +136,15 @@ public static class FitScorer
                 Add(ScoreRule.NegativeSignal, signal, ScoreWhere.Body, -policy.NegativeSignalBodyPenalty);
         }
 
-        // "sponsor" as a substring also covers "sponsorship", "sponsored"; the offered phrases
-        // are substrings too ("no sponsorship available" contains one), so both are gated by
-        // the denial pattern.
-        var sponsorDenied = rules.SponsorshipDenied.IsMatch(full);
-        var sponsorConfirmed = !sponsorDenied && rules.SponsorshipOffered.Any(full.Contains);
-        if (sponsorConfirmed || (rules.AssistanceWord is { } word && full.Contains(word, StringComparison.Ordinal) && !sponsorDenied))
-            Add(ScoreRule.SponsorshipMentioned, "sponsor", ScoreWhere.Text, policy.SponsorBonus);
-        else if (sponsorDenied)
-            Add(ScoreRule.SponsorshipDenied, "sponsor", ScoreWhere.Text, 0);
+        // The assistance word is a substring, so it also covers its longer forms; the offered phrases are
+        // substrings too, and a denial contains them ("no ... available"), so both are gated by the denial pattern.
+        var assistanceDenied = rules.AssistanceDenied.Match(full);
+        var assistanceConfirmed = assistanceDenied.Success ? null : rules.AssistanceOffered.FirstOrDefault(full.Contains);
+        var assistanceWord = !assistanceDenied.Success && rules.AssistanceWord is { } word && full.Contains(word, StringComparison.Ordinal) ? word : null;
+        if ((assistanceConfirmed ?? assistanceWord) is { } assistance)
+            Add(ScoreRule.AssistanceOffered, assistance, ScoreWhere.Text, policy.AssistanceBonus);
+        else if (assistanceDenied.Success)
+            Add(ScoreRule.AssistanceDenied, assistanceDenied.Value, ScoreWhere.Text, 0);
 
         if (profile.RewardRemote && ListingPatterns.Signal(rules.Remote).IsMatch(full))
             Add(ScoreRule.Remote, "remote", ScoreWhere.Text, policy.RemoteBonus);
@@ -164,26 +166,25 @@ public static class FitScorer
             }
         }
 
-        // The full-text search gives no context: next to citizenship or residency, a working holiday
-        // mention is mostly a refusal. The listing's own text still counts: it was read, not searched.
-        // A captured ad has the context the search lacks: it replaces the searched WHV phrases, and its
-        // mention counts unless negated just before ("unable to accept working holiday visas"); a
-        // refusal after it ("working holiday visa holders will not") was excluded above.
-        var whvLocal = rules.WorkingHolidayFriendly.Match(full);
-        var whvDescribed = described && rules.WorkingHolidayFriendly.Match(desc) is { Success: true } inDesc && ListingPatterns.MatchesUnnegated(inDesc.Value, desc)
+        // The full-text search gives no context: next to a reserved status (the welcome_retracted phrases), a
+        // welcome is mostly a refusal. The listing's own text still counts: it was read, not searched. A captured
+        // ad has the context the search lacks: it replaces the searched welcome phrases, and its welcome counts
+        // unless negated just before ("unable to accept ..."); a refusal after it ("... will not") was excluded above.
+        var welcomeLocal = rules.Welcome.Match(full);
+        var welcomeDescribed = described && rules.Welcome.Match(desc) is { Success: true } inDesc && ListingPatterns.MatchesUnnegated(inDesc.Value, desc)
             ? inDesc.Value
             : null;
-        var whvDoubtful = groups.ContainsKey(FullTextGroup.WelcomeRetracted);
-        var whvHits = described || whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Welcome);
-        var whv = whvLocal.Success || whvDescribed is not null || whvHits is not null;
-        if (whvLocal.Success)
-            Add(ScoreRule.WorkingHolidayFriendly, whvLocal.Value, ScoreWhere.Text, policy.WorkingHolidayBonus);
-        else if (whvDescribed is not null)
-            Add(ScoreRule.WorkingHolidayFriendly, whvDescribed, ScoreWhere.Description, policy.WorkingHolidayBonus);
-        else if (whvHits is not null)
-            Add(ScoreRule.WorkingHolidayFriendly, whvHits[0], ScoreWhere.FullText, policy.WorkingHolidayBonus);
+        var welcomeRetracted = groups.ContainsKey(FullTextGroup.WelcomeRetracted);
+        var welcomeHits = described || welcomeRetracted ? null : groups.GetValueOrDefault(FullTextGroup.Welcome);
+        var welcome = welcomeLocal.Success || welcomeDescribed is not null || welcomeHits is not null;
+        if (welcomeLocal.Success)
+            Add(ScoreRule.EligibilityWelcome, welcomeLocal.Value, ScoreWhere.Text, policy.WelcomeBonus);
+        else if (welcomeDescribed is not null)
+            Add(ScoreRule.EligibilityWelcome, welcomeDescribed, ScoreWhere.Description, policy.WelcomeBonus);
+        else if (welcomeHits is not null)
+            Add(ScoreRule.EligibilityWelcome, welcomeHits[0], ScoreWhere.FullText, policy.WelcomeBonus);
 
-        // Contract, temp and casual fit the six months per employer.
+        // Contract, temp and casual: short engagements, which fit a profile that cannot stay long with one employer.
         if (job.WorkTypeLabel is { } workType && rules.FlexibleWorkType.IsMatch(workType))
             Add(ScoreRule.FlexibleWorkType, workType, ScoreWhere.WorkType, policy.FlexibleWorkTypeBonus);
 
@@ -271,12 +272,12 @@ public static class FitScorer
         {
             if (!groups.TryGetValue(group, out var hits))
                 continue;
-            // The work-rights phrases and the truck licence are read from a captured ad instead (below):
+            // The eligibility phrases and the truck licence are read from a captured ad instead (below):
             // the search gives no context ("HR licence desirable"), the ad does.
             if (described && group is FullTextGroup.Doubt or FullTextGroup.Ambiguous or FullTextGroup.Tenure
                     or FullTextGroup.WelcomeRetracted or FullTextGroup.Licence)
                 continue;
-            if (whv && group is FullTextGroup.Doubt or FullTextGroup.Tenure or FullTextGroup.WelcomeRetracted)
+            if (welcome && group is FullTextGroup.Doubt or FullTextGroup.Tenure or FullTextGroup.WelcomeRetracted)
                 continue;
             // Same reason, counted once.
             if (group == FullTextGroup.WelcomeRetracted && groups.ContainsKey(FullTextGroup.Doubt))
@@ -288,10 +289,10 @@ public static class FitScorer
 
         if (described)
         {
-            if (!whv && rules.CitizenshipRequired.Match(desc) is { Success: true } descCitizen)
-                Add(ScoreRule.FullTextCitizenship, descCitizen.Value, ScoreWhere.Description, -policy.CitizenshipPenalty);
+            if (!welcome && rules.Restricted.Match(desc) is { Success: true } descRestricted)
+                Add(ScoreRule.FullTextEligibilityDoubt, descRestricted.Value, ScoreWhere.Description, -policy.EligibilityDoubtPenalty);
             if (rules.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => ListingPatterns.Signal(p).IsMatch(desc)) is { } ambiguous)
-                Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -policy.AmbiguousRightsPenalty);
+                Add(ScoreRule.FullTextEligibilityAmbiguous, ambiguous, ScoreWhere.Description, -policy.EligibilityAmbiguousPenalty);
         }
 
         // Requirements of the profile found in the full ad: once per kind, a truck licence apart from a
@@ -344,8 +345,9 @@ public static class FitScorer
                 Add(ScoreRule.TruckLicence, truck.Value, ScoreWhere.Text, -policy.TruckLicencePenalty);
         }
 
-        if (policy.VisaRequired && !sponsorConfirmed)
-            Add(ScoreRule.NoSponsorship, "sponsor", ScoreWhere.None, -(sponsorDenied ? policy.SponsorDeniedPenalty : policy.NoSponsorPenalty));
+        if (policy.AssistanceRequired && assistanceConfirmed is null)
+            Add(ScoreRule.NoAssistance, assistanceDenied.Value, ScoreWhere.None,
+                -(assistanceDenied.Success ? policy.AssistanceDeniedPenalty : policy.NoAssistancePenalty));
 
         if (job.PostedAt is { } posted)
         {
@@ -379,19 +381,19 @@ public static class FitScorer
 
     private static (string Group, ScoreRule Rule, int Points)[] FullTextRestrictions(ScoringPolicy policy) =>
     [
-        (FullTextGroup.Doubt, ScoreRule.FullTextCitizenship, -policy.CitizenshipPenalty),
-        (FullTextGroup.WelcomeRetracted, ScoreRule.FullTextWhvWithResidency, -policy.WhvWithResidencyPenalty),
-        (FullTextGroup.Ambiguous, ScoreRule.FullTextAmbiguousRights, -policy.AmbiguousRightsPenalty),
-        (FullTextGroup.Tenure, ScoreRule.FullTextTwelveMonthRights, -policy.TwelveMonthRightsPenalty),
+        (FullTextGroup.Doubt, ScoreRule.FullTextEligibilityDoubt, -policy.EligibilityDoubtPenalty),
+        (FullTextGroup.WelcomeRetracted, ScoreRule.FullTextWelcomeRetracted, -policy.WelcomeRetractedPenalty),
+        (FullTextGroup.Ambiguous, ScoreRule.FullTextEligibilityAmbiguous, -policy.EligibilityAmbiguousPenalty),
+        (FullTextGroup.Tenure, ScoreRule.FullTextEligibilityTenure, -policy.EligibilityTenurePenalty),
         (FullTextGroup.Commission, ScoreRule.FullTextCommission, -policy.CommissionOnlyPenalty),
         (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -policy.TruckLicencePenalty),
     ];
 
     /// <summary>
-    /// Groups with at least one phrase found, each with the phrases found, in policy order. A term found
-    /// with a context word ("australian citizen + FIFO", see <see cref="ScoringPolicy.ContextGroups"/>)
-    /// counts as the term; a mark that is itself a policy term ("working holiday + citizen") is never
-    /// read as another term plus a context word.
+    /// Groups with at least one phrase found, each with the phrases found, in the market's order. A term found
+    /// with a context word ("guild member + FIFO", see <see cref="ScoringPolicy.ContextGroups"/>) counts as the
+    /// term; a mark that is itself one of the market's terms ("seasonal member + guild member") is never read as
+    /// another term plus a context word.
     /// </summary>
     private static Dictionary<string, List<string>> FullTextHits(
         IReadOnlyCollection<string> found, IReadOnlyDictionary<string, IReadOnlyList<string>> groups)

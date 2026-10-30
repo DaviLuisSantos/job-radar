@@ -3,11 +3,14 @@ using JobRadar.Domain.Matching;
 
 namespace JobRadar.Domain.Tests.Matching;
 
-/// <summary>One fictional case per rule. Real-data parity lives in <see cref="PrototypeParityTests"/>.</summary>
+/// <summary>
+/// One fictional case per rule, with the fictional market of <see cref="TestMarkets"/>. Real-data parity lives in
+/// <see cref="PrototypeParityTests"/>, real eligibility words in <see cref="LocalScoringCasesTests"/>.
+/// </summary>
 public class FitScorerTests
 {
     private static readonly DateOnly Today = new(2026, 10, 21);
-    private static readonly MarketRules Au = MarketRules.For(JobMarket.AU);
+    private static readonly MarketRules Au = TestMarkets.Au;
     private static readonly DateTimeOffset Yesterday = new(2026, 10, 20, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly MatchingProfile Tech = new(
@@ -43,22 +46,22 @@ public class FitScorerTests
     // ── Exclusions ────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("Must be an Australian citizen")]
-    [InlineData("NV1 security clearance")]
-    [InlineData("Full Australian working rights - essential")]
-    public void Citizenship_or_PR_requirements_exclude(string summary)
+    [InlineData("Must be a guild member")]
+    [InlineData("Guild pass required")]
+    [InlineData("Full guild standing - essential")]
+    public void A_reserved_status_excludes(string summary)
     {
         var score = Score(Job("Developer", summary));
 
         Assert.True(score.Excluded);
-        Assert.Equal(ScoreRule.CitizenshipRequired, Item(score, ScoreRule.CitizenshipRequired).Rule);
+        Assert.Equal(ScoreRule.EligibilityRestricted, Item(score, ScoreRule.EligibilityRestricted).Rule);
     }
 
     [Theory]
-    [InlineData("Unlimited working rights required")]
-    [InlineData("You need 12 months of valid working rights")]
-    [InlineData("No working holiday visas")]
-    public void Work_rights_a_working_holiday_visa_cannot_give_exclude(string summary)
+    [InlineData("Lifetime guild standing required")]
+    [InlineData("You need 24 months of valid guild standing")]
+    [InlineData("No seasonal members")]
+    public void A_condition_the_status_cannot_meet_excludes(string summary)
     {
         Assert.True(Score(Job("Developer", summary)).Excluded);
     }
@@ -66,16 +69,16 @@ public class FitScorerTests
     [Fact]
     public void An_excluding_phrase_in_the_full_text_excludes()
     {
-        var score = Score(Job("Developer", fullText: "unrestricted working rights"));
+        var score = Score(Job("Developer", fullText: "lifetime guild standing"));
 
         Assert.True(score.Excluded);
-        Assert.Equal(ScoreWhere.FullText, Item(score, ScoreRule.WorkRightsIncompatible).Where);
+        Assert.Equal(ScoreWhere.FullText, Item(score, ScoreRule.EligibilityIncompatible).Where);
     }
 
     [Fact]
-    public void Identified_roles_exclude()
+    public void Reserved_roles_exclude()
     {
-        Assert.True(Score(Job("Indigenous Liaison Officer")).Excluded);
+        Assert.Equal(ScoreRule.ReservedRole, Assert.Single(Score(Job("Guild Scholar Liaison Officer")).Items).Rule);
     }
 
     [Theory]
@@ -156,10 +159,16 @@ public class FitScorerTests
     }
 
     [Fact]
-    public void Sponsorship_mentioned_adds_the_bonus_and_denied_adds_nothing()
+    public void Assistance_offered_adds_the_bonus_and_denied_adds_nothing()
     {
-        Assert.Equal(10, Item(Score(Job("Developer", "482 visa sponsorship available")), ScoreRule.SponsorshipMentioned).Points);
-        Assert.Equal(0, Item(Score(Job("Developer", "Sponsorship is not available")), ScoreRule.SponsorshipDenied).Points);
+        var offered = Item(Score(Job("Developer", "Relocation package available")), ScoreRule.AssistanceOffered);
+        var word = Item(Score(Job("Developer", "Relocation considered")), ScoreRule.AssistanceOffered);
+        var denied = Score(Job("Developer", "Relocation is not available"));
+
+        Assert.Equal((10, "relocation package"), (offered.Points, offered.Detail));
+        Assert.Equal((10, "relocation"), (word.Points, word.Detail));
+        Assert.Equal((0, "relocation is not available"), (Item(denied, ScoreRule.AssistanceDenied).Points, Item(denied, ScoreRule.AssistanceDenied).Detail));
+        Assert.DoesNotContain(denied.Items, i => i.Rule == ScoreRule.AssistanceOffered);
     }
 
     [Fact]
@@ -205,17 +214,17 @@ public class FitScorerTests
     }
 
     [Fact]
-    public void Working_holiday_friendly_from_text_or_full_text()
+    public void A_welcome_from_text_or_full_text()
     {
-        Assert.Equal(ScoreWhere.Text, Item(Score(Job("Barista", "Backpackers welcome")), ScoreRule.WorkingHolidayFriendly).Where);
-        Assert.Equal(ScoreWhere.FullText, Item(Score(Job("Barista", fullText: "88 days")), ScoreRule.WorkingHolidayFriendly).Where);
+        Assert.Equal(ScoreWhere.Text, Item(Score(Job("Barista", "Newcomers welcome")), ScoreRule.EligibilityWelcome).Where);
+        Assert.Equal(ScoreWhere.FullText, Item(Score(Job("Barista", fullText: "newcomers")), ScoreRule.EligibilityWelcome).Where);
     }
 
     [Theory]
     [InlineData("Contract/Temp", true)]
     [InlineData("Casual/Vacation", true)]
     [InlineData("Full time", false)]
-    public void Contract_temp_and_casual_fit_six_months_per_employer(string workType, bool bonus)
+    public void Contract_temp_and_casual_are_short_engagements(string workType, bool bonus)
     {
         Assert.Equal(bonus, Score(Job("Developer", workType: workType)).Items.Any(i => i.Rule == ScoreRule.FlexibleWorkType));
     }
@@ -249,49 +258,49 @@ public class FitScorerTests
     public void Full_text_restrictions_apply_after_compression()
     {
         var score = Score(Job("C# .NET Contract Developer", "Remote", "Perth WA", "Contract/Temp",
-            fullText: "full working rights"));
+            fullText: "full guild standing"));
 
         Assert.Equal(94 - 10, score.Final);
-        Assert.Equal(ScoreRule.FullTextAmbiguousRights, score.Items[^1].Rule);
+        Assert.Equal(ScoreRule.FullTextEligibilityAmbiguous, score.Items[^1].Rule);
     }
 
     [Fact]
-    public void Citizen_and_twelve_month_phrases_are_cancelled_by_a_working_holiday_mention()
+    public void Doubt_and_tenure_phrases_are_cancelled_by_a_welcome()
     {
-        var withoutWhv = Score(Job("Barista", fullText: ["australian citizen", "12 months + working rights"]));
-        var withWhv = Score(Job("Barista", fullText: ["australian citizen", "12 months + working rights", "working holiday"]));
+        var withoutWelcome = Score(Job("Barista", fullText: ["guild member", "24 months + guild standing"]));
+        var withWelcome = Score(Job("Barista", fullText: ["guild member", "24 months + guild standing", "seasonal member"]));
 
-        Assert.Equal(1, withoutWhv.Final);   // 50 − 55 − 40, floored
-        Assert.Equal(65, withWhv.Final);     // 50 + 15
+        Assert.Equal(1, withoutWelcome.Final);   // 50 − 55 − 40, floored
+        Assert.Equal(65, withWelcome.Final);     // 50 + 15
     }
 
     [Fact]
-    public void Working_holiday_next_to_citizenship_or_residency_is_a_refusal_not_a_welcome()
+    public void A_welcome_next_to_a_reserved_status_is_a_refusal_not_a_welcome()
     {
-        var score = Score(Job("Barista", fullText: ["working holiday", "working holiday + residency", "12 months + working rights"]));
+        var score = Score(Job("Barista", fullText: ["seasonal member", "seasonal member + guild pass", "24 months + guild standing"]));
 
-        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.WorkingHolidayFriendly);
-        Assert.Equal(-55, Item(score, ScoreRule.FullTextWhvWithResidency).Points);
-        Assert.Equal(-40, Item(score, ScoreRule.FullTextTwelveMonthRights).Points);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.EligibilityWelcome);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextWelcomeRetracted).Points);
+        Assert.Equal(-40, Item(score, ScoreRule.FullTextEligibilityTenure).Points);
     }
 
     [Fact]
-    public void Working_holiday_with_citizenship_is_penalised_once()
+    public void A_retracted_welcome_with_a_doubt_is_penalised_once()
     {
-        var score = Score(Job("Barista", fullText: ["australian citizen", "working holiday", "working holiday + citizen"]));
+        var score = Score(Job("Barista", fullText: ["guild member", "seasonal member", "seasonal member + guild member"]));
 
-        Assert.Equal(-55, Item(score, ScoreRule.FullTextCitizenship).Points);
-        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextWhvWithResidency);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextEligibilityDoubt).Points);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextWelcomeRetracted);
         Assert.Equal(1, score.Final);   // 50 − 55, floored
     }
 
     [Fact]
     public void A_welcome_in_the_listing_own_text_still_wins_over_the_doubtful_full_text()
     {
-        var score = Score(Job("Barista", "Backpackers welcome", fullText: ["working holiday", "working holiday + citizen"]));
+        var score = Score(Job("Barista", "Newcomers welcome", fullText: ["seasonal member", "seasonal member + guild member"]));
 
-        Assert.Equal(ScoreWhere.Text, Item(score, ScoreRule.WorkingHolidayFriendly).Where);
-        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextWhvWithResidency);
+        Assert.Equal(ScoreWhere.Text, Item(score, ScoreRule.EligibilityWelcome).Where);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.FullTextWelcomeRetracted);
         Assert.Equal(65, score.Final);
     }
 
@@ -331,35 +340,35 @@ public class FitScorerTests
         Job(title, fullText: fullText) with { Description = description };
 
     [Fact]
-    public void Citizenship_in_a_captured_ad_costs_55_unless_the_ad_welcomes_working_holiday_makers()
+    public void A_reserved_status_in_a_captured_ad_costs_55_unless_the_ad_welcomes_the_profile()
     {
-        var citizensOnly = Score(Described("Labourer", "Applicants must be Australian citizens or permanent residents."), Trades);
-        var welcome = Score(Described("Labourer", "Open to Australian citizens, PR and working holiday visa holders."), Trades);
+        var membersOnly = Score(Described("Labourer", "Applicants must be guild members or guild pass holders."), Trades);
+        var welcome = Score(Described("Labourer", "Open to guild pass holders and seasonal members."), Trades);
 
-        Assert.True(citizensOnly.Final > 0);   // weighed, not excluded: the ad may welcome other visas
-        Assert.Equal(ScoreWhere.Description, Item(citizensOnly, ScoreRule.FullTextCitizenship).Where);
-        Assert.Equal(-55, Item(citizensOnly, ScoreRule.FullTextCitizenship).Points);
-        Assert.Equal(ScoreWhere.Description, Item(welcome, ScoreRule.WorkingHolidayFriendly).Where);
-        Assert.DoesNotContain(welcome.Items, i => i.Rule == ScoreRule.FullTextCitizenship);
+        Assert.True(membersOnly.Final > 0);   // weighed, not excluded: the ad may list who else may apply
+        Assert.Equal(ScoreWhere.Description, Item(membersOnly, ScoreRule.FullTextEligibilityDoubt).Where);
+        Assert.Equal(-55, Item(membersOnly, ScoreRule.FullTextEligibilityDoubt).Points);
+        Assert.Equal(ScoreWhere.Description, Item(welcome, ScoreRule.EligibilityWelcome).Where);
+        Assert.DoesNotContain(welcome.Items, i => i.Rule == ScoreRule.FullTextEligibilityDoubt);
     }
 
     [Fact]
-    public void A_negated_working_holiday_mention_in_a_captured_ad_earns_nothing_and_beats_the_searched_phrase()
+    public void A_negated_welcome_in_a_captured_ad_earns_nothing_and_beats_the_searched_phrase()
     {
-        var score = Score(Described("Labourer", "Australian citizens only apply. We are unable to accept working holiday visa holders.",
-            "working holiday"), Trades);
+        var score = Score(Described("Labourer", "Guild members only apply. We are unable to accept seasonal members.",
+            "seasonal member"), Trades);
 
-        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.WorkingHolidayFriendly);
-        Assert.Equal(-55, Item(score, ScoreRule.FullTextCitizenship).Points);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.EligibilityWelcome);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextEligibilityDoubt).Points);
     }
 
     [Fact]
-    public void Work_rights_a_working_holiday_cannot_give_exclude_from_a_captured_ad()
+    public void A_condition_the_status_cannot_meet_excludes_from_a_captured_ad()
     {
-        var score = Score(Described("Labourer", "You must have unrestricted work rights in Australia to apply for this role."), Trades);
+        var score = Score(Described("Labourer", "You must have lifetime guild standing to apply for this role."), Trades);
 
         Assert.Equal(0, score.Final);
-        Assert.Equal(ScoreWhere.Description, Item(score, ScoreRule.WorkRightsIncompatible).Where);
+        Assert.Equal(ScoreWhere.Description, Item(score, ScoreRule.EligibilityIncompatible).Where);
     }
 
     [Fact]
@@ -396,19 +405,19 @@ public class FitScorerTests
     [Fact]
     public void A_policy_term_found_with_a_context_word_counts_as_the_term()
     {
-        var score = Score(Job("Barista", fullText: ["australian citizen + FIFO"]));
+        var score = Score(Job("Barista", fullText: ["guild member + FIFO"]));
 
-        Assert.Equal("australian citizen", Item(score, ScoreRule.FullTextCitizenship).Detail);
+        Assert.Equal("guild member", Item(score, ScoreRule.FullTextEligibilityDoubt).Detail);
     }
 
     [Fact]
     public void A_composite_policy_term_is_never_read_as_another_term_plus_a_context_word()
     {
-        // "working holiday + citizen" is its own term (a refusal), not "working holiday" found with "citizen".
-        var score = Score(Job("Barista", fullText: ["working holiday + citizen"]));
+        // "seasonal member + guild member" is its own term (a refusal), not "seasonal member" found with a context word.
+        var score = Score(Job("Barista", fullText: ["seasonal member + guild member"]));
 
-        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.WorkingHolidayFriendly);
-        Assert.Equal(-55, Item(score, ScoreRule.FullTextWhvWithResidency).Points);
+        Assert.DoesNotContain(score.Items, i => i.Rule == ScoreRule.EligibilityWelcome);
+        Assert.Equal(-55, Item(score, ScoreRule.FullTextWelcomeRetracted).Points);
     }
 
     [Fact]
@@ -491,12 +500,12 @@ public class FitScorerTests
         Assert.Equal(-40, Item(Score(Job("Operator Assistant", "Current HC Unrestricted licence")), ScoreRule.TruckLicence).Points);
 
     [Fact]
-    public void Long_term_work_rights_rule_a_working_holiday_out()
+    public void Long_term_conditions_exclude_from_the_text_or_a_captured_ad()
     {
-        var local = Score(Job("Cleaning Utility", "Long-term Australian working rights"));
-        var described = Score(Described("Cleaning Utility", "Requirements: current C class licence and long term work rights."));
+        var local = Score(Job("Cleaning Utility", "Long-term guild standing"));
+        var described = Score(Described("Cleaning Utility", "Requirements: current C class licence and long term guild standing."));
 
-        Assert.Equal(ScoreRule.WorkRightsIncompatible, Assert.Single(local.Items).Rule);
+        Assert.Equal(ScoreRule.EligibilityIncompatible, Assert.Single(local.Items).Rule);
         Assert.Equal(ScoreWhere.Description, Assert.Single(described.Items).Where);
     }
 
@@ -511,10 +520,10 @@ public class FitScorerTests
     [Fact]
     public void A_location_the_profile_rules_out_excludes_the_listing()
     {
-        var regional = Trades with { ExcludedLocations = ["Perth WA"] };
+        var farm = Trades with { ExcludedLocations = ["Perth WA"] };
 
-        var city = Score(Job("Farm Hand", location: "Osborne Park, Perth WA"), regional);
-        var town = Score(Job("Farm Hand", location: "Geraldton, Mid West WA"), regional);
+        var city = Score(Job("Farm Hand", location: "Osborne Park, Perth WA"), farm);
+        var town = Score(Job("Farm Hand", location: "Geraldton, Mid West WA"), farm);
 
         Assert.Equal((0, ScoreRule.LocationExcluded, "Perth WA"), (city.Final, Assert.Single(city.Items).Rule, city.Items[0].Detail));
         Assert.DoesNotContain(town.Items, i => i.Rule == ScoreRule.LocationExcluded);
@@ -536,13 +545,14 @@ public class FitScorerTests
     }
 
     [Fact]
-    public void Missing_sponsorship_only_costs_when_the_visa_requires_it()
+    public void Missing_assistance_only_costs_when_the_policy_requires_it()
     {
-        var required = ScoringPolicy.Default with { VisaRequired = true };
+        var required = ScoringPolicy.Default with { AssistanceRequired = true };
 
-        Assert.DoesNotContain(Score(Job("Developer")).Items, i => i.Rule == ScoreRule.NoSponsorship);
-        Assert.Equal(-10, Item(Score(Job("Developer"), policy: required), ScoreRule.NoSponsorship).Points);
-        Assert.Equal(-15, Item(Score(Job("Developer", "No sponsorship"), policy: required), ScoreRule.NoSponsorship).Points);
+        Assert.DoesNotContain(Score(Job("Developer")).Items, i => i.Rule == ScoreRule.NoAssistance);
+        Assert.Equal(-10, Item(Score(Job("Developer"), policy: required), ScoreRule.NoAssistance).Points);
+        Assert.Equal(-15, Item(Score(Job("Developer", "No relocation"), policy: required), ScoreRule.NoAssistance).Points);
+        Assert.DoesNotContain(Score(Job("Developer", "Relocation package"), policy: required).Items, i => i.Rule == ScoreRule.NoAssistance);
     }
 
     [Theory]
@@ -607,7 +617,7 @@ public class FitScorerTests
     [Fact]
     public void Listings_that_are_not_excluded_never_score_zero()
     {
-        var awful = Score(Job("Hospitality Cert III", "hospitality", fullText: ["australian citizen", "commission only"]));
+        var awful = Score(Job("Hospitality Cert III", "hospitality", fullText: ["guild member", "commission only"]));
 
         Assert.Equal(1, awful.Final);
         Assert.False(awful.Excluded);
@@ -624,14 +634,14 @@ public class FitScorerTests
             PositiveSignalBodyBonus = 4,
             TruckLicencePenalty = 25,
             ObtainableRequirementPenalty = 3,
-            CitizenshipPenalty = 30,
+            EligibilityDoubtPenalty = 30,
             CompressAbove = 90,
             CompressionDivisor = 5,
         };
         var fifo = Trades with { Requirements = new([], [], [], ["HRWL"]) };
 
         var signals = Score(Job("C# Developer", "We build .NET services"), policy: policy);
-        var licences = Score(Job("Offsider", "HR licence required", fullText: ["HRWL", "australian citizen"]), fifo, policy);
+        var licences = Score(Job("Offsider", "HR licence required", fullText: ["HRWL", "guild member"]), fifo, policy);
         // 50 + 20 × 3 + 10 remote + 5 contract type + 10 Perth = 135, compressed above 90: 90 + 45 / 5
         var strong = Score(Job("C# .NET Contract Developer", "Remote", "Perth WA", "Contract/Temp"), policy: policy);
 
@@ -639,7 +649,7 @@ public class FitScorerTests
             signals.Items.Where(i => i.Rule == ScoreRule.PositiveSignal).Select(i => (i.Where, i.Points)));
         Assert.Equal(-25, Item(licences, ScoreRule.TruckLicence).Points);
         Assert.Equal(-3, Item(licences, ScoreRule.FullTextLicence).Points);
-        Assert.Equal(-30, Item(licences, ScoreRule.FullTextCitizenship).Points);
+        Assert.Equal(-30, Item(licences, ScoreRule.FullTextEligibilityDoubt).Points);
         Assert.Equal(99, strong.Final);
         Assert.Equal("90", Item(strong, ScoreRule.Compression).Detail);
     }

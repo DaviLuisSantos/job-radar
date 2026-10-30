@@ -39,7 +39,7 @@ public class SnapshotQualityTests
     [Fact]
     public void Plausible_complete_counts_are_ok()
     {
-        var result = SnapshotQuality.Assess([new("HVAC-R", "Perth WA", null, 120), new("HVAC-R", "Perth WA", "482", 3)], Previous, []);
+        var result = SnapshotQuality.Assess([new("HVAC-R", "Perth WA", null, 120), new("HVAC-R", "Perth WA", "fifo", 3)], Previous, []);
 
         Assert.Equal(SnapshotStatus.Ok, result.Status);
         Assert.Empty(result.Issues);
@@ -48,7 +48,7 @@ public class SnapshotQualityTests
     [Fact]
     public void A_failed_count_or_a_cut_listing_makes_it_partial()
     {
-        Assert.Equal(SnapshotStatus.Partial, SnapshotQuality.Assess([new("HVAC-R", "Perth WA", "482", null)], Previous, []).Status);
+        Assert.Equal(SnapshotStatus.Partial, SnapshotQuality.Assess([new("HVAC-R", "Perth WA", "fifo", null)], Previous, []).Status);
         Assert.Equal(SnapshotStatus.Partial, SnapshotQuality.Assess([new("HVAC-R", "Perth WA", null, 100)], Previous, [("HVAC-R", "Perth WA")]).Status);
     }
 
@@ -70,7 +70,7 @@ public class SnapshotQualityTests
         var small = new Dictionary<(string, string), int> { [("HVAC-R", "Perth WA")] = 10 };
 
         Assert.Equal(SnapshotStatus.Ok, SnapshotQuality.Assess([new("HVAC-R", "Perth WA", null, 30)], small, []).Status);
-        Assert.Equal(SnapshotStatus.Ok, SnapshotQuality.Assess([new("HVAC-R", "Perth WA", "482", 0)], Previous, []).Status);
+        Assert.Equal(SnapshotStatus.Ok, SnapshotQuality.Assess([new("HVAC-R", "Perth WA", "fifo", 0)], Previous, []).Status);
     }
 }
 
@@ -82,7 +82,7 @@ public class MonthlyReportTests
         new("HVAC-R", city, title, company, min, max, DateTimeOffset.Parse(posted, System.Globalization.CultureInfo.InvariantCulture), D1, D2);
 
     private static MarketReport Build(IReadOnlyCollection<DailyCount> current, IReadOnlyCollection<DailyCount>? previous = null, IReadOnlyCollection<SeenListing>? listings = null) =>
-        MonthlyReport.Build("2026-10", ["HVAC-R", "Elétrica"], ["Perth WA", "All Australia"], ["482"], current, previous ?? [], listings ?? [], [])!;
+        MonthlyReport.Build("2026-10", ["HVAC-R", "Elétrica"], ["Perth WA", "All Australia"], ["fifo"], current, previous ?? [], listings ?? [], [])!;
 
     [Fact]
     public void No_good_snapshot_no_report()
@@ -102,14 +102,14 @@ public class MonthlyReportTests
     public void Daily_averages_change_and_mention_share()
     {
         var report = Build(
-            [new(D1, "HVAC-R", "Perth WA", null, 100), new(D2, "HVAC-R", "Perth WA", null, 120), new(D1, "HVAC-R", "Perth WA", "482", 11)],
+            [new(D1, "HVAC-R", "Perth WA", null, 100), new(D2, "HVAC-R", "Perth WA", null, 120), new(D1, "HVAC-R", "Perth WA", "fifo", 11)],
             previous: [new(new DateOnly(2026, 9, 10), "HVAC-R", "Perth WA", null, 88)]);
 
         var city = Assert.Single(Assert.Single(report.Categories).Cities);
         Assert.Equal(2, report.DaysCovered);
         Assert.Equal(110, city.AverageOpen);
         Assert.Equal(0.25, city.ChangeVsPreviousMonth!.Value, 3);
-        Assert.Equal(("482", 11.0, 0.1), (city.Mentions[0].Term, city.Mentions[0].Average, city.Mentions[0].Share!.Value));
+        Assert.Equal(("fifo", 11.0, 0.1), (city.Mentions[0].Term, city.Mentions[0].Average, city.Mentions[0].Share!.Value));
     }
 
     [Fact]

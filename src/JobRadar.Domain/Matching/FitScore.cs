@@ -38,9 +38,12 @@ public enum ScoreWhere
 public enum ScoreRule
 {
     // Exclusions (score 0)
-    CitizenshipRequired,
-    WorkRightsIncompatible,
-    IdentifiedRole,
+    /// <summary>A status the market reserves the job for (<see cref="EligibilityRules.RestrictedPattern"/>).</summary>
+    EligibilityRestricted,
+    /// <summary>A condition the profile's status cannot meet (<see cref="EligibilityRules.IncompatiblePattern"/>, the exclude phrases).</summary>
+    EligibilityIncompatible,
+    /// <summary>A job reserved for a group (<see cref="EligibilityRules.ReservedTitlePattern"/>).</summary>
+    ReservedRole,
     LeadershipTitle,
     SeniorTitle,
     LocationExcluded,
@@ -55,13 +58,16 @@ public enum ScoreRule
     SeniorPenalty,
     PositiveSignal,
     NegativeSignal,
-    SponsorshipMentioned,
-    SponsorshipDenied,
+    /// <summary>The employer helps with the profile's status.</summary>
+    AssistanceOffered,
+    /// <summary>The employer says it will not help: a label, 0 points.</summary>
+    AssistanceDenied,
     Remote,
     Hybrid,
     Fifo,
     EntryLevel,
-    WorkingHolidayFriendly,
+    /// <summary>The ad welcomes the profile's status (<see cref="EligibilityRules.WelcomePattern"/>, the welcome phrases).</summary>
+    EligibilityWelcome,
     FlexibleWorkType,
     PreferredLocation,
     RequirementHeld,
@@ -72,10 +78,14 @@ public enum ScoreRule
     Compression,
 
     // Restrictions applied after compression
-    FullTextCitizenship,
-    FullTextWhvWithResidency,
-    FullTextAmbiguousRights,
-    FullTextTwelveMonthRights,
+    /// <summary>A reserved status in the full ad: the doubt phrases, or the restricted pattern in a captured ad.</summary>
+    FullTextEligibilityDoubt,
+    /// <summary>A welcome and a reserved status in the same full ad: mostly a refusal.</summary>
+    FullTextWelcomeRetracted,
+    /// <summary>Wording in the full ad that may or may not leave the profile out.</summary>
+    FullTextEligibilityAmbiguous,
+    /// <summary>A duration the profile's status cannot cover, in the full ad.</summary>
+    FullTextEligibilityTenure,
     FullTextCommission,
     FullTextTruckLicence,
     FullTextExperience,
@@ -86,7 +96,8 @@ public enum ScoreRule
     CommissionOnly,
     EnglishRequired,
     TruckLicence,
-    NoSponsorship,
+    /// <summary>No assistance confirmed, for a policy that requires it (<see cref="ScoringPolicy.AssistanceRequired"/>).</summary>
+    NoAssistance,
     Aging,
     Stale,
     /// <summary>The time zones the employer accepts leave Brazil out.</summary>

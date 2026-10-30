@@ -22,11 +22,11 @@ public class SeekMarketSourceTests
     {
         var api = new FakeSeekApi { Respond = _ => FakeSeekApi.PageOf(418, ["1"]) };
 
-        var total = await Market(api).CountAsync("6287,6290", "Perth WA", new FullTextTerm("working rights"), Ct);
+        var total = await Market(api).CountAsync("6287,6290", "Perth WA", new FullTextTerm("night shift"), Ct);
 
         Assert.Equal(418, total);
         var q = Assert.Single(api.Queries);
-        Assert.Equal(("6287,6290", "Perth WA", "\"working rights\"", "100", "1"), (q["subclassification"], q["where"], q["keywords"], q["pageSize"], q["page"]));
+        Assert.Equal(("6287,6290", "Perth WA", "\"night shift\"", "100", "1"), (q["subclassification"], q["where"], q["keywords"], q["pageSize"], q["page"]));
     }
 
     [Fact]

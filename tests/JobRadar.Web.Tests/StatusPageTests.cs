@@ -35,9 +35,9 @@ public class StatusPageTests : BunitContext
     public void Lists_what_failed_or_was_cut_in_the_last_pass_only()
     {
         var cut = RenderWith(
-            Run(Pass.AddDays(-1), "term: australian citizen", complete: false),   // the pass before: not listed
+            Run(Pass.AddDays(-1), "term: guild member", complete: false),   // the pass before: not listed
             Run(Pass, "fifo @ perth"),
-            Run(Pass.AddMinutes(1), "term: australian citizen", complete: false),
+            Run(Pass.AddMinutes(1), "term: guild member", complete: false),
             Run(Pass.AddMinutes(2), "labourer @ perth", error: "HttpRequestException: 503\n   at Polly"));
 
         cut.WaitForAssertion(() => Assert.Contains("3 execuções", cut.Markup, StringComparison.Ordinal));
@@ -47,7 +47,7 @@ public class StatusPageTests : BunitContext
         Assert.Contains("Falhou", rows[0].TextContent, StringComparison.Ordinal);
         Assert.Contains("HttpRequestException: 503", rows[0].TextContent, StringComparison.Ordinal);
         Assert.DoesNotContain("Polly", rows[0].TextContent, StringComparison.Ordinal);
-        Assert.Contains("term: australian citizen", rows[1].TextContent, StringComparison.Ordinal);
+        Assert.Contains("term: guild member", rows[1].TextContent, StringComparison.Ordinal);
         Assert.Contains("Incompleta", rows[1].TextContent, StringComparison.Ordinal);
     }
 

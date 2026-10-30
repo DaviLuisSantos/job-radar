@@ -37,7 +37,7 @@ public class ListingScoringServiceTests
         var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()), ("hospo", hospo));
         await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
         var id = new ListingId("seek", "1");
-        _descriptions.Saved[id] = new ListingDescription(id, "You must hold Australian citizenship to be considered for this role.",
+        _descriptions.Saved[id] = new ListingDescription(id, "You must be a guild member to be considered for this role.",
             DescriptionOrigin.Pasted, _time.GetUtcNow());
 
         var scored = await Service(catalog).ScoreOneAsync(id, Perth, Ct);
@@ -55,7 +55,7 @@ public class ListingScoringServiceTests
         var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()));
         await _listings.RecordObservationsAsync([Ad("1", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
         var id = new ListingId("seek", "1");
-        _descriptions.Saved[id] = new ListingDescription(id, "You must hold Australian citizenship to be considered for this role.",
+        _descriptions.Saved[id] = new ListingDescription(id, "You must be a guild member to be considered for this role.",
             DescriptionOrigin.Pasted, _time.GetUtcNow());
         var stale = new FitScore(90, []);
         JudgedScore[] judged =
@@ -133,13 +133,13 @@ public class ListingScoringServiceTests
     {
         var catalog = ProfileCatalogTests.Catalog(("tech", ProfileCatalogTests.Dotnet()));
         await _listings.RecordObservationsAsync([Ad("1", "C# Developer"), Ad("2", "C# Developer")], "c# developer @ perth wa", _time.GetUtcNow(), Ct);
-        await _terms.RecordAsync("seek", "australian citizen", ["1"], _time.GetUtcNow(), Ct);
+        await _terms.RecordAsync("seek", "guild member", ["1"], _time.GetUtcNow(), Ct);
 
         await Service(catalog).ScoreAllAsync(Perth, Ct);
 
         var byId = _scores.Saved.ToDictionary(s => s.Id.SourceId);
         Assert.Equal(11, byId["1"].Score.Final);   // 66 − 55
-        Assert.Contains(byId["1"].Score.Items, i => i.Rule == ScoreRule.FullTextCitizenship);
+        Assert.Contains(byId["1"].Score.Items, i => i.Rule == ScoreRule.FullTextEligibilityDoubt);
         Assert.Equal(66, byId["2"].Score.Final);
     }
 

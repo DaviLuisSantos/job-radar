@@ -38,13 +38,13 @@ public abstract class ListingTermRepositoryContractTests(DatabaseFixture db)
         await SeedAsync(Monday, ("1", null), ("2", null));
 
         // "999" is a Seek ad this system never collected.
-        Assert.Equal(2, await RecordAsync("australian citizen", "1", "2", "999"));
-        Assert.Equal(0, await RecordAsync("australian citizen", "1", "2"));
-        Assert.Equal(1, await RecordAsync("working holiday", "1"));
+        Assert.Equal(2, await RecordAsync("guild member", "1", "2", "999"));
+        Assert.Equal(0, await RecordAsync("guild member", "1", "2"));
+        Assert.Equal(1, await RecordAsync("seasonal member", "1"));
 
         var terms = await TermsAsync("1", "2", "999");
-        Assert.Equal(["australian citizen", "working holiday"], terms[new ListingId("seek", "1")]);
-        Assert.Equal(["australian citizen"], terms[new ListingId("seek", "2")]);
+        Assert.Equal(["guild member", "seasonal member"], terms[new ListingId("seek", "1")]);
+        Assert.Equal(["guild member"], terms[new ListingId("seek", "2")]);
         Assert.False(terms.ContainsKey(new ListingId("seek", "999")));
     }
 

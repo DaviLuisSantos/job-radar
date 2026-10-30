@@ -9,5 +9,6 @@
 candidate/
 docs/
 **/appsettings.Local.json
+**/scoring-cases.Local.json
 **/*.user
 .env

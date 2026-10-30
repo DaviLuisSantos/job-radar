@@ -12,7 +12,7 @@ public sealed record EligibilityRules
 
     /// <summary>
     /// A status the market reserves the job for, which the profile does not have. Excludes when the title or summary
-    /// says it; in a captured ad, costs <see cref="ScoringPolicy.CitizenshipPenalty"/> unless the ad also welcomes the
+    /// says it; in a captured ad, costs <see cref="ScoringPolicy.EligibilityDoubtPenalty"/> unless the ad also welcomes the
     /// profile (the same words often list who else may apply).
     /// </summary>
     public string? RestrictedPattern { get; init; }

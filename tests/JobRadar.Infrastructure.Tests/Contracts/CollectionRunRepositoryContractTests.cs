@@ -55,7 +55,7 @@ public abstract class CollectionRunRepositoryContractTests(DatabaseFixture db)
             Assert.Null(await new EfCollectionRunRepository(empty).GetLastStartAsync(Ct));
 
         await RecordAsync(Run(Monday));
-        await RecordAsync(Run(Monday.AddDays(1), key: "term: backpackers", error: "boom"));
+        await RecordAsync(Run(Monday.AddDays(1), key: "term: newcomers", error: "boom"));
 
         await using var ctx = db.NewContext();
         Assert.Equal(Monday.AddDays(1), await new EfCollectionRunRepository(ctx).GetLastStartAsync(Ct));
@@ -85,7 +85,7 @@ public abstract class CollectionRunRepositoryContractTests(DatabaseFixture db)
     {
         await db.ResetAsync();
         await RecordAsync(Run(Monday.AddMinutes(-1)));
-        await RecordAsync(Run(Monday.AddMinutes(5), key: "term: australian citizen") with { Complete = false });
+        await RecordAsync(Run(Monday.AddMinutes(5), key: "term: guild member") with { Complete = false });
         await RecordAsync(Run(Monday, error: "HttpRequestException: 503") with { Source = "adzuna" });
 
         await using var ctx = db.NewContext();
@@ -94,7 +94,7 @@ public abstract class CollectionRunRepositoryContractTests(DatabaseFixture db)
         Assert.Equal(
             [
                 Run(Monday, error: "HttpRequestException: 503") with { Source = "adzuna" },
-                Run(Monday.AddMinutes(5), key: "term: australian citizen") with { Complete = false },
+                Run(Monday.AddMinutes(5), key: "term: guild member") with { Complete = false },
             ],
             runs);   // DateTimeOffset equality is by instant: the UTC offset read back does not matter
     }

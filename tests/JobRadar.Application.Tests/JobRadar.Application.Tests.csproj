@@ -14,6 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The fictional market of the scorer tests: one set of fictional words for every layer. -->
+    <Compile Include="..\JobRadar.Domain.Tests\Matching\TestMarkets.cs" Link="Matching\TestMarkets.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="xunit.v3" />
   </ItemGroup>

@@ -110,7 +110,7 @@ public class PrototypeImportServiceTests
         var snapshot = new MarketSnapshot("seek", new DateOnly(2026, 10, 1), SnapshotStatus.Ok, 30, 30, 400, []);
         _market.Days.Add(new DateOnly(2026, 10, 2));   // this system already took the 2nd
         var data = new PrototypeData(
-            [Job("1", terms: ["australian citizen", "working holiday"])],
+            [Job("1", terms: ["guild member", "seasonal member"])],
             [new PrototypeSnapshot(snapshot, []), new PrototypeSnapshot(snapshot with { Date = new DateOnly(2026, 10, 2) }, [])],
             [new ImportedMarketListing(new MarketListing("HVAC-R", "Perth WA", Listings.Of("seek", "9").Listing), new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 20))]);
 
@@ -145,7 +145,7 @@ public class PrototypeImportServiceTests
     [Fact]
     public async Task A_dry_run_reads_and_counts_but_writes_nothing()
     {
-        var report = await Service(Job("1", "applied", applied: true, label: Verdict.Good, terms: ["88 days"])).ImportAsync("jobs.db", dryRun: true, Ct);
+        var report = await Service(Job("1", "applied", applied: true, label: Verdict.Good, terms: ["harvest season"])).ImportAsync("jobs.db", dryRun: true, Ct);
 
         Assert.Equal((1, 1, 1, 1), (report.JobsInFile, report.TermsInFile, report.LabelsInFile, report.ApplicationsInFile));
         Assert.Empty(_listings.Imported);

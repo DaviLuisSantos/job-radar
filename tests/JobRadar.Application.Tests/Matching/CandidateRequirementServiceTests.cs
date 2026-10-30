@@ -89,7 +89,7 @@ public class CandidateRequirementServiceTests
     public async Task Impact_counts_the_listings_holding_an_item_would_move_and_how_far()
     {
         var asks = await HrwlAdAsync("1");
-        await HrwlAdAsync("2", "Offsider citizens only");   // excluded either way: does not move
+        await HrwlAdAsync("2", "Offsider guild members only");   // excluded either way: does not move
         _scores.Judged.Add(new JudgedScore(asks, "Offsider", "fifo", new FitScore(0, []), Verdict.Good));
 
         var impact = Assert.Single(await Service().ImpactAsync(Ct), i => i.ItemId == "hrwl");

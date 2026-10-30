@@ -60,7 +60,7 @@ public class MarketSnapshotServiceTests
             Categories = [new() { Name = "HVAC-R", Codes = new() { ["seek"] = "1313" } }, new() { Name = "Only elsewhere", Codes = new() { ["adzuna"] = "x" } }],
             FullCities = ["Perth WA"],
             CountOnlyCities = ["All Australia"],
-            Terms = [new() { Name = "482", Phrase = "482" }, new() { Name = "working_rights", Phrase = "working rights" }],
+            Terms = [new() { Name = "fifo", Phrase = "fifo" }, new() { Name = "night_shift", Phrase = "night shift" }],
             RetryPause = TimeSpan.Zero,
         };
         return o;
@@ -103,7 +103,7 @@ public class MarketSnapshotServiceTests
         // 1 category with a Seek code × 2 cities × (total + 2 terms); the Adzuna-only one is skipped.
         Assert.Equal(6, seek.Counted.Count);
         Assert.All(seek.Counted, c => Assert.Equal("1313", c.Code));
-        Assert.Contains(("1313", "All Australia", "working rights"), seek.Counted);
+        Assert.Contains(("1313", "All Australia", "night shift"), seek.Counted);
         Assert.Equal((SnapshotStatus.Ok, 6, 6, 1), (snapshot.Status, snapshot.Expected, snapshot.Saved, snapshot.Listings));
         Assert.Equal("Perth WA", Assert.Single(_repo.Saved[0].Listings).City);
     }
@@ -123,7 +123,7 @@ public class MarketSnapshotServiceTests
     [Fact]
     public async Task A_count_failing_twice_leaves_it_out_and_marks_the_snapshot_partial()
     {
-        var seek = new FakeMarket { Count = (_, _, term) => term?.Text == "482" ? throw new HttpRequestException("503") : 50 };
+        var seek = new FakeMarket { Count = (_, _, term) => term?.Text == "fifo" ? throw new HttpRequestException("503") : 50 };
 
         var snapshot = Assert.Single(await Service(seek).TakeAsync(Today, Ct));
 

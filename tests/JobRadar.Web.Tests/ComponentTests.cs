@@ -41,7 +41,7 @@ public class ComponentTests : BunitContext
     [Fact]
     public void An_excluded_listing_has_no_base_line_and_says_why()
     {
-        var score = new FitScore(0, [new ScoreItem(ScoreRule.CitizenshipRequired, "australian citizen", ScoreWhere.Text, -50)]);
+        var score = new FitScore(0, [new ScoreItem(ScoreRule.EligibilityRestricted, "guild members only", ScoreWhere.Text, -50)]);
 
         var cut = Render<Explanation>(p => p.Add(x => x.Score, score));
 

@@ -22,24 +22,24 @@ public sealed record MarketRules
     public IReadOnlyDictionary<string, IReadOnlyList<string>> FullTextGroups { get; init; } = FullTextGroup.Code;
 
     // Exclusions.
-    public required Regex CitizenshipRequired { get; init; }
-    public required Regex WorkRightsIncompatible { get; init; }
-    public required Regex IdentifiedRole { get; init; }
+    public required Regex Restricted { get; init; }
+    public required Regex Incompatible { get; init; }
+    public required Regex ReservedTitle { get; init; }
     public required Regex LeadershipTitle { get; init; }
     public required Regex SeniorRank { get; init; }
     public required Regex MidTitle { get; init; }
     public required Regex JuniorTitle { get; init; }
 
     // Points.
-    public required Regex SponsorshipDenied { get; init; }
-    public required IReadOnlyList<string> SponsorshipOffered { get; init; }
+    public required Regex AssistanceDenied { get; init; }
+    public required IReadOnlyList<string> AssistanceOffered { get; init; }
     /// <summary>A substring that alone earns the assistance bonus (<see cref="EligibilityRules.AssistanceWord"/>).</summary>
     public string? AssistanceWord { get; init; }
     public required string Remote { get; init; }
     public required string Hybrid { get; init; }
     public required IReadOnlyList<string> Fifo { get; init; }
     public required IReadOnlyList<string> NoExperience { get; init; }
-    public required Regex WorkingHolidayFriendly { get; init; }
+    public required Regex Welcome { get; init; }
     public required Regex FlexibleWorkType { get; init; }
 
     // Restrictions and the qualification cap.
@@ -84,21 +84,21 @@ public sealed record MarketRules
             Market = JobMarket.AU,
             Eligibility = e,
             FullTextGroups = Groups(e),
-            CitizenshipRequired = Compile(e.RestrictedPattern, JobMarket.AU, nameof(EligibilityRules.RestrictedPattern)),
-            WorkRightsIncompatible = Compile(e.IncompatiblePattern, JobMarket.AU, nameof(EligibilityRules.IncompatiblePattern)),
-            IdentifiedRole = Compile(e.ReservedTitlePattern, JobMarket.AU, nameof(EligibilityRules.ReservedTitlePattern)),
+            Restricted = Compile(e.RestrictedPattern, JobMarket.AU, nameof(EligibilityRules.RestrictedPattern)),
+            Incompatible = Compile(e.IncompatiblePattern, JobMarket.AU, nameof(EligibilityRules.IncompatiblePattern)),
+            ReservedTitle = Compile(e.ReservedTitlePattern, JobMarket.AU, nameof(EligibilityRules.ReservedTitlePattern)),
             LeadershipTitle = ListingPatterns.LeadershipTitle,
             SeniorRank = ListingPatterns.SeniorRank,
             MidTitle = ListingPatterns.MidTitle,
             JuniorTitle = ListingPatterns.JuniorTitle,
-            SponsorshipDenied = Compile(e.AssistanceDeniedPattern, JobMarket.AU, nameof(EligibilityRules.AssistanceDeniedPattern)),
-            SponsorshipOffered = e.AssistanceOfferedPhrases,
+            AssistanceDenied = Compile(e.AssistanceDeniedPattern, JobMarket.AU, nameof(EligibilityRules.AssistanceDeniedPattern)),
+            AssistanceOffered = e.AssistanceOfferedPhrases,
             AssistanceWord = e.AssistanceWord,
             Remote = "remote",
             Hybrid = "hybrid",
             Fifo = ["fifo", "fly-in fly-out"],
             NoExperience = ListingPatterns.NoExperience,
-            WorkingHolidayFriendly = Compile(e.WelcomePattern, JobMarket.AU, nameof(EligibilityRules.WelcomePattern)),
+            Welcome = Compile(e.WelcomePattern, JobMarket.AU, nameof(EligibilityRules.WelcomePattern)),
             FlexibleWorkType = ListingPatterns.FlexibleWorkType,
             TrainingTitle = ListingPatterns.TrainingTitle,
             EntryTitle = ListingPatterns.EntryTitle,
@@ -120,20 +120,20 @@ public sealed record MarketRules
     public static MarketRules Brazil { get; } = new()
     {
         Market = JobMarket.BR,
-        CitizenshipRequired = BrazilPatterns.Never,
-        WorkRightsIncompatible = BrazilPatterns.Never,
-        IdentifiedRole = BrazilPatterns.Never,
+        Restricted = BrazilPatterns.Never,
+        Incompatible = BrazilPatterns.Never,
+        ReservedTitle = BrazilPatterns.Never,
         LeadershipTitle = BrazilPatterns.LeadershipTitle,
         SeniorRank = BrazilPatterns.SeniorRank,
         MidTitle = BrazilPatterns.MidTitle,
         JuniorTitle = BrazilPatterns.JuniorTitle,
-        SponsorshipDenied = BrazilPatterns.Never,
-        SponsorshipOffered = [],
+        AssistanceDenied = BrazilPatterns.Never,
+        AssistanceOffered = [],
         Remote = "remoto",
         Hybrid = "híbrido",
         Fifo = [],
         NoExperience = BrazilPatterns.NoExperience,
-        WorkingHolidayFriendly = BrazilPatterns.Never,
+        Welcome = BrazilPatterns.Never,
         FlexibleWorkType = BrazilPatterns.Never,
         TrainingTitle = BrazilPatterns.TrainingTitle,
         EntryTitle = BrazilPatterns.TrainingTitle,
@@ -179,20 +179,20 @@ public sealed record MarketRules
         {
             Market = market,
             Eligibility = e,
-            CitizenshipRequired = BrazilPatterns.Never,
-            WorkRightsIncompatible = BrazilPatterns.Never,
-            IdentifiedRole = BrazilPatterns.Never,
+            Restricted = BrazilPatterns.Never,
+            Incompatible = BrazilPatterns.Never,
+            ReservedTitle = BrazilPatterns.Never,
             LeadershipTitle = ListingPatterns.LeadershipTitle,
             SeniorRank = ListingPatterns.SeniorRank,
             MidTitle = ListingPatterns.MidTitle,
             JuniorTitle = ListingPatterns.JuniorTitle,
-            SponsorshipDenied = BrazilPatterns.Never,
-            SponsorshipOffered = [],
+            AssistanceDenied = BrazilPatterns.Never,
+            AssistanceOffered = [],
             Remote = "remote",
             Hybrid = "hybrid",
             Fifo = [],
             NoExperience = ListingPatterns.NoExperience,
-            WorkingHolidayFriendly = BrazilPatterns.Never,
+            Welcome = BrazilPatterns.Never,
             FlexibleWorkType = BrazilPatterns.Never,
             TrainingTitle = ListingPatterns.TrainingTitle,
             EntryTitle = ListingPatterns.EntryTitle,

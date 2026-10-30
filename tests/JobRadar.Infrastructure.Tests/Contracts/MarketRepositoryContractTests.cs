@@ -33,11 +33,11 @@ public abstract class MarketRepositoryContractTests(DatabaseFixture db)
     public async Task Only_good_snapshots_feed_the_counts_and_the_last_good_totals()
     {
         await db.ResetAsync();
-        await SaveAsync(Snap(D1), [new("HVAC-R", "Perth WA", null, 100), new("HVAC-R", "Perth WA", "482", 5)]);
+        await SaveAsync(Snap(D1), [new("HVAC-R", "Perth WA", null, 100), new("HVAC-R", "Perth WA", "fifo", 5)]);
         await SaveAsync(Snap(D2, SnapshotStatus.Partial), [new("HVAC-R", "Perth WA", null, 999)]);
 
         var counts = await Read(r => r.GetGoodCountsAsync("seek", D1, D3, Ct));
-        Assert.Equal([(D1, (string?)null, 100), (D1, "482", 5)], counts.OrderBy(c => c.Term).Select(c => (c.Date, c.Term, c.Total)));
+        Assert.Equal([(D1, (string?)null, 100), (D1, "fifo", 5)], counts.OrderBy(c => c.Term).Select(c => (c.Date, c.Term, c.Total)));
 
         var last = await Read(r => r.GetLastGoodTotalsAsync("seek", D3, Ct));
         Assert.Equal(100, last[("HVAC-R", "Perth WA")]);

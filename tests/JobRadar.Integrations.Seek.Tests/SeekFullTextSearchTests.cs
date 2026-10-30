@@ -10,9 +10,9 @@ public class SeekFullTextSearchTests
         Enumerable.Range(from, count).Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     [Theory]
-    [InlineData("australian citizen", "\"australian citizen\"")]
-    [InlineData("backpackers", "backpackers")]
-    [InlineData("12 months + working rights", "\"12 months\" \"working rights\"")]
+    [InlineData("guild member", "\"guild member\"")]
+    [InlineData("newcomers", "newcomers")]
+    [InlineData("24 months + guild standing", "\"24 months\" \"guild standing\"")]
     public void Phrases_are_quoted_and_joined_with_and(string term, string query)
     {
         Assert.Equal(query, SeekFullTextSearch.Query(new FullTextTerm(term)));
@@ -23,12 +23,12 @@ public class SeekFullTextSearchTests
     {
         var api = new FakeSeekApi { Respond = _ => FakeSeekApi.PageOf(2, ["1", "2"]) };
 
-        var result = await api.FullText().FindAsync(new FullTextTerm("working holiday"), 5, Ct);
+        var result = await api.FullText().FindAsync(new FullTextTerm("seasonal member"), 5, Ct);
 
         Assert.Equal(["1", "2"], result.SourceIds.Order());
         Assert.True(result.Complete);
         var q = Assert.Single(api.Queries);
-        Assert.Equal(("\"working holiday\"", "All Australia", "5"), (q["keywords"], q["where"], q["dateRange"]));
+        Assert.Equal(("\"seasonal member\"", "All Australia", "5"), (q["keywords"], q["where"], q["dateRange"]));
     }
 
     [Fact]

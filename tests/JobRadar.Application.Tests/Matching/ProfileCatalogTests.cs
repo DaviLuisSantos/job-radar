@@ -1,6 +1,7 @@
 using JobRadar.Application.Matching;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
+using JobRadar.Domain.Tests.Matching;
 using Microsoft.Extensions.Options;
 
 namespace JobRadar.Application.Tests.Matching;
@@ -18,7 +19,31 @@ public class ProfileCatalogTests
         new(Options.Create(new MatchingOptions
         {
             Profiles = profiles.ToDictionary(p => p.Name, p => p.Options),
+            Markets = FictionalMarkets(),
         }), ScoringPolicy.Default);
+
+    /// <summary>The fictional AU market of the scorer tests (<see cref="TestMarkets"/>), as configuration.</summary>
+    internal static Dictionary<string, MarketRulesOptions> FictionalMarkets()
+    {
+        var r = TestMarkets.Fictional;
+        return new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["AU"] = new MarketRulesOptions
+            {
+                Eligibility = new EligibilityOptions
+                {
+                    RestrictedPattern = r.RestrictedPattern,
+                    IncompatiblePattern = r.IncompatiblePattern,
+                    ReservedTitlePattern = r.ReservedTitlePattern,
+                    WelcomePattern = r.WelcomePattern,
+                    AssistanceDeniedPattern = r.AssistanceDeniedPattern,
+                    AssistanceOfferedPhrases = [.. r.AssistanceOfferedPhrases],
+                    AssistanceWord = r.AssistanceWord,
+                    Phrases = r.Phrases.ToDictionary(p => p.Key, p => p.Value.ToList(), StringComparer.OrdinalIgnoreCase),
+                },
+            },
+        };
+    }
 
     [Fact]
     public void Every_keyword_is_searched_in_every_location()
@@ -81,7 +106,7 @@ public class ProfileCatalogTests
 
         Assert.Equal(baseline, ProfileCatalog.Build("tech", moreSearches, ScoringPolicy.Default).RulesHash);
         Assert.NotEqual(baseline, ProfileCatalog.Build("tech", newSignal, ScoringPolicy.Default).RulesHash);
-        Assert.NotEqual(baseline, ProfileCatalog.Build("tech", Dotnet(), ScoringPolicy.Default with { SponsorBonus = 20 }).RulesHash);
+        Assert.NotEqual(baseline, ProfileCatalog.Build("tech", Dotnet(), ScoringPolicy.Default with { AssistanceBonus = 20 }).RulesHash);
         Assert.Equal(baseline, ProfileCatalog.Build("tech", Dotnet(), ScoringPolicy.Default).RulesHash);
     }
 
@@ -176,7 +201,7 @@ public class ProfileCatalogTests
 
         Assert.Equal(JobMarket.AU, rules.Market);
         Assert.Equal("relocation", rules.AssistanceWord);
-        Assert.Matches(rules.CitizenshipRequired, "guild members only");
+        Assert.Matches(rules.Restricted, "guild members only");
         // Group keys in lower case, blank phrases dropped, the code's groups kept.
         Assert.Equal(["seasonal member"], rules.FullTextGroups[FullTextGroup.Welcome]);
         Assert.Equal(["guild member"], rules.FullTextGroups[FullTextGroup.Doubt]);
@@ -194,14 +219,14 @@ public class ProfileCatalogTests
 
     [Theory]
     [InlineData("RestrictedPattern", "Matching:Markets:AU:Eligibility:RestrictedPattern is not a valid regular expression")]
-    [InlineData("Phrases", "unknown groups: citizens")]
+    [InlineData("Phrases", "unknown groups: members")]
     public void A_block_that_would_not_score_stops_the_start(string broken, string message)
     {
         var block = Fictional();
         if (broken == "RestrictedPattern")
             block.RestrictedPattern = "guild (members";
         else
-            block.Phrases["citizens"] = ["x"];
+            block.Phrases["members"] = ["x"];
 
         var error = Assert.Throws<InvalidOperationException>(() => WithMarkets(Au(block), ("tech", Dotnet())));
         Assert.Contains(message, error.Message);

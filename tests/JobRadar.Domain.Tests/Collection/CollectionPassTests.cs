@@ -16,8 +16,8 @@ public class CollectionPassTests
     public void The_last_pass_starts_after_the_first_long_pause_since_every_run_before_ended()
     {
         // As on 2026-10-23: a pass recovered at 18:04 (last run started 18:10) and the scheduled one at 19:01.
-        var recovered = new[] { Run(Morning.AddMinutes(-57)), Run(Morning.AddMinutes(-51), "term: backpackers") };
-        var pass = new[] { Run(Morning), Run(Morning.AddMinutes(2), "term: backpackers"), Run(Morning.AddMinutes(14)) };
+        var recovered = new[] { Run(Morning.AddMinutes(-57)), Run(Morning.AddMinutes(-51), "term: newcomers") };
+        var pass = new[] { Run(Morning), Run(Morning.AddMinutes(2), "term: newcomers"), Run(Morning.AddMinutes(14)) };
 
         var last = CollectionPass.Last([.. pass.Reverse(), Run(Morning.AddDays(-1)), .. recovered])!;
 
@@ -31,7 +31,7 @@ public class CollectionPassTests
     {
         // One search retrying for 20 minutes; the terms start only when it ends.
         var slow = Run(Morning) with { FinishedAt = Morning.AddMinutes(20) };
-        var terms = Run(Morning.AddMinutes(21), "term: backpackers");
+        var terms = Run(Morning.AddMinutes(21), "term: newcomers");
 
         var last = CollectionPass.Last([Run(Morning.AddSeconds(-5)), slow, terms])!;
 
@@ -43,14 +43,14 @@ public class CollectionPassTests
     {
         var pass = new CollectionPass(
         [
-            Run(Morning, "term: permanent resident", complete: false),
+            Run(Morning, "term: guild pass", complete: false),
             Run(Morning, "fifo @ perth"),
-            Run(Morning, "term: australian citizen", complete: false),
+            Run(Morning, "term: guild member", complete: false),
             Run(Morning, "labourer @ perth", error: "HttpRequestException: 503"),
         ]);
 
         Assert.Equal(
-            ["labourer @ perth", "term: australian citizen", "term: permanent resident"],
+            ["labourer @ perth", "term: guild member", "term: guild pass"],
             pass.Problems.Select(r => r.SearchKey));
     }
 }

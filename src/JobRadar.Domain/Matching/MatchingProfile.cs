@@ -33,8 +33,8 @@ public sealed record MatchingProfile(
     public bool RewardRemote { get; init; } = true;
 
     /// <summary>
-    /// Locations that rule a listing out for this profile ("Perth WA" for the 88 days of regional work, which
-    /// do not count in the city), matched as a whole token in the location label.
+    /// Locations that rule a listing out for this profile ("Perth WA" for farm work outside the city), matched as a
+    /// whole token in the location label.
     /// </summary>
     public IReadOnlyList<string> ExcludedLocations { get; init; } = [];
 
@@ -61,20 +61,21 @@ public sealed record MatchingProfile(
 }
 
 /// <summary>
-/// Weights shared by every profile. Defaults are the values calibrated in the prototype for a
-/// Working Holiday visa holder: sponsorship is a bonus, not a requirement, and the weights added after
-/// (truck licence, tickets, work rights) are the ones calibrated against the candidate's labels since.
+/// Weights shared by every profile. Defaults are the values calibrated in the prototype for the author's first
+/// market, where the employer's assistance is a bonus, not a requirement; the weights added after (truck licence,
+/// tickets, eligibility) are the ones calibrated against the candidate's labels since.
 /// Bonuses and penalties are magnitudes: the scorer adds the first and subtracts the second.
 /// </summary>
 public sealed record ScoringPolicy
 {
     public bool ExcludeSeniorTitles { get; init; } = true;
-    public bool VisaRequired { get; init; }
-    public int SponsorBonus { get; init; } = 10;
-    public int NoSponsorPenalty { get; init; } = 10;
+    /// <summary>The profile's status needs the employer's assistance: an ad that does not confirm it costs points.</summary>
+    public bool AssistanceRequired { get; init; }
+    public int AssistanceBonus { get; init; } = 10;
+    public int NoAssistancePenalty { get; init; } = 10;
 
-    /// <summary>When the visa is required and the ad turns sponsorship down.</summary>
-    public int SponsorDeniedPenalty { get; init; } = 15;
+    /// <summary>When assistance is required and the ad turns it down.</summary>
+    public int AssistanceDeniedPenalty { get; init; } = 15;
     public int DisqualifyMaxScore { get; init; } = 35;
     public int ApprenticeshipPenalty { get; init; } = 25;
     public int LongContractPenalty { get; init; } = 10;
@@ -98,9 +99,10 @@ public sealed record ScoringPolicy
 
     /// <summary>Per "no experience required"-style phrase, for profiles with an entry-level boost.</summary>
     public int EntryLevelBonus { get; init; } = 12;
-    public int WorkingHolidayBonus { get; init; } = 15;
+    /// <summary>The ad welcomes the profile's status.</summary>
+    public int WelcomeBonus { get; init; } = 15;
 
-    /// <summary>Contract, temp and casual: they fit the six months per employer.</summary>
+    /// <summary>Contract, temp and casual: short engagements, for a profile that cannot stay long with one employer.</summary>
     public int FlexibleWorkTypeBonus { get; init; } = 5;
     public int PreferredLocationBonus { get; init; } = 10;
 
@@ -111,11 +113,11 @@ public sealed record ScoringPolicy
     public int CompressAbove { get; init; } = 80;
     public int CompressionDivisor { get; init; } = 3;
 
-    // Work rights and pay, from the full-text phrases (FullTextGroup) or a captured ad.
-    public int CitizenshipPenalty { get; init; } = 55;
-    public int WhvWithResidencyPenalty { get; init; } = 55;
-    public int AmbiguousRightsPenalty { get; init; } = 10;
-    public int TwelveMonthRightsPenalty { get; init; } = 40;
+    // Eligibility and pay, from the full-text phrases (FullTextGroup) or a captured ad.
+    public int EligibilityDoubtPenalty { get; init; } = 55;
+    public int WelcomeRetractedPenalty { get; init; } = 55;
+    public int EligibilityAmbiguousPenalty { get; init; } = 10;
+    public int EligibilityTenurePenalty { get; init; } = 40;
     public int CommissionOnlyPenalty { get; init; } = 30;
     /// <summary>English as a condition, in a market whose ads are not in English: something to train, not a no.</summary>
     public int EnglishRequiredPenalty { get; init; } = 10;
@@ -181,19 +183,19 @@ public static class FullTextGroup
 {
     /// <summary>A condition the profile's status cannot meet: excludes, like <see cref="EligibilityRules.IncompatiblePattern"/>.</summary>
     public const string Exclude = "exclude";
-    /// <summary><see cref="ScoringPolicy.CitizenshipPenalty"/>: a status the profile lacks, unless the ad also welcomes the profile.</summary>
+    /// <summary><see cref="ScoringPolicy.EligibilityDoubtPenalty"/>: a status the profile lacks, unless the ad also welcomes the profile.</summary>
     public const string Doubt = "doubt";
-    /// <summary><see cref="ScoringPolicy.AmbiguousRightsPenalty"/>: wording that may or may not leave the profile out.</summary>
+    /// <summary><see cref="ScoringPolicy.EligibilityAmbiguousPenalty"/>: wording that may or may not leave the profile out.</summary>
     public const string Ambiguous = "ambiguous";
-    /// <summary><see cref="ScoringPolicy.WorkingHolidayBonus"/>, unless the same ad also has a <see cref="WelcomeRetracted"/> phrase.</summary>
+    /// <summary><see cref="ScoringPolicy.WelcomeBonus"/>, unless the same ad also has a <see cref="WelcomeRetracted"/> phrase.</summary>
     public const string Welcome = "welcome";
     /// <summary>
-    /// <see cref="ScoringPolicy.WhvWithResidencyPenalty"/>: a welcome and a reserved status in the same ad ("a + b"). In practice
+    /// <see cref="ScoringPolicy.WelcomeRetractedPenalty"/>: a welcome and a reserved status in the same ad ("a + b"). In practice
     /// that is mostly turning the profile down, so the mention neither earns the welcome bonus nor cancels the doubt
     /// penalties.
     /// </summary>
     public const string WelcomeRetracted = "welcome_retracted";
-    /// <summary><see cref="ScoringPolicy.TwelveMonthRightsPenalty"/>: a duration the profile's status cannot cover, unless the ad also welcomes it.</summary>
+    /// <summary><see cref="ScoringPolicy.EligibilityTenurePenalty"/>: a duration the profile's status cannot cover, unless the ad also welcomes it.</summary>
     public const string Tenure = "tenure";
     /// <summary><see cref="ScoringPolicy.CommissionOnlyPenalty"/>.</summary>
     public const string Commission = "commission";

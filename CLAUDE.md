@@ -34,7 +34,7 @@ JOBRADAR_LIVE_TESTS=1 dotnet test --project tests/JobRadar.Worker.Tests
 ```
 
 ```bash
-JOBRADAR_PARITY_FILE=D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json dotnet test --project tests/JobRadar.Domain.Tests
+JOBRADAR_PARITY_FILE=D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json JOBRADAR_LOCAL_SETTINGS=D:\Desenvolvimento\job-radar-au\src\JobRadar.Worker\appsettings.Local.json dotnet test --project tests/JobRadar.Domain.Tests
 ```
 
 ```bash
@@ -62,8 +62,11 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
 - Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek, da Gupy, do Himalayas e do Jobicy pela composição completa.
   Fora do CI de propósito. Rode ao mexer numa `Integrations.*`, ou quando a coleta começar a falhar.
 - Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
-  fora do repo (são anúncios reais). **Mexeu em `Domain/Matching`? Rode.** Mudança de regra intencional
-  quebra a paridade: aí registre no `docs/plano.md` e incremente `FitScorer.RulesVersion`.
+  fora do repo (são anúncios reais), pontuadas com o bloco de elegibilidade do arquivo local (`JOBRADAR_LOCAL_SETTINGS`;
+  no checkout principal ele é achado sozinho, num worktree aponte para o do checkout principal). **Mexeu em
+  `Domain/Matching`? Rode.** Mudança de regra intencional quebra a paridade: aí registre no `docs/plano.md` e incremente
+  `FitScorer.RulesVersion`. Os casos com texto real de elegibilidade ficam em `scoring-cases.Local.json`, ao lado do
+  arquivo local (`[LocalCasesFact]`, `JOBRADAR_LOCAL_CASES`); os testes públicos usam o mercado fictício de `TestMarkets`.
 - Testes usam Microsoft.Testing.Platform (opt-in em `global.json`), não VSTest.
 - Versões de pacote só em `Directory.Packages.props` (gerenciamento central, com pinning transitivo).
 
@@ -119,7 +122,8 @@ do Raio-X.
    devolve, o Seek não), só quando o texto muda;
 5. registra a execução em `collection_runs`, com sucesso ou erro. Falha numa busca não para as outras.
 
-**Termos** — `FullTextTermService.TagAsync`: cada frase de `ScoringPolicy.FullTextGroups` (21 hoje) e dos requisitos de cada perfil
+**Termos** — `FullTextTermService.TagAsync`: cada frase de `MarketRules.FullTextGroups` de cada mercado (as do código,
+comissão e carteira, mais as `Phrases` do bloco de elegibilidade do mercado) e dos requisitos de cada perfil
 (`ProfileRequirements`: "frase + palavra de contexto", para caber no teto de 500; os grupos de
 `ScoringPolicy.ContextGroups` também vão com cada palavra de contexto) é
 buscada na Austrália toda por cada fonte com a capacidade `IFullTextSearch` (o Seek tem: a busca dele cobre
@@ -198,7 +202,7 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   execução e centenas de buscas acumulavam entidades rastreadas.
 - `appsettings.Local.json` é adicionado depois das fontes padrão; por isso o `Program.cs` reaplica variáveis
   de ambiente e linha de comando em seguida, para elas continuarem vencendo.
-- Termos: a busca do Seek não dá o contexto da frase ("no sponsorship" também contém "sponsorship"). Por isso os
+- Termos: a busca do Seek não dá o contexto da frase (a frase negada também casa). Por isso os
   pesos dos grupos são moderados e só o grupo `exclude` elimina. A divisão por estado quando passa de 500 é
   peculiaridade do Seek e fica em `SeekFullTextSearch`, não no serviço.
 - Rótulo vale para o estado do candidato quando foi dado: uma vaga ruim porque pedia carteira HR vira boa quando
@@ -255,13 +259,14 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Score: `FitScorer` é a **única** implementação, para todo país; a ordem das fases faz parte da regra (ver o comentário
   da classe). O que uma frase quer dizer é do mercado do **perfil** (`MarketRules`, escolhida pelo `JobMarket`: AU, BR, LatamRemote,
   GlobalRemote), não do país da vaga, que só diz onde ela fica; os padrões do AU
-  ficam em `ListingPatterns`; os pesos, todos na `ScoringPolicy` (número solto
+  ficam em `ListingPatterns`, menos quem pode se candidatar: isso é dado, o bloco `Matching:Markets:<mercado>:Eligibility`
+  do arquivo local (`EligibilityRules`, impresso por `eligibility <mercado>`); os pesos, todos na `ScoringPolicy` (número solto
   no `FitScorer` é regressão: peso novo entra na política, que está no `rules_hash`). `".NET"` não casa dentro de `"ASP.NET"`
   (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
   vêm do protótipo, e a paridade depende delas. Desde a `RulesVersion` 8 a carteira de caminhão diverge do
   protótipo de propósito (−40, não −20), e desde a 9 "Assistant … Manager" é liderança: o teste de paridade conta
-  esses casos à parte. `ExcludedLocations` de um perfil exclui pelo local (o regional exclui Perth: os 88 dias não
-  contam lá); `ExcludedTitles`, por uma palavra do título (júnior, Java); `OnSiteLocations`, quando a vaga é presencial
+  esses casos à parte. `ExcludedLocations` de um perfil exclui pelo local (o de fazenda exclui Perth);
+  `ExcludedTitles`, por uma palavra do título (júnior, Java); `OnSiteLocations`, quando a vaga é presencial
   fora delas (`MarketRules.OnSite`). Regra que é do candidato vai para o perfil; o que uma frase quer dizer, para o mercado.
   O enum se chama `JobMarket` porque `Market` colide com o namespace `JobRadar.Domain.Market` (o do Raio-X).
 - Remoto: a vaga fica em `Country.Remote` (gravado `ZZ`) e diz quem pode se candidatar em `Listing.Eligibility`
