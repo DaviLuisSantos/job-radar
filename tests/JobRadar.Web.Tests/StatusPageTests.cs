@@ -40,15 +40,15 @@ public class StatusPageTests : BunitContext
             Run(Pass.AddMinutes(1), "term: australian citizen", complete: false),
             Run(Pass.AddMinutes(2), "labourer @ perth", error: "HttpRequestException: 503\n   at Polly"));
 
-        cut.WaitForAssertion(() => Assert.Contains("3 runs", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Contains("3 execuções", cut.Markup, StringComparison.Ordinal));
         var rows = cut.FindAll("h2 + p + table tbody tr");
         Assert.Equal(2, rows.Count);
         Assert.Contains("labourer @ perth", rows[0].TextContent, StringComparison.Ordinal);
-        Assert.Contains("Failed", rows[0].TextContent, StringComparison.Ordinal);
+        Assert.Contains("Falhou", rows[0].TextContent, StringComparison.Ordinal);
         Assert.Contains("HttpRequestException: 503", rows[0].TextContent, StringComparison.Ordinal);
         Assert.DoesNotContain("Polly", rows[0].TextContent, StringComparison.Ordinal);
         Assert.Contains("term: australian citizen", rows[1].TextContent, StringComparison.Ordinal);
-        Assert.Contains("Incomplete", rows[1].TextContent, StringComparison.Ordinal);
+        Assert.Contains("Incompleta", rows[1].TextContent, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -56,8 +56,8 @@ public class StatusPageTests : BunitContext
     {
         var cut = RenderWith(Run(Pass, "fifo @ perth"));
 
-        cut.WaitForAssertion(() => Assert.Contains("every one succeeded", cut.Markup, StringComparison.Ordinal));
-        Assert.Contains("this build", cut.Markup, StringComparison.Ordinal);
+        cut.WaitForAssertion(() => Assert.Contains("todas deram certo", cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("este build", cut.Markup, StringComparison.Ordinal);
     }
 
     private sealed class Runs(IReadOnlyList<CollectionRun> runs) : ICollectionRunRepository

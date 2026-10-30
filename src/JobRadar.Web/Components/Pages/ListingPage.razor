@@ -2,13 +2,13 @@
 @inject Backend Backend
 @inject TimeProvider Time
 
-<PageTitle>@(_detail?.Record.Listing.Title ?? "Listing") · JobRadar</PageTitle>
+<PageTitle>@(_detail?.Record.Listing.Title ?? "Vaga") · JobRadar</PageTitle>
 
 @if (_missing)
 {
     <section class="empty">
-        <h1>Listing not found</h1>
-        <p>@Id was never collected.</p>
+        <h1>Vaga não encontrada</h1>
+        <p>@Id nunca foi coletada.</p>
     </section>
 }
 else if (_detail is { } d)
@@ -18,7 +18,7 @@ else if (_detail is { } d)
         <header>
             <h1>@listing.Title</h1>
             <p class="meta">
-                <span>@(listing.Company ?? "Company not given")</span>
+                <span>@(listing.Company ?? "Empresa não informada")</span>
                 <span>@Wording.Location(listing.Location)</span>
                 @if (Wording.WorkType(listing.WorkType) is { Length: > 0 } wt)
                 {
@@ -31,19 +31,19 @@ else if (_detail is { } d)
             </p>
             <FactChips Facts="d.Facts" />
             <p class="muted">
-                Posted @(listing.PostedAt?.ToString("d MMM yyyy") ?? "—") · first seen @d.Record.FirstSeenAt.ToString("d MMM yyyy")
+                Publicada em @(listing.PostedAt is { } posted ? Wording.Date(posted) : "—") · vista pela primeira vez em @Wording.Date(d.Record.FirstSeenAt)
                 @if (listing.SourceCategory is { } category)
                 {
                     <text> · @category</text>
                 }
             </p>
-            <a class="button" href="@listing.Url" target="_blank" rel="noopener noreferrer">Open on @listing.Id.Source ↗</a>
+            <a class="button" href="@listing.Url" target="_blank" rel="noopener noreferrer">Abrir no @listing.Id.Source ↗</a>
         </header>
 
         @if (listing.Summary is { } summary)
         {
             <section>
-                <h2>Summary</h2>
+                <h2>Resumo</h2>
                 <ul class="summary">
                     @foreach (var part in summary.Split(" | "))
                     {
@@ -54,32 +54,32 @@ else if (_detail is { } d)
         }
 
         <section class="full-ad">
-            <h2>Full ad</h2>
+            <h2>Anúncio inteiro</h2>
             @if (d.Description is { } desc)
             {
                 <p class="muted">
-                    Captured @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin)
+                    Capturado em @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin)
                 </p>
                 <details>
-                    <summary>Show the text (@desc.Text.Length characters)</summary>
+                    <summary>Mostrar o texto (@Wording.Number(desc.Text.Length) caracteres)</summary>
                     <pre class="ad">@desc.Text</pre>
                 </details>
             }
             else
             {
-                <p class="muted">Not captured. Open the ad and click <a href="capture">Send to JobRadar</a>, or paste the text here.</p>
+                <p class="muted">Não capturado. Abra o anúncio e clique em <a href="capture">Enviar ao JobRadar</a>, ou cole o texto aqui.</p>
             }
             <label class="notes">
-                @(d.Description is null ? "Paste the full ad text" : "Replace with another text")
-                <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Full ad text"></textarea>
+                @(d.Description is null ? "Cole o texto do anúncio inteiro" : "Trocar por outro texto")
+                <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Texto do anúncio inteiro"></textarea>
             </label>
-            <button @onclick="SaveDescriptionAsync" disabled="@string.IsNullOrWhiteSpace(_pasted)">Save and rescore</button>
+            <button @onclick="SaveDescriptionAsync" disabled="@string.IsNullOrWhiteSpace(_pasted)">Salvar e recalcular a nota</button>
         </section>
 
         @if (d.Terms.Count > 0)
         {
             <section>
-                <h2>Found in the full ad</h2>
+                <h2>Encontrado no anúncio inteiro</h2>
                 <p class="chips">
                     @foreach (var term in d.Terms)
                     {
@@ -91,22 +91,22 @@ else if (_detail is { } d)
 
         <div class="columns">
             <section class="panel">
-                <h2>Your call</h2>
+                <h2>Sua avaliação</h2>
                 @if (_error is { } error)
                 {
                     <p class="alert" role="alert">@error</p>
                 }
-                <div class="segmented" role="group" aria-label="Label">
-                    <button class="good @(d.Label?.Verdict == Verdict.Good ? "on" : "")" @onclick="() => LabelAsync(Verdict.Good)">Good match</button>
-                    <button class="bad @(d.Label?.Verdict == Verdict.Bad ? "on" : "")" @onclick="() => LabelAsync(Verdict.Bad)">Bad match</button>
+                <div class="segmented" role="group" aria-label="Avaliação">
+                    <button class="good @(d.Label?.Verdict == Verdict.Good ? "on" : "")" @onclick="() => LabelAsync(Verdict.Good)">Boa</button>
+                    <button class="bad @(d.Label?.Verdict == Verdict.Bad ? "on" : "")" @onclick="() => LabelAsync(Verdict.Bad)">Ruim</button>
                     @if (d.Label is not null)
                     {
-                        <button class="ghost" @onclick="() => LabelAsync(null)">Clear</button>
+                        <button class="ghost" @onclick="() => LabelAsync(null)">Limpar</button>
                     }
                 </div>
 
-                <h3>Application</h3>
-                <div class="statuses" role="group" aria-label="Application status">
+                <h3>Candidatura</h3>
+                <div class="statuses" role="group" aria-label="Situação da candidatura">
                     @foreach (var status in Enum.GetValues<ApplicationStatus>())
                     {
                         <button class="@(d.Application?.Status == status ? "on" : "")" @onclick="() => StatusAsync(status)">@Wording.Status(status)</button>
@@ -114,18 +114,18 @@ else if (_detail is { } d)
                 </div>
                 @if (d.Application?.AppliedAt is { } applied)
                 {
-                    <p class="muted">Applied on @applied.ToString("d MMM yyyy")</p>
+                    <p class="muted">Candidatura em @Wording.Date(applied)</p>
                 }
 
                 <label class="notes">
-                    Notes
-                    <textarea rows="4" @bind="_notes" placeholder="Recruiter, contacts, next step…"></textarea>
+                    Notas
+                    <textarea rows="4" @bind="_notes" placeholder="Recrutador, contatos, próximo passo…"></textarea>
                 </label>
-                <button @onclick="SaveNotesAsync" disabled="@(_notes == d.Application?.Notes)">Save notes</button>
+                <button @onclick="SaveNotesAsync" disabled="@(_notes == d.Application?.Notes)">Salvar notas</button>
 
                 @if (d.Application is { History.Count: > 0 } app)
                 {
-                    <h3>History</h3>
+                    <h3>Histórico</h3>
                     <ol class="history">
                         @foreach (var change in app.History.Reverse())
                         {
@@ -136,17 +136,17 @@ else if (_detail is { } d)
             </section>
 
             <section class="panel">
-                <h2>Why this score</h2>
+                <h2>Por que esta nota</h2>
                 @if (d.Scores.Count == 0)
                 {
-                    <p class="muted">Not scored yet.</p>
+                    <p class="muted">Ainda sem nota.</p>
                 }
                 @foreach (var s in d.Scores)
                 {
                     <details open="@(s == d.Scores[0])">
                         <summary><ScoreBadge Value="s.Score.Final" /> @s.Profile</summary>
                         <Explanation Score="s.Score" />
-                        <p class="muted small">Scored @Wording.When(s.ScoredAt)</p>
+                        <p class="muted small">Nota calculada em @Wording.When(s.ScoredAt)</p>
                     </details>
                 }
             </section>

@@ -1,23 +1,23 @@
 @page "/calibration"
 @inject Backend Backend
 
-<PageTitle>Calibration · JobRadar</PageTitle>
+<PageTitle>Calibragem · JobRadar</PageTitle>
 
 <div class="page-head">
-    <h1>Calibration</h1>
-    <p class="muted">How the score agrees with your labels and application decisions. Change a weight, rescore, and check this again.</p>
-    <p class="muted">Aim for @Calibration.LabelGoal judged listings per profile first, some with low scores too: the triage order “across scores” deals them out.</p>
+    <h1>Calibragem</h1>
+    <p class="muted">Quanto a nota concorda com as suas avaliações e decisões de candidatura. Mude um peso, recalcule as notas e confira de novo.</p>
+    <p class="muted">Mire primeiro em @Calibration.LabelGoal vagas avaliadas por perfil, algumas com nota baixa também: a ordem de triagem “por faixa de nota” distribui essas vagas.</p>
 </div>
 
 @if (_results is null)
 {
-    <p class="muted">Loading…</p>
+    <p class="muted">Carregando…</p>
 }
 else if (_results.Count == 0)
 {
     <section class="empty">
-        <h2>Nothing judged yet</h2>
-        <p>Mark listings as good or bad, or move them to Applied or Dismissed, and they show up here.</p>
+        <h2>Nada avaliado ainda</h2>
+        <p>Marque vagas como boas ou ruins, ou mude para Candidatei ou Descartada, e elas aparecem aqui.</p>
     </section>
 }
 else
@@ -25,12 +25,12 @@ else
     <table class="grid">
         <thead>
             <tr>
-                <th>Profile</th>
-                <th class="num">Good</th>
-                <th class="num">Bad</th>
-                <th class="num" title="Of every (good, bad) pair, how often the good one scores higher">Pairs right</th>
-                <th class="num">Good ≥ @Calibration.AlertThreshold</th>
-                <th class="num">Bad ≥ @Calibration.VisibleThreshold</th>
+                <th>Perfil</th>
+                <th class="num">Boas</th>
+                <th class="num">Ruins</th>
+                <th class="num" title="De cada par (boa, ruim), quantas vezes a boa tem nota maior">Pares certos</th>
+                <th class="num">Boas ≥ @Calibration.AlertThreshold</th>
+                <th class="num">Ruins ≥ @Calibration.VisibleThreshold</th>
             </tr>
         </thead>
         <tbody>
@@ -40,7 +40,7 @@ else
                     <td><a href="@($"triage/{Uri.EscapeDataString(r.Profile)}")">@r.Profile</a></td>
                     <td class="num">@r.Good</td>
                     <td class="num">@r.Bad</td>
-                    <td class="num">@(r.PairAccuracy is { } p ? p.ToString("P0") : "—")</td>
+                    <td class="num">@(r.PairAccuracy is { } p ? p.ToString("P0", Wording.Culture) : "—")</td>
                     <td class="num">@r.GoodAtAlert / @r.Good</td>
                     <td class="num">@r.BadVisible / @r.Bad</td>
                 </tr>
@@ -49,10 +49,10 @@ else
     </table>
 
     var misses = _results.SelectMany(r => r.Disagreements).ToList();
-    <h2>Where the score disagrees with you</h2>
+    <h2>Onde a nota discorda de você</h2>
     @if (misses.Count == 0)
     {
-        <p class="muted">No disagreements: good listings at @Calibration.AlertThreshold or more, bad ones under @Calibration.VisibleThreshold.</p>
+        <p class="muted">Nenhuma discordância: vagas boas com @Calibration.AlertThreshold ou mais, ruins abaixo de @Calibration.VisibleThreshold.</p>
     }
     else
     {
@@ -64,7 +64,7 @@ else
                     <div class="what">
                         <a class="title" href="@Pages.Triage.ListingLink(m.Id)">@m.Title</a>
                         <div class="meta">
-                            <span class="chip verdict-@m.Verdict.ToString().ToLowerInvariant()">You: @Wording.Verdict(m.Verdict)</span>
+                            <span class="chip verdict-@m.Verdict.ToString().ToLowerInvariant()">Você: @Wording.Verdict(m.Verdict)</span>
                             <span>@m.Profile</span>
                         </div>
                         <ul class="why">

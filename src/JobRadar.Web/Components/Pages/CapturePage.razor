@@ -4,11 +4,11 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<PageTitle>Capture · JobRadar</PageTitle>
+<PageTitle>Captura · JobRadar</PageTitle>
 
 <div class="page-head">
-    <h1>Capture a full ad</h1>
-    <p class="muted">The score reads the full text of the ads you capture. The text stays in your database.</p>
+    <h1>Capturar um anúncio inteiro</h1>
+    <p class="muted">A nota lê o texto inteiro dos anúncios que você captura. O texto fica no seu banco de dados.</p>
 </div>
 
 @if (_id is { } id)
@@ -16,22 +16,22 @@
     <section class="panel capture">
         @if (_missing)
         {
-            <p class="alert" role="alert">@id was never collected: no profile search found it, so there is nothing to score.</p>
+            <p class="alert" role="alert">@id nunca foi coletada: nenhuma busca de perfil a encontrou, então não há o que pontuar.</p>
         }
         else if (_detail is { } d)
         {
             <h2><a href="@Pages.Triage.ListingLink(id)">@d.Record.Listing.Title</a></h2>
             <p class="meta">
-                <span>@(d.Record.Listing.Company ?? "Company not given")</span>
+                <span>@(d.Record.Listing.Company ?? "Empresa não informada")</span>
                 <span>@Wording.Location(d.Record.Listing.Location)</span>
             </p>
         }
 
         <label class="notes">
-            @(_received ? "Received from the ad page. Check it, then save." : "The ad text arrives here from the bookmarklet. If it does not, paste it (Ctrl+V).")
-            <textarea rows="14" @bind="_text" @bind:event="oninput" placeholder="Full ad text"></textarea>
+            @(_received ? "Recebido da página do anúncio. Confira e salve." : "O texto do anúncio chega aqui pelo favorito. Se não chegar, cole (Ctrl+V).")
+            <textarea rows="14" @bind="_text" @bind:event="oninput" placeholder="Texto do anúncio inteiro"></textarea>
         </label>
-        <button @onclick="SaveAsync" disabled="@(_busy || _missing || string.IsNullOrWhiteSpace(_text))">Save and rescore</button>
+        <button @onclick="SaveAsync" disabled="@(_busy || _missing || string.IsNullOrWhiteSpace(_text))">Salvar e recalcular a nota</button>
 
         @if (_error is { } error)
         {
@@ -39,10 +39,10 @@
         }
         @if (_result is { } result)
         {
-            <h3>New score</h3>
+            <h3>Nova nota</h3>
             @if (result.Scores.Count == 0)
             {
-                <p class="muted">Saved. No profile scores this listing.</p>
+                <p class="muted">Salvo. Nenhum perfil pontua esta vaga.</p>
             }
             <ul class="rows">
                 @foreach (var s in result.Scores)
@@ -66,14 +66,14 @@
 }
 
 <section class="panel setup">
-    <h2>Bookmarklet</h2>
-    <p>Drag this button to your browser's bookmarks bar: <a class="button bookmarklet" href="@BookmarkletHref" @onclick:preventDefault>Send to JobRadar</a></p>
+    <h2>Favorito</h2>
+    <p>Arraste este botão para a barra de favoritos do navegador: <a class="button bookmarklet" href="@BookmarkletHref" @onclick:preventDefault>Enviar ao JobRadar</a></p>
     <ol class="steps">
-        <li>Open a job ad on Seek, in your own browser.</li>
-        <li>Click <b>Send to JobRadar</b>. If the page changed and the ad text is not found, select the ad text first.</li>
-        <li>This page opens with the text. Check it and save: the listing is scored again at once.</li>
+        <li>Abra um anúncio de vaga no Seek, no seu próprio navegador.</li>
+        <li>Clique em <b>Enviar ao JobRadar</b>. Se a página mudou e o texto do anúncio não for encontrado, selecione o texto antes.</li>
+        <li>Esta página abre com o texto. Confira e salve: a vaga ganha nota nova na hora.</li>
     </ol>
-    <p class="muted small">The bookmarklet only reads the page you opened; JobRadar never opens Seek ad pages. It also copies the text, so pasting works when the browser keeps the two pages apart.</p>
+    <p class="muted small">O favorito só lê a página que você abriu; o JobRadar nunca abre páginas de anúncio do Seek. Ele também copia o texto, então colar funciona quando o navegador mantém as duas páginas separadas.</p>
 </section>
 
 @code {

@@ -1,7 +1,7 @@
 @* Pay, roster, accommodation and the like, read from the ad (ListingFacts), as short labels. *@
 @if (Facts.Count > 0)
 {
-    <span class="facts" aria-label="From the ad">
+    <span class="facts" aria-label="Do anúncio">
         @foreach (var fact in Facts)
         {
             <span class="chip fact fact-@fact.Kind.ToString().ToLowerInvariant()" title="@Wording.FactTitle(fact.Kind)">@fact.Text</span>

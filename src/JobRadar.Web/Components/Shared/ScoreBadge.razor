@@ -1,4 +1,4 @@
-<span class="score score-@Wording.Band(Value)" title="@(Value == 0 ? "Excluded" : $"Fit score {Value}")">@(Value == 0 ? "×" : Value)</span>
+<span class="score score-@Wording.Band(Value)" title="@(Value == 0 ? "Excluída" : $"Nota {Value}")">@(Value == 0 ? "×" : Value)</span>
 
 @code {
     [Parameter, EditorRequired] public int Value { get; set; }

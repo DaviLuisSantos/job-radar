@@ -7,8 +7,8 @@
 <PageTitle>Status · JobRadar</PageTitle>
 
 <div class="page-head">
-    <h1>Pipeline status</h1>
-    <p class="muted">Collection, full-text terms, scoring and the market snapshot run once a day.</p>
+    <h1>Status da passada diária</h1>
+    <p class="muted">Coleta, termos do texto completo, notas e retrato do mercado rodam uma vez por dia.</p>
 </div>
 
 @if (_status is { } s)
@@ -16,36 +16,36 @@
     <section class="panel status-summary">
         @if (s.LastRunMissed)
         {
-            <p class="alert" role="alert">The last scheduled run did not start. The worker runs it as soon as it is back up.</p>
+            <p class="alert" role="alert">A última passada agendada não começou. O worker roda assim que voltar.</p>
         }
         <dl>
-            <dt>Next run</dt>
-            <dd>@s.NextRun.ToString("ddd d MMM, HH:mm") (schedule time zone) · @Wording.When(s.NextRun) here</dd>
-            <dt>Last start</dt>
-            <dd>@(s.LastStart is { } last ? Wording.When(last) : "never")</dd>
-            <dt>Deployed</dt>
-            <dd>@(_deployment?.Deployed ?? "no deploy record (not installed by deploy.ps1)")@(_deployment?.Build is { } build ? $" · this build {build}" : "")</dd>
+            <dt>Próxima passada</dt>
+            <dd>@s.NextRun.ToString("ddd d MMM, HH:mm", Wording.Culture) (fuso do agendamento) · @Wording.When(s.NextRun) aqui</dd>
+            <dt>Último início</dt>
+            <dd>@(s.LastStart is { } last ? Wording.When(last) : "nunca")</dd>
+            <dt>Implantado</dt>
+            <dd>@(_deployment?.Deployed ?? "sem registro de implantação (não instalado pelo deploy.ps1)")@(_deployment?.Build is { } build ? $" · este build {build}" : "")</dd>
         </dl>
     </section>
 
     @if (s.LastPass is { } pass)
     {
         var problems = pass.Problems;
-        <h2>Last pass</h2>
+        <h2>Última passada</h2>
         <p class="muted">
-            @Wording.When(pass.StartedAt) to @Wording.When(pass.FinishedAt) · @pass.Runs.Count runs (searches and terms) ·
-            @(problems.Count == 0 ? "every one succeeded and saw its whole window." : $"{problems.Count} failed or incomplete:")
+            @Wording.When(pass.StartedAt) a @Wording.When(pass.FinishedAt) · @Wording.Number(pass.Runs.Count) execuções (buscas e termos) ·
+            @(problems.Count == 0 ? "todas deram certo e viram a janela inteira." : $"{Wording.Number(problems.Count)} com falha ou incompletas:")
         </p>
         @if (problems.Count > 0)
         {
             <table class="grid">
                 <thead>
                     <tr>
-                        <th>Search or term</th>
-                        <th>Source</th>
-                        <th>Outcome</th>
-                        <th class="num">Found</th>
-                        <th>Error</th>
+                        <th>Busca ou termo</th>
+                        <th>Fonte</th>
+                        <th>Resultado</th>
+                        <th class="num">Achadas</th>
+                        <th>Erro</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -54,8 +54,8 @@
                         <tr class="@(r.Succeeded ? "" : "warn")">
                             <td>@r.SearchKey</td>
                             <td>@r.Source</td>
-                            <td>@(r.Succeeded ? "Incomplete" : "Failed")</td>
-                            <td class="num">@r.Found.ToString("N0")</td>
+                            <td>@(r.Succeeded ? "Incompleta" : "Falhou")</td>
+                            <td class="num">@Wording.Number(r.Found)</td>
                             <td title="@r.Error">@Wording.Shorten(r.Error, 160)</td>
                         </tr>
                     }
@@ -64,35 +64,35 @@
         }
     }
 
-    <h2>Collection, by day</h2>
+    <h2>Coleta, por dia</h2>
     @if (s.Days.Count == 0)
     {
-        <p class="muted">No runs yet.</p>
+        <p class="muted">Nenhuma execução ainda.</p>
     }
     else
     {
         <table class="grid">
             <thead>
                 <tr>
-                    <th>Day</th>
-                    <th class="num">Runs</th>
-                    <th class="num" title="Searches or terms that raised an error">Failed</th>
-                    <th class="num" title="Stopped at the source cap: more listings exist">Incomplete</th>
-                    <th class="num">Found</th>
-                    <th class="num">New</th>
-                    <th>Finished</th>
+                    <th>Dia</th>
+                    <th class="num">Execuções</th>
+                    <th class="num" title="Buscas ou termos que deram erro">Com falha</th>
+                    <th class="num" title="Pararam no limite da fonte: existem mais vagas">Incompletas</th>
+                    <th class="num">Achadas</th>
+                    <th class="num">Novas</th>
+                    <th>Terminou</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var d in s.Days)
                 {
                     <tr class="@(d.Failed > 0 ? "warn" : "")">
-                        <td>@d.Day.ToString("ddd d MMM")</td>
-                        <td class="num">@d.Runs</td>
-                        <td class="num">@d.Failed</td>
-                        <td class="num">@d.Incomplete</td>
-                        <td class="num">@d.Found.ToString("N0")</td>
-                        <td class="num">@d.New.ToString("N0")</td>
+                        <td>@d.Day.ToString("ddd d MMM", Wording.Culture)</td>
+                        <td class="num">@Wording.Number(d.Runs)</td>
+                        <td class="num">@Wording.Number(d.Failed)</td>
+                        <td class="num">@Wording.Number(d.Incomplete)</td>
+                        <td class="num">@Wording.Number(d.Found)</td>
+                        <td class="num">@Wording.Number(d.New)</td>
                         <td>@Wording.When(d.LastFinished)</td>
                     </tr>
                 }
@@ -100,10 +100,10 @@
         </table>
     }
 
-    <h2>Market snapshots</h2>
+    <h2>Retratos do mercado</h2>
     @if (s.Snapshots.Count == 0)
     {
-        <p class="muted">No snapshot yet.</p>
+        <p class="muted">Nenhum retrato ainda.</p>
     }
     else
     {
@@ -111,10 +111,10 @@
             @foreach (var snap in s.Snapshots)
             {
                 <li class="row disagreement">
-                    <span class="chip snapshot-@snap.Status.ToString().ToLowerInvariant()">@snap.Status</span>
+                    <span class="chip snapshot-@snap.Status.ToString().ToLowerInvariant()">@Wording.Snapshot(snap.Status)</span>
                     <div class="what">
-                        <span class="title">@snap.Date.ToString("ddd d MMM yyyy")</span>
-                        <div class="meta"><span>@snap.Saved / @snap.Expected counts</span><span>@snap.Listings listings</span></div>
+                        <span class="title">@snap.Date.ToString("ddd d MMM yyyy", Wording.Culture)</span>
+                        <div class="meta"><span>@Wording.Number(snap.Saved) / @Wording.Number(snap.Expected) contagens</span><span>@Wording.Listings(snap.Listings)</span></div>
                         @if (snap.Issues.Count > 0)
                         {
                             <ul class="why">
@@ -132,7 +132,7 @@
 }
 else
 {
-    <p class="muted">Loading…</p>
+    <p class="muted">Carregando…</p>
 }
 
 @code {

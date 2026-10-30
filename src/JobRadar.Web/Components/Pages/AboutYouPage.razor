@@ -1,11 +1,11 @@
 @page "/me"
 @inject Backend Backend
 
-<PageTitle>About you · JobRadar</PageTitle>
+<PageTitle>Você · JobRadar</PageTitle>
 
 <div class="page-head">
-    <h1>About you</h1>
-    <p class="muted">Where you stand on what ads ask for. Each answer is saved at once and the listings it touches are scored again.</p>
+    <h1>Você</h1>
+    <p class="muted">Onde você está em relação ao que os anúncios pedem. Cada resposta é salva na hora e as vagas que ela afeta ganham nota nova.</p>
 </div>
 
 @if (_message is not null)
@@ -15,32 +15,32 @@
 
 @if (_requirements is null || _experience is null)
 {
-    <p class="muted">Loading…</p>
+    <p class="muted">Carregando…</p>
 }
 else
 {
     <section class="about">
-        <h2>Years of experience</h2>
-        <p class="muted small">In each line of work. When an ad says how many years it wants, these decide: enough is a plus, one year short a small minus, more a bigger one.</p>
+        <h2>Anos de experiência</h2>
+        <p class="muted small">Em cada área. Quando um anúncio diz quantos anos quer, estes decidem: o bastante soma, um ano a menos tira um pouco, mais que isso tira mais.</p>
         <div class="cards">
             @foreach (var (profile, years) in _experience)
             {
                 <div class="card">
                     <div class="card-head">
                         <b>@profile</b>
-                        <span class="muted">@(years is { } y ? Wording.Years(y) : "not set")</span>
+                        <span class="muted">@(years is { } y ? Wording.Years(y) : "não informado")</span>
                     </div>
-                    <div class="chips" role="group" aria-label="@($"Years in {profile}")">
+                    <div class="chips" role="group" aria-label="@($"Anos em {profile}")">
                         @foreach (var option in YearOptions)
                         {
                             <button type="button" class="@(years == option ? "on" : null)" disabled="@Busy"
                                     @onclick="() => SetYearsAsync(profile, option)">@Wording.YearsShort(option)</button>
                         }
-                        <input type="number" min="0" max="60" step="0.5" aria-label="@($"Other number of years in {profile}")"
-                               placeholder="other" disabled="@Busy" @onchange="e => SetYearsAsync(profile, ParseYears(e.Value as string))" />
+                        <input type="number" min="0" max="60" step="0.5" aria-label="@($"Outro número de anos em {profile}")"
+                               placeholder="outro" disabled="@Busy" @onchange="e => SetYearsAsync(profile, ParseYears(e.Value as string))" />
                         @if (years is not null)
                         {
-                            <button type="button" class="ghost" disabled="@Busy" @onclick="() => SetYearsAsync(profile, null)">Clear</button>
+                            <button type="button" class="ghost" disabled="@Busy" @onclick="() => SetYearsAsync(profile, null)">Limpar</button>
                         }
                     </div>
                 </div>
@@ -67,7 +67,7 @@ else
                             <b>@title</b>
                             @if (r.Profiles.Count > 0)
                             {
-                                <span class="muted small">checked in @string.Join(", ", r.Profiles)</span>
+                                <span class="muted small">conta em @string.Join(", ", r.Profiles)</span>
                             }
                         </div>
                         @if (hint.Length > 0)
@@ -83,11 +83,11 @@ else
                         </div>
                         @if (r.IsDefault)
                         {
-                            <p class="muted small">Not answered yet: weighed as “@Wording.StateButton(r.State)”.</p>
+                            <p class="muted small">Ainda sem resposta: pesa como “@Wording.StateButton(r.State)”.</p>
                         }
                         else
                         {
-                            <button type="button" class="link small" disabled="@Busy" @onclick="() => SetStateAsync(r, null)">Back to the default</button>
+                            <button type="button" class="link small" disabled="@Busy" @onclick="() => SetStateAsync(r, null)">Voltar ao padrão</button>
                         }
                     </div>
                 }
@@ -95,7 +95,7 @@ else
         </section>
     }
 
-    <p class="muted small">To see how much each one moves your listings, open <a href="requirements">Requirements</a>.</p>
+    <p class="muted small">Para ver quanto cada um mexe nas suas vagas, abra <a href="requirements">Requisitos</a>.</p>
 }
 
 @code {
@@ -105,9 +105,9 @@ else
 
     private static readonly (RequirementKind Kind, string Heading, string Intro)[] Sections =
     [
-        (RequirementKind.Licence, "Licences and tickets", "What you hold, what a short course would give you, and what is years away."),
-        (RequirementKind.Qualification, "Qualifications", "Trades and degrees as Australia counts them."),
-        (RequirementKind.Experience, "Experience an ad asks for without a number", "Used only when the ad gives no number of years."),
+        (RequirementKind.Licence, "Licenças e tickets", "O que você tem, o que um curso curto daria e o que está a anos de distância."),
+        (RequirementKind.Qualification, "Formações", "Ofícios e diplomas como a Austrália os reconhece."),
+        (RequirementKind.Experience, "Experiência que o anúncio pede sem número", "Usada só quando o anúncio não dá o número de anos."),
     ];
 
     private IReadOnlyList<RequirementStatus>? _requirements;
@@ -131,7 +131,7 @@ else
         {
             var (_, rescored) = await Backend.RunAsync<CandidateRequirementService, (RequirementItem, int)>(s => s.SetAsync(requirement.Item.Id, state));
             var title = Wording.Requirement(requirement.Item.Id).Title;
-            return $"{title}: {(state is { } s ? Wording.StateButton(s) : "back to the default")}. {Wording.Listings(rescored)} scored again.";
+            return $"{title}: {(state is { } s ? Wording.StateButton(s) : "de volta ao padrão")}. {Wording.Listings(rescored)} com nota nova.";
         });
     }
 
@@ -139,13 +139,13 @@ else
         await SaveAsync(async () =>
         {
             var rescored = await Backend.RunAsync<CandidateRequirementService, int>(s => s.SetExperienceAsync(profile, years));
-            return $"{profile}: {(years is { } y ? Wording.Years(y) : "years cleared")}. {Wording.Listings(rescored)} scored again.";
+            return $"{profile}: {(years is { } y ? Wording.Years(y) : "anos apagados")}. {Wording.Listings(rescored)} com nota nova.";
         });
 
     private async Task SaveAsync(Func<Task<string>> save)
     {
         Busy = true;
-        _message = "Saving…";
+        _message = "Salvando…";
         try
         {
             _message = await save();
@@ -153,7 +153,7 @@ else
         }
         catch (Exception ex)
         {
-            _message = $"Not saved: {ex.Message}";
+            _message = $"Não foi salvo: {ex.Message}";
         }
         finally
         {

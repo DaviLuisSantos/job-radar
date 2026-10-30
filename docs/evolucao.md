@@ -300,7 +300,7 @@ A chave de busca do BR segue `(br)`. A elegibilidade (campo e migration) ficou p
 informa: sem fonte, seria uma coluna sempre vazia. Paridade a rodar no trabalhopc (o `FitScorer` mudou de onde tira as
 regras).
 
-**5.2 Interface: base.** MudBlazor, tema (claro e escuro) e `Wording` em português. Barra superior com o seletor de
+**5.2 Interface: base.** ✅ 2026-10-30 (estrutura em `a27d47c`, português neste commit; prints do README ficam para depois da 5.3). MudBlazor, tema (claro e escuro) e `Wording` em português. Barra superior com o seletor de
 mercado (contagem de novas em cada um) e os perfis do mercado logo abaixo; Captura, Você, Requisitos, Calibragem e Status
 num menu de ajustes. Layout responsivo, com gaveta no celular. As teclas da triagem (`j` `k` `g` `b` `u` `o`) continuam.
 

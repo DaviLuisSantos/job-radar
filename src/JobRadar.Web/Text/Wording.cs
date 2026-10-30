@@ -1,5 +1,6 @@
 using System.Globalization;
 using JobRadar.Domain.Listings;
+using JobRadar.Domain.Market;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
 
@@ -25,167 +26,208 @@ public static class Wording
 
     public static string ProfilesOf(string market) => $"Perfis de {market}";
 
+    /// <summary>
+    /// pt-BR for everything shown: "1.234", "0,5", "21 out 2026". The abbreviated month and day names lose
+    /// their trailing dot ("out." becomes "out"), which reads as clutter in a table cell.
+    /// </summary>
+    public static readonly CultureInfo Culture = BuildCulture();
+
+    private static CultureInfo BuildCulture()
+    {
+        var culture = (CultureInfo)CultureInfo.GetCultureInfo("pt-BR").Clone();
+        var format = culture.DateTimeFormat;
+        format.AbbreviatedMonthNames = [.. format.AbbreviatedMonthNames.Select(n => n.TrimEnd('.'))];
+        format.AbbreviatedMonthGenitiveNames = [.. format.AbbreviatedMonthGenitiveNames.Select(n => n.TrimEnd('.'))];
+        format.AbbreviatedDayNames = [.. format.AbbreviatedDayNames.Select(n => n.TrimEnd('.'))];
+        return CultureInfo.ReadOnly(culture);
+    }
+
     public static string Describe(ScoreItem item) => item.Rule switch
     {
-        ScoreRule.CitizenshipRequired => $"Citizenship or PR required: “{item.Detail}”",
-        ScoreRule.WorkRightsIncompatible => $"Needs work rights a working holiday visa cannot give: “{item.Detail}”",
-        ScoreRule.IdentifiedRole => "Identified position for Aboriginal and Torres Strait Islander applicants",
-        ScoreRule.LeadershipTitle => $"Leadership title: {item.Detail}",
-        ScoreRule.SeniorTitle => $"Senior title: {item.Detail}",
-        ScoreRule.LocationExcluded => $"Location this profile rules out: {item.Detail}",
-        ScoreRule.TitleExcluded => $"Title word this profile rules out: {item.Detail}",
-        ScoreRule.OnSiteElsewhere => $"On-site outside where this profile accepts it: {item.Detail}",
-        ScoreRule.SeniorPenalty => "Senior title",
-        ScoreRule.PositiveSignal => $"Profile signal “{item.Detail}”",
-        ScoreRule.NegativeSignal => $"Negative signal “{item.Detail}”",
-        ScoreRule.SponsorshipMentioned => "Mentions visa sponsorship",
-        ScoreRule.SponsorshipDenied => "Says there is no visa sponsorship",
-        ScoreRule.Remote => "Remote",
-        ScoreRule.Hybrid => "Hybrid",
+        ScoreRule.CitizenshipRequired => $"Exige cidadania ou PR: “{item.Detail}”",
+        ScoreRule.WorkRightsIncompatible => $"Exige direito de trabalho que o visto working holiday não dá: “{item.Detail}”",
+        ScoreRule.IdentifiedRole => "Vaga reservada a candidatos aborígenes e das ilhas do Estreito de Torres",
+        ScoreRule.LeadershipTitle => $"Título de liderança: {item.Detail}",
+        ScoreRule.SeniorTitle => $"Título sênior: {item.Detail}",
+        ScoreRule.LocationExcluded => $"Local que este perfil descarta: {item.Detail}",
+        ScoreRule.TitleExcluded => $"Palavra do título que este perfil descarta: {item.Detail}",
+        ScoreRule.OnSiteElsewhere => $"Presencial fora de onde este perfil aceita: {item.Detail}",
+        ScoreRule.SeniorPenalty => "Título sênior",
+        ScoreRule.PositiveSignal => $"Sinal do perfil “{item.Detail}”",
+        ScoreRule.NegativeSignal => $"Sinal negativo “{item.Detail}”",
+        ScoreRule.SponsorshipMentioned => "Cita patrocínio de visto",
+        ScoreRule.SponsorshipDenied => "Diz que não há patrocínio de visto",
+        ScoreRule.Remote => "Remota",
+        ScoreRule.Hybrid => "Híbrida",
         ScoreRule.Fifo => "FIFO",
-        ScoreRule.EntryLevel => $"Entry level: “{item.Detail}”",
-        ScoreRule.WorkingHolidayFriendly => $"Welcomes working holiday makers: “{item.Detail}”",
-        ScoreRule.FlexibleWorkType => $"{item.Detail} fits six months per employer",
-        ScoreRule.PreferredLocation => $"Preferred location: {item.Detail}",
-        ScoreRule.RequirementHeld => $"Asks for something you have: “{item.Detail}”",
-        ScoreRule.Compression => "Compressed above 80 to keep the best in order",
-        ScoreRule.FullTextCitizenship => $"Full ad mentions “{item.Detail}”",
-        ScoreRule.FullTextWhvWithResidency => $"Full ad mentions “{item.Detail.Replace(" + ", "” and “", StringComparison.Ordinal)}”: usually turning working holiday visas down",
-        ScoreRule.FullTextAmbiguousRights => $"Full ad asks for “{item.Detail}” (may exclude visas)",
-        ScoreRule.FullTextTwelveMonthRights => $"Full ad asks for “{item.Detail}”",
-        ScoreRule.FullTextCommission => $"Full ad mentions “{item.Detail}”",
-        ScoreRule.FullTextTruckLicence => $"Full ad asks for a truck licence: “{item.Detail}”",
-        ScoreRule.FullTextExperience => $"Full ad asks for experience: “{item.Detail}”",
-        ScoreRule.FullTextQualification => $"Full ad asks for a qualification: “{item.Detail}”",
-        ScoreRule.FullTextLicence => $"Full ad asks for a licence or ticket: “{item.Detail}”",
-        ScoreRule.Apprenticeship => "Formal apprenticeship: often needs PR and lasts years",
-        ScoreRule.LongContract => $"Longer than six months per employer: “{item.Detail}”",
-        ScoreRule.CommissionOnly => $"Commission only: “{item.Detail}”",
-        ScoreRule.EnglishRequired => $"English as a condition: “{item.Detail}”",
-        ScoreRule.TruckLicence => $"Truck licence: “{item.Detail}”",
-        ScoreRule.NoSponsorship => "No confirmed sponsorship",
-        ScoreRule.Aging => $"Posted {item.Detail} days ago",
-        ScoreRule.Stale => $"Posted {item.Detail} days ago, probably closed",
-        ScoreRule.QualificationRequired => $"Needs a qualification: {item.Detail}",
+        ScoreRule.EntryLevel => $"Nível inicial: “{item.Detail}”",
+        ScoreRule.WorkingHolidayFriendly => $"Aceita quem está de working holiday: “{item.Detail}”",
+        ScoreRule.FlexibleWorkType => $"{WorkTypeLabel(item.Detail)} cabe nos seis meses por empregador",
+        ScoreRule.PreferredLocation => $"Local preferido: {item.Detail}",
+        ScoreRule.RequirementHeld => $"Pede algo que você tem: “{item.Detail}”",
+        ScoreRule.Compression => "Nota comprimida acima de 80 para manter as melhores em ordem",
+        ScoreRule.FullTextCitizenship => $"O anúncio inteiro cita “{item.Detail}”",
+        ScoreRule.FullTextWhvWithResidency => $"O anúncio inteiro cita “{item.Detail.Replace(" + ", "” e “", StringComparison.Ordinal)}”: costuma recusar o visto working holiday",
+        ScoreRule.FullTextAmbiguousRights => $"O anúncio inteiro pede “{item.Detail}” (pode excluir vistos)",
+        ScoreRule.FullTextTwelveMonthRights => $"O anúncio inteiro pede “{item.Detail}”",
+        ScoreRule.FullTextCommission => $"O anúncio inteiro cita “{item.Detail}”",
+        ScoreRule.FullTextTruckLicence => $"O anúncio inteiro pede carteira de caminhão: “{item.Detail}”",
+        ScoreRule.FullTextExperience => $"O anúncio inteiro pede experiência: “{item.Detail}”",
+        ScoreRule.FullTextQualification => $"O anúncio inteiro pede uma formação: “{item.Detail}”",
+        ScoreRule.FullTextLicence => $"O anúncio inteiro pede uma licença ou ticket: “{item.Detail}”",
+        ScoreRule.Apprenticeship => "Apprenticeship formal: costuma exigir PR e dura anos",
+        ScoreRule.LongContract => $"Mais de seis meses por empregador: “{item.Detail}”",
+        ScoreRule.CommissionOnly => $"Só comissão: “{item.Detail}”",
+        ScoreRule.EnglishRequired => $"Inglês como condição: “{item.Detail}”",
+        ScoreRule.TruckLicence => $"Carteira de caminhão: “{item.Detail}”",
+        ScoreRule.NoSponsorship => "Sem patrocínio de visto confirmado",
+        ScoreRule.Aging => $"Publicada há {item.Detail} dias",
+        ScoreRule.Stale => $"Publicada há {item.Detail} dias, provavelmente encerrada",
+        ScoreRule.QualificationRequired => $"Exige formação: {item.Detail}",
         _ => $"{item.Rule}: {item.Detail}",
     };
 
     public static string Where(ScoreWhere where) => where switch
     {
-        ScoreWhere.Title => "title",
-        ScoreWhere.Body => "summary",
-        ScoreWhere.Text => "text",
-        ScoreWhere.FullText => "full ad",
-        ScoreWhere.WorkType => "work type",
-        ScoreWhere.Location => "location",
-        ScoreWhere.PostedDate => "date",
-        ScoreWhere.Description => "captured ad",
+        ScoreWhere.Title => "título",
+        ScoreWhere.Body => "resumo",
+        ScoreWhere.Text => "texto",
+        ScoreWhere.FullText => "anúncio inteiro",
+        ScoreWhere.WorkType => "tipo de contrato",
+        ScoreWhere.Location => "local",
+        ScoreWhere.PostedDate => "data",
+        ScoreWhere.Description => "anúncio capturado",
         _ => "",
     };
 
     public static string Points(int points) => points switch
     {
-        > 0 => $"+{points}",
-        _ => points.ToString(CultureInfo.InvariantCulture),
+        > 0 => $"+{points.ToString(Culture)}",
+        _ => points.ToString(Culture),
     };
 
     public static string Status(ApplicationStatus status) => status switch
     {
-        ApplicationStatus.Reviewed => "Reviewed",
-        ApplicationStatus.Dismissed => "Dismissed",
-        ApplicationStatus.Applied => "Applied",
-        ApplicationStatus.Interview => "Interview",
-        ApplicationStatus.Offer => "Offer",
-        ApplicationStatus.Declined => "Declined by employer",
+        ApplicationStatus.Reviewed => "Vista",
+        ApplicationStatus.Dismissed => "Descartada",
+        ApplicationStatus.Applied => "Candidatei",
+        ApplicationStatus.Interview => "Entrevista",
+        ApplicationStatus.Offer => "Proposta",
+        ApplicationStatus.Declined => "Recusada pela empresa",
         _ => status.ToString(),
     };
 
     public static string Origin(DescriptionOrigin origin) => origin switch
     {
-        DescriptionOrigin.Browser => "from the ad page",
-        DescriptionOrigin.Pasted => "pasted",
-        DescriptionOrigin.Source => "fetched from the source",
+        DescriptionOrigin.Browser => "da página do anúncio",
+        DescriptionOrigin.Pasted => "colado",
+        DescriptionOrigin.Source => "buscado na fonte",
         _ => origin.ToString(),
     };
 
     public static string State(RequirementState state) => state switch
     {
-        RequirementState.Have => "I have it",
-        RequirementState.Obtainable => "I would get it",
-        RequirementState.Missing => "I don't have it",
-        RequirementState.OutOfReach => "Out of reach",
+        RequirementState.Have => "Tenho",
+        RequirementState.Obtainable => "Consigo tirar",
+        RequirementState.Missing => "Não tenho",
+        RequirementState.OutOfReach => "Fora de alcance",
         _ => state.ToString(),
     };
 
     /// <summary>A catalog requirement in plain words: what it is and how one gets it. Unknown ids show as they are.</summary>
     public static (string Title, string Hint) Requirement(string id) => id switch
     {
-        "hrwl" => ("High Risk Work Licence (HRWL)", "Forklift, elevated work platform, dogging and the like: a course of a few days."),
-        "voc" => ("Verification of competency (VOC)", "Proof you can run a given machine, usually assessed on the job."),
-        "truck-mr" => ("Truck licence MR (medium rigid)", "Needs a year or more of a full car licence first."),
-        "truck-hr" => ("Truck licence HR (heavy rigid)", "Needs a year or more of a full car licence first; includes MR."),
-        "truck-hc" => ("Truck licence HC (heavy combination)", "Needs a year or more of HR first; includes HR and MR."),
-        "truck-mc" => ("Truck licence MC (multi combination)", "Road trains; needs HC first; includes every lower class."),
-        "trade-qualification" => ("Trade certificate (Cert III, trade qualified)", "An Australian trade qualification; an overseas course counts only once assessed."),
-        "degree" => ("University degree", "Asked as “degree in”, “tertiary qualification”."),
-        "refrigerant-licence" => ("Refrigerant handling licence (ARCtick)", "Needs a refrigeration trade plus supervised time."),
-        "electrical-licence" => ("Electrical licence", "Needs an electrical trade plus supervised time."),
-        "experience-years" => ("Years of experience, when the ad gives no number", "With a number, your years above decide."),
-        "experience-proven" => ("Proven experience in a similar role", "“Proven” or “demonstrated experience”."),
-        "experience-operating" => ("Experience operating machinery", "“Experience operating” excavators, rollers and the like."),
+        "hrwl" => ("Licença de trabalho de alto risco (HRWL)", "Empilhadeira, plataforma elevatória, dogging e afins: um curso de poucos dias."),
+        "voc" => ("Verificação de competência (VOC)", "Prova de que você opera uma máquina específica, em geral avaliada no próprio trabalho."),
+        "truck-mr" => ("Carteira de caminhão MR (rígido médio)", "Exige antes um ano ou mais de carteira de carro definitiva."),
+        "truck-hr" => ("Carteira de caminhão HR (rígido pesado)", "Exige antes um ano ou mais de carteira de carro definitiva; inclui a MR."),
+        "truck-hc" => ("Carteira de caminhão HC (combinação pesada)", "Exige antes um ano ou mais de HR; inclui a HR e a MR."),
+        "truck-mc" => ("Carteira de caminhão MC (combinação múltipla)", "Road trains; exige antes a HC; inclui todas as classes abaixo."),
+        "trade-qualification" => ("Certificado de ofício (Cert III, trade qualified)", "Uma qualificação de ofício australiana; curso de fora só conta depois de avaliado."),
+        "degree" => ("Diploma universitário", "Pedido como “degree in”, “tertiary qualification”."),
+        "refrigerant-licence" => ("Licença para manusear refrigerante (ARCtick)", "Exige o ofício de refrigeração mais tempo supervisionado."),
+        "electrical-licence" => ("Licença de eletricista", "Exige o ofício de eletricista mais tempo supervisionado."),
+        "experience-years" => ("Anos de experiência, quando o anúncio não dá número", "Com número, decidem os seus anos, acima."),
+        "experience-proven" => ("Experiência comprovada em função parecida", "“Proven” ou “demonstrated experience”."),
+        "experience-operating" => ("Experiência operando máquinas", "“Experience operating” escavadeiras, rolos compactadores e afins."),
         _ => (id, ""),
     };
 
     /// <summary>The tooltip of a fact label: what kind of fact it is and where it came from.</summary>
     public static string FactTitle(FactKind kind) => kind switch
     {
-        FactKind.Pay => "Pay, as the ad states it",
-        FactKind.Travel => "How you get to site",
-        FactKind.Roster => "Roster: days or weeks on and off",
-        FactKind.Accommodation => "Accommodation provided",
-        FactKind.Meals => "Meals provided",
-        FactKind.Flights => "Flights paid by the employer",
-        FactKind.Start => "Start date",
-        FactKind.Shift => "Shifts",
-        FactKind.Duration => "Length of the contract",
+        FactKind.Pay => "Pagamento, como o anúncio diz",
+        FactKind.Travel => "Como você chega ao local",
+        FactKind.Roster => "Escala: dias ou semanas de trabalho e de folga",
+        FactKind.Accommodation => "Acomodação oferecida",
+        FactKind.Meals => "Refeições oferecidas",
+        FactKind.Flights => "Passagens pagas pelo empregador",
+        FactKind.Start => "Data de início",
+        FactKind.Shift => "Turnos",
+        FactKind.Duration => "Duração do contrato",
         _ => kind.ToString(),
-    } + " (read from the ad)";
+    } + " (lido do anúncio)";
 
     /// <summary>Short labels for the four states, as buttons.</summary>
     public static string StateButton(RequirementState state) => state switch
     {
-        RequirementState.Have => "I have it",
-        RequirementState.Obtainable => "I'd get it",
-        RequirementState.Missing => "I don't have it",
-        RequirementState.OutOfReach => "Out of reach",
+        RequirementState.Have => "Tenho",
+        RequirementState.Obtainable => "Consigo tirar",
+        RequirementState.Missing => "Não tenho",
+        RequirementState.OutOfReach => "Fora de alcance",
         _ => state.ToString(),
     };
 
     public static string Years(double years) =>
-        years == 1 ? "1 year" : $"{years.ToString("0.#", CultureInfo.InvariantCulture)} years";
+        years == 1 ? "1 ano" : $"{years.ToString("0.#", Culture)} anos";
 
     /// <summary>A quick-pick button: the top option reads "10+".</summary>
-    public static string YearsShort(double years) => years >= 10 ? "10+" : years.ToString("0.#", CultureInfo.InvariantCulture);
+    public static string YearsShort(double years) => years >= 10 ? "10+" : years.ToString("0.#", Culture);
 
     public static string Listings(int count) =>
-        count == 1 ? "1 listing" : $"{count.ToString("N0", CultureInfo.InvariantCulture)} listings";
+        count == 1 ? "1 vaga" : $"{Number(count)} vagas";
+
+    /// <summary>A count for display: "1.234".</summary>
+    public static string Number(int count) => count.ToString("N0", Culture);
 
     public static string Kind(RequirementKind kind) => kind switch
     {
-        RequirementKind.Experience => "Experience",
-        RequirementKind.Qualification => "Qualification",
-        RequirementKind.Licence => "Licence or ticket",
+        RequirementKind.Experience => "Experiência",
+        RequirementKind.Qualification => "Formação",
+        RequirementKind.Licence => "Licença ou ticket",
         _ => kind.ToString(),
     };
 
-    public static string Verdict(Verdict verdict) => verdict == Domain.Tracking.Verdict.Good ? "Good match" : "Bad match";
+    public static string Verdict(Verdict verdict) => verdict == Domain.Tracking.Verdict.Good ? "Boa" : "Ruim";
 
-    public static string WorkType(WorkType workType) => ScoringInput.FormatWorkType(workType) ?? "";
+    public static string Snapshot(SnapshotStatus status) => status switch
+    {
+        SnapshotStatus.Ok => "ok",
+        SnapshotStatus.Partial => "parcial",
+        SnapshotStatus.Suspect => "suspeito",
+        _ => status.ToString(),
+    };
 
-    public static string Location(ListingLocation location) => ScoringInput.FormatLocation(location) ?? "Location not given";
+    public static string WorkType(WorkType workType) =>
+        ScoringInput.FormatWorkType(workType) is { } label ? WorkTypeLabel(label) : "";
+
+    /// <summary>The Seek work type labels the domain formats, in Portuguese; any other label shows as it is.</summary>
+    private static string WorkTypeLabel(string label) => label switch
+    {
+        "Full time" => "Tempo integral",
+        "Part time" => "Meio período",
+        "Casual/Vacation" => "Casual/temporário",
+        "Contract/Temp" => "Contrato/temporário",
+        _ => label,
+    };
+
+    public static string Location(ListingLocation location) => ScoringInput.FormatLocation(location) ?? "Local não informado";
 
     /// <summary>A stored instant (UTC) in the local time of the machine running the site.</summary>
-    public static string When(DateTimeOffset at) => at.ToLocalTime().ToString("d MMM yyyy HH:mm", CultureInfo.InvariantCulture);
+    public static string When(DateTimeOffset at) => at.ToLocalTime().ToString("d MMM yyyy HH:mm", Culture);
+
+    /// <summary>A day as stored, without moving it to local time: "21 out 2026".</summary>
+    public static string Date(DateTimeOffset at) => at.ToString("d MMM yyyy", Culture);
 
     /// <summary>First line of <paramref name="text"/>, cut at <paramref name="max"/> characters; a stack trace stays out of a table cell.</summary>
     public static string Shorten(string? text, int max)
@@ -194,7 +236,7 @@ public static class Wording
         return line.Length <= max ? line : string.Concat(line.AsSpan(0, max - 1).TrimEnd(), "…");
     }
 
-    /// <summary>"today", "3d", "5w": short enough for a table column.</summary>
+    /// <summary>"hoje", "3d", "5sem": short enough for a table column.</summary>
     public static string Age(DateTimeOffset? posted, DateTimeOffset now)
     {
         if (posted is not { } p)
@@ -202,9 +244,9 @@ public static class Wording
         var days = (int)(now - p).TotalDays;
         return days switch
         {
-            < 1 => "today",
+            < 1 => "hoje",
             < 14 => $"{days}d",
-            _ => $"{days / 7}w",
+            _ => $"{days / 7}sem",
         };
     }
 

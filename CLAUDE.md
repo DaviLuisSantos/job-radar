@@ -87,7 +87,7 @@ src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, pa
 src/JobRadar.Integrations.Gupy  IJobSource da Gupy (Brasil): busca do portal, tradutor; o anúncio inteiro vem na busca
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
-src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
+src/JobRadar.Web             triagem em Blazor + MudBlazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
 ```
 
 - Um `.csproj` por camada: Application não referencia Infrastructure, o compilador garante.
@@ -254,7 +254,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 
 ## Convenções
 
-- Idioma: código, identificadores e README em inglês (repo público, portfólio). `docs/` e este arquivo em português.
+- Idioma: código, identificadores e README em inglês (repo público, portfólio). `docs/`, este arquivo e **a interface do
+  site** em português (desde 2026-10-30): texto que o usuário lê mora em `Text/Wording.cs` ou no markup, com datas e
+  números em pt-BR (`Wording.Culture`); `InvariantCulture` só para o que não é exibido.
 - Commits: Conventional Commits em inglês (`feat: ...`), imperativo, com o porquê no corpo.
 - **Commits e PRs sem atribuição a IA:** nada de `Co-Authored-By: Claude ...`, "Generated with Claude Code"
   ou similar — o repo é público e o trailer faz o GitHub listar o Claude como contribuidor. Vale mesmo que o

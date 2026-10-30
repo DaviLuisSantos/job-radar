@@ -23,9 +23,9 @@ public class ComponentTests : BunitContext
         Assert.Equal(4, lines.Count);
         Assert.StartsWith("50", lines[0]);
         Assert.Contains("+16", lines[1]);
-        Assert.Contains("Profile signal “C#”", lines[1]);
-        Assert.Contains("title", lines[1]);
-        Assert.Contains("Final score", lines[3]);
+        Assert.Contains("Sinal do perfil “C#”", lines[1]);
+        Assert.Contains("título", lines[1]);
+        Assert.Contains("Nota final", lines[3]);
         Assert.Equal(2, cut.FindAll("li.plus").Count);
     }
 
@@ -38,7 +38,7 @@ public class ComponentTests : BunitContext
 
         Assert.Empty(cut.FindAll("li.base"));
         Assert.Single(cut.FindAll("li.exclusion"));
-        Assert.Contains("Excluded", cut.Find("li.total").TextContent);
+        Assert.Contains("Excluída", cut.Find("li.total").TextContent);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class ComponentTests : BunitContext
         Assert.Equal(["$48/hr", "2:1 roster"], cut.FindAll(".chip.fact").Select(c => c.TextContent));
         Assert.Contains("fact-pay", cut.Find(".chip.fact").ClassList);
         Assert.Empty(Render<FactChips>(p => p.Add(x => x.Facts, [])).Markup.Trim());
-        Assert.All(Enum.GetValues<FactKind>(), k => Assert.EndsWith("(read from the ad)", Wording.FactTitle(k), StringComparison.Ordinal));
+        Assert.All(Enum.GetValues<FactKind>(), k => Assert.EndsWith("(lido do anúncio)", Wording.FactTitle(k), StringComparison.Ordinal));
     }
 
     [Theory]
@@ -96,9 +96,9 @@ public class WordingTests
     }
 
     [Theory]
-    [InlineData(0, "today")]
+    [InlineData(0, "hoje")]
     [InlineData(3, "3d")]
-    [InlineData(20, "2w")]
+    [InlineData(20, "2sem")]
     public void Age_is_short(int days, string expected)
     {
         var now = new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero);
@@ -118,9 +118,9 @@ public class WordingTests
 public class RequirementWordingTests
 {
     [Theory]
-    [InlineData(1, "1 listing")]
-    [InlineData(0, "0 listings")]
-    [InlineData(1406, "1,406 listings")]
+    [InlineData(1, "1 vaga")]
+    [InlineData(0, "0 vagas")]
+    [InlineData(1406, "1.406 vagas")]
     public void Listing_counts_read_naturally(int count, string text) => Assert.Equal(text, Wording.Listings(count));
 
     [Fact]
@@ -136,9 +136,9 @@ public class RequirementWordingTests
     }
 
     [Theory]
-    [InlineData(1, "1 year", "1")]
-    [InlineData(0.5, "0.5 years", "0.5")]
-    [InlineData(10, "10 years", "10+")]
+    [InlineData(1, "1 ano", "1")]
+    [InlineData(0.5, "0,5 anos", "0,5")]
+    [InlineData(10, "10 anos", "10+")]
     public void Years_read_naturally(double years, string text, string button)
     {
         Assert.Equal(text, Wording.Years(years));
