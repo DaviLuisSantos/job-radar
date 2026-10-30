@@ -1,0 +1,9 @@
+@* How many listings arrived since the last visit, as a small badge; nothing when none. *@
+@if (Count > 0)
+{
+    <span class="count" title="@Wording.NewListings(Count)" aria-label="@Wording.NewListings(Count)">@Wording.Number(Count)</span>
+}
+
+@code {
+    [Parameter] public int Count { get; set; }
+}

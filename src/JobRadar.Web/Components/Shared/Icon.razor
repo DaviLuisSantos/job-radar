@@ -1,0 +1,7 @@
+@* A MudBlazor icon (Icons.Material.*) as plain inline SVG, coloured by the text around it. *@
+<svg class="icon @Class" viewBox="0 0 24 24" aria-hidden="true" focusable="false">@((MarkupString)Path)</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Path { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+}

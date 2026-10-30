@@ -4,61 +4,66 @@
 @inject ProfileCatalog Catalog
 @inject NavigationManager Nav
 @inject TimeProvider Time
+@inject IJSRuntime JS
 
-<MudThemeProvider @ref="_themeProvider" Theme="JobRadarTheme.Theme" @bind-IsDarkMode="_dark" />
+@* Light palette only: the dark one is CSS in the page head (JobRadarTheme.DarkCss), so the prerender is right too. *@
+<MudThemeProvider Theme="JobRadarTheme.Theme" ObserveSystemDarkModeChange="false" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="0" Dense="true" Class="appbar">
-        <MudIconButton Icon="@Icons.Material.Outlined.Menu" Color="Color.Inherit" Class="d-flex d-md-none"
-                       aria-label="@Wording.Menu" OnClick="() => _drawer = !_drawer" />
-        <a class="brand" href="/">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" /><circle cx="16" cy="16" r="4" class="dot" /></svg>
-            JobRadar
-        </a>
-        @if (_groups.Count > 1)
-        {
-            <MudToggleGroup T="JobMarket" Value="_market" ValueChanged="GoToMarket" Size="Size.Medium" Color="Color.Primary"
-                            Class="d-none d-md-flex ml-4" aria-label="@Wording.Markets">
-                @foreach (var group in _groups)
-                {
-                    <MudToggleItem Value="group.Market" Text="@Wording.NewInMarket(group.Label, _newCounts.GetValueOrDefault(group.Market))" />
-                }
-            </MudToggleGroup>
-        }
-        <MudSpacer />
-        <MudMenu Icon="@Icons.Material.Outlined.Settings" Color="Color.Inherit" AriaLabel="@Wording.Settings"
-                 AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="d-none d-md-flex">
-            @foreach (var (href, label) in SettingsPages)
+    <header class="topbar">
+        <div class="topbar-row">
+            <button type="button" class="icon-button drawer-toggle" aria-label="@Wording.Menu" @onclick="() => _drawer = true">
+                <Icon Path="@Icons.Material.Rounded.Menu" />
+            </button>
+            <a class="brand" href="/">
+                <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" /><circle cx="16" cy="16" r="4" class="dot" /></svg>
+                <span>JobRadar</span>
+            </a>
+            @if (_groups.Count > 1)
             {
-                <MudMenuItem Href="@href">@label</MudMenuItem>
-            }
-        </MudMenu>
-    </MudAppBar>
-
-    <MudDrawer @bind-Open="_drawer" Variant="DrawerVariant.Temporary" Anchor="Anchor.Start" Elevation="1">
-        <MudNavMenu>
-            @foreach (var group in _groups)
-            {
-                <MudNavGroup Title="@Wording.NewInMarket(group.Label, _newCounts.GetValueOrDefault(group.Market))" Expanded="group.Market == _market">
-                    <MudNavLink Href="@ProfileMenu.TodayHref(group.Market)" Match="NavLinkMatch.All" OnClick="() => _drawer = false">@Wording.Today</MudNavLink>
-                    @foreach (var profile in group.Profiles)
+                <nav class="markets" aria-label="@Wording.Markets">
+                    @foreach (var group in _groups)
                     {
-                        <MudNavLink Href="@TriageHref(profile)" Match="NavLinkMatch.All" OnClick="() => _drawer = false">@profile</MudNavLink>
+                        <a href="@ProfileMenu.TodayHref(group.Market)" class="market @(group.Market == _market ? "active" : "")"
+                           aria-current="@(group.Market == _market ? "true" : null)">
+                            @group.Label
+                            <NewCount Count="_newCounts.GetValueOrDefault(group.Market)" />
+                        </a>
                     }
-                </MudNavGroup>
+                </nav>
+                <MudMenu Class="market-menu" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" AriaLabel="@Wording.Markets">
+                    <ActivatorContent>
+                        <button type="button" class="market-current" aria-haspopup="menu" @onclick="context.ToggleAsync">
+                            @CurrentGroup?.Label
+                            <NewCount Count="_newCounts.Where(c => c.Key != _market).Sum(c => c.Value)" />
+                            <Icon Path="@Icons.Material.Rounded.ExpandMore" />
+                        </button>
+                    </ActivatorContent>
+                    <ChildContent>
+                        @foreach (var group in _groups)
+                        {
+                            <MudMenuItem Href="@ProfileMenu.TodayHref(group.Market)">
+                                <span class="menu-market">@group.Label <NewCount Count="_newCounts.GetValueOrDefault(group.Market)" /></span>
+                            </MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
             }
-            <MudDivider Class="my-2" />
-            @foreach (var (href, label) in SettingsPages)
-            {
-                <MudNavLink Href="@href" OnClick="() => _drawer = false">@label</MudNavLink>
-            }
-        </MudNavMenu>
-    </MudDrawer>
-
-    <MudMainContent>
+            <span class="spacer"></span>
+            <button type="button" class="icon-button" title="@Wording.ThemeTitle(_theme)" aria-label="@Wording.ThemeTitle(_theme)" @onclick="NextThemeAsync">
+                <Icon Path="@ThemeIcon" />
+            </button>
+            <MudMenu Icon="@Icons.Material.Outlined.Settings" Color="Color.Inherit" AriaLabel="@Wording.Settings" Class="settings-menu"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                @foreach (var (href, label, icon) in SettingsPages)
+                {
+                    <MudMenuItem Href="@href" Icon="@icon">@label</MudMenuItem>
+                }
+            </MudMenu>
+        </div>
         @if (CurrentGroup is { Profiles.Count: > 0 } current)
         {
             <nav class="profile-bar" aria-label="@Wording.ProfilesOf(current.Label)">
@@ -69,6 +74,41 @@
                 }
             </nav>
         }
+    </header>
+
+    <MudDrawer @bind-Open="_drawer" Variant="DrawerVariant.Temporary" Anchor="Anchor.Start" Elevation="2" Width="min(320px, 86vw)" Class="drawer">
+        <div class="drawer-head">
+            <a class="brand" href="/" @onclick="() => _drawer = false">
+                <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" /><circle cx="16" cy="16" r="4" class="dot" /></svg>
+                <span>JobRadar</span>
+            </a>
+            <button type="button" class="icon-button" aria-label="@Wording.Close" @onclick="() => _drawer = false">
+                <Icon Path="@Icons.Material.Rounded.Close" />
+            </button>
+        </div>
+        <nav class="drawer-nav" aria-label="@Wording.Menu">
+            @foreach (var group in _groups)
+            {
+                <p class="drawer-section">@group.Label <NewCount Count="_newCounts.GetValueOrDefault(group.Market)" /></p>
+                <NavLink href="@ProfileMenu.TodayHref(group.Market)" Match="NavLinkMatch.All" @onclick="() => _drawer = false">
+                    <Icon Path="@Icons.Material.Outlined.WbSunny" /> @Wording.Today
+                </NavLink>
+                @foreach (var profile in group.Profiles)
+                {
+                    <NavLink href="@TriageHref(profile)" Match="NavLinkMatch.All" @onclick="() => _drawer = false">
+                        <Icon Path="@Icons.Material.Outlined.FilterList" /> @profile
+                    </NavLink>
+                }
+            }
+            <p class="drawer-section">@Wording.Settings</p>
+            @foreach (var (href, label, icon) in SettingsPages)
+            {
+                <NavLink href="@href" @onclick="() => _drawer = false"><Icon Path="@icon" /> @label</NavLink>
+            }
+        </nav>
+    </MudDrawer>
+
+    <MudMainContent>
         <main class="page">
             @Body
         </main>
@@ -82,20 +122,31 @@
 </div>
 
 @code {
-    private static readonly (string Href, string Label)[] SettingsPages =
+    private static readonly (string Href, string Label, string Icon)[] SettingsPages =
     [
-        ("capture", Wording.CapturePage), ("me", Wording.AboutYouPage), ("requirements", Wording.RequirementsPage),
-        ("calibration", Wording.CalibrationPage), ("status", Wording.StatusPage),
+        ("capture", Wording.CapturePage, Icons.Material.Outlined.BookmarkAdd),
+        ("me", Wording.AboutYouPage, Icons.Material.Outlined.Person),
+        ("requirements", Wording.RequirementsPage, Icons.Material.Outlined.Checklist),
+        ("calibration", Wording.CalibrationPage, Icons.Material.Outlined.Tune),
+        ("status", Wording.StatusPage, Icons.Material.Outlined.MonitorHeart),
     ];
 
-    private MudThemeProvider? _themeProvider;
-    private bool _dark;
+    private static readonly string[] Themes = ["system", "light", "dark"];
+
     private bool _drawer;
+    private string _theme = "system";
     private IReadOnlyList<ProfileGroup> _groups = [];
     private JobMarket _market = JobMarket.AU;
     private IReadOnlyDictionary<JobMarket, int> _newCounts = new Dictionary<JobMarket, int>();
 
     private ProfileGroup? CurrentGroup => _groups.FirstOrDefault(g => g.Market == _market);
+
+    private string ThemeIcon => _theme switch
+    {
+        "light" => Icons.Material.Outlined.LightMode,
+        "dark" => Icons.Material.Outlined.DarkMode,
+        _ => Icons.Material.Outlined.BrightnessAuto,
+    };
 
     private static string TriageHref(string profile) => $"triage/{Uri.EscapeDataString(profile)}";
 
@@ -118,18 +169,20 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _themeProvider is null)
+        if (!firstRender)
             return;
-        _dark = await _themeProvider.GetSystemDarkModeAsync();
-        await _themeProvider.WatchSystemDarkModeAsync(dark =>
-        {
-            _dark = dark;
-            return InvokeAsync(StateHasChanged);
-        });
+        _theme = await JS.InvokeAsync<string?>("jobRadarTheme.get") ?? "system";
         StateHasChanged();
     }
 
-    /// <summary>On a profile's triage, its market is the current one; elsewhere the last one stays.</summary>
+    /// <summary>Automatic (the system's), light, dark: kept on this device by the script in the page head.</summary>
+    private async Task NextThemeAsync()
+    {
+        _theme = Themes[(Array.IndexOf(Themes, _theme) + 1) % Themes.Length];
+        await JS.InvokeVoidAsync("jobRadarTheme.set", _theme);
+    }
+
+    /// <summary>On a market's "Today" or a profile's triage, its market is the current one; elsewhere the last one stays.</summary>
     private void FollowLocation(string uri)
     {
         if (ProfileMenu.MarketOf(_groups, Nav.ToBaseRelativePath(uri)) is { } market)
@@ -145,12 +198,6 @@
             await CountNewAsync();
             StateHasChanged();
         });
-    }
-
-    private void GoToMarket(JobMarket market)
-    {
-        _market = market;
-        Nav.NavigateTo(ProfileMenu.TodayHref(market));
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

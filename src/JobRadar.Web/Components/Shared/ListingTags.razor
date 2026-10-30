@@ -1,26 +1,23 @@
 @* What decides an application, as the source gives it: who may apply, arrangement, contract, time zones. *@
 @if (Eligibility is { Length: > 0 } eligibility)
 {
-    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" Class="tag tag-eligibility"
-             title="@eligibility">@Wording.Eligibility(eligibility)</MudChip>
+    <span class="chip tag tag-eligibility" title="@eligibility">@Wording.Eligibility(eligibility)</span>
 }
 @if (Wording.Arrangement(Conditions.Arrangement) is { Length: > 0 } arrangement)
 {
-    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
-             Class="@($"tag tag-{Conditions.Arrangement.ToString().ToLowerInvariant()}")">@arrangement</MudChip>
+    <span class="chip tag tag-arrangement tag-@Conditions.Arrangement.ToString().ToLowerInvariant()">@arrangement</span>
 }
 @if (Conditions.Contract is { } contract)
 {
-    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-contract">@contract</MudChip>
+    <span class="chip tag tag-contract">@contract</span>
 }
-
 @if (Conditions.TimeZones is { } zones)
 {
-    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-timezones">@Wording.TimeZones(zones.ToString())</MudChip>
+    <span class="chip tag tag-timezones">@Wording.TimeZones(zones.ToString())</span>
 }
 @if (Engagement is { } engagement and not JobRadar.Domain.Matching.Engagement.Unknown)
 {
-    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-engagement">@Wording.EngagementName(engagement)</MudChip>
+    <span class="chip tag tag-engagement">@Wording.EngagementName(engagement)</span>
 }
 
 @code {

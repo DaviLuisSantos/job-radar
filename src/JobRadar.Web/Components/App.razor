@@ -7,6 +7,27 @@
     <base href="/" />
     <title>JobRadar</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='none' stroke='%232563eb' stroke-width='3'/><circle cx='16' cy='16' r='4' fill='%232563eb'/></svg>" />
+    @* Before the first paint: the theme chosen on this device ("jobradar-theme"), or the system's. The prerendered page
+       is in the right theme from the start, and follows the system when it changes. *@
+    <script>
+        (() => {
+            const key = "jobradar-theme", dark = matchMedia("(prefers-color-scheme: dark)");
+            const chosen = () => { try { return localStorage.getItem(key); } catch { return null; } };
+            const apply = () => {
+                const c = chosen();
+                document.documentElement.dataset.theme = c === "light" || c === "dark" ? c : dark.matches ? "dark" : "light";
+            };
+            apply();
+            dark.addEventListener("change", apply);
+            window.jobRadarTheme = {
+                get: () => chosen() ?? "system",
+                set: choice => { try { choice === "system" ? localStorage.removeItem(key) : localStorage.setItem(key, choice); } catch { } apply(); },
+            };
+        })();
+    </script>
+    <style>@((MarkupString)JobRadarTheme.DarkCss)</style>
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151b23" media="(prefers-color-scheme: dark)" />
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
