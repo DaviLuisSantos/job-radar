@@ -5,8 +5,8 @@ namespace JobRadar.Domain.Tests.Triage;
 
 public class DuplicatesTests
 {
-    private static TriageRow Row(string id, string title, string? company, int score, string region = "Perth", AustralianState state = AustralianState.WA) =>
-        new(new ListingId("seek", id), title, company, new ListingLocation(null, region, state, null), WorkType.Contract,
+    private static TriageRow Row(string id, string title, string? company, int score, string region = "Perth", string? state = "WA") =>
+        new(new ListingId("seek", id), title, company, new ListingLocation(Country.AU, null, region, state, null), WorkType.Contract,
             null, null, DateTimeOffset.UnixEpoch, score, null, null);
 
     [Fact]
@@ -31,8 +31,8 @@ public class DuplicatesTests
         var rows = Duplicates.Collapse(
         [
             Row("1", "Kitchen Hand", "Cafe Co", 70),
-            Row("2", "Kitchen Hand", "Cafe Co", 70, "Sydney", AustralianState.NSW),
-            Row("3", "Kitchen Hand", "Cafe Co", 70, "Sydney", AustralianState.NSW),
+            Row("2", "Kitchen Hand", "Cafe Co", 70, "Sydney", "NSW"),
+            Row("3", "Kitchen Hand", "Cafe Co", 70, "Sydney", "NSW"),
             Row("4", "Kitchen Hand", "Cafe Co", 70),
         ]);
 

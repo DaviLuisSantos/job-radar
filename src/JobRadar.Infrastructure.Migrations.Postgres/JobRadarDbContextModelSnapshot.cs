@@ -129,6 +129,12 @@ namespace JobRadar.Infrastructure.Migrations.Postgres
                         .HasColumnType("character varying(300)")
                         .HasColumnName("company");
 
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country");
+
                     b.Property<DateTimeOffset>("FirstSeenAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("first_seen_at");
@@ -138,8 +144,8 @@ namespace JobRadar.Infrastructure.Migrations.Postgres
                         .HasColumnName("last_seen_at");
 
                     b.Property<string>("Postcode")
-                        .HasMaxLength(4)
-                        .HasColumnType("character varying(4)")
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)")
                         .HasColumnName("postcode");
 
                     b.Property<DateTimeOffset?>("PostedAt")

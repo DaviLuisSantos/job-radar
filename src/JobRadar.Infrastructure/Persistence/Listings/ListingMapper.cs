@@ -25,9 +25,10 @@ internal static class ListingMapper
     {
         e.Title = listing.Title;
         e.Company = listing.Company;
+        e.Country = ToColumn(listing.Location.Country);
         e.Suburb = listing.Location.Suburb;
         e.Region = listing.Location.Region;
-        e.State = ToColumn(listing.Location.State);
+        e.State = listing.Location.State;
         e.Postcode = listing.Location.Postcode;
         e.WorkType = ToColumn(listing.WorkType);
         e.SalaryText = listing.SalaryText;
@@ -44,7 +45,7 @@ internal static class ListingMapper
             Id: new ListingId(e.Source, e.SourceId),
             Title: e.Title,
             Company: e.Company,
-            Location: new ListingLocation(e.Suburb, e.Region, ToState(e.State), e.Postcode),
+            Location: new ListingLocation(ToCountry(e.Country), e.Suburb, e.Region, e.State, e.Postcode),
             WorkType: ToWorkType(e.WorkType),
             SalaryText: e.SalaryText,
             PostedAt: e.PostedAt,
@@ -54,14 +55,19 @@ internal static class ListingMapper
         FirstSeenAt: e.FirstSeenAt,
         LastSeenAt: e.LastSeenAt);
 
-    // Unknown is stored as NULL: "the source didn't say" is not a value.
-    internal static string? ToColumn(AustralianState state) =>
-        state == AustralianState.Unknown ? null : state.ToString();
+    internal static string ToColumn(Country country) => country switch
+    {
+        Country.AU => "AU",
+        Country.BR => "BR",
+        _ => throw new ArgumentOutOfRangeException(nameof(country), country, null),
+    };
 
-    internal static AustralianState ToState(string? column) =>
-        Enum.TryParse<AustralianState>(column?.Trim(), ignoreCase: true, out var s) && Enum.IsDefined(s)
-            ? s
-            : AustralianState.Unknown;
+    internal static Country ToCountry(string column) => column switch
+    {
+        "AU" => Country.AU,
+        "BR" => Country.BR,
+        _ => throw new InvalidOperationException($"Unknown country '{column}' in listings.country."),
+    };
 
     internal static string? ToColumn(WorkType workType) => workType switch
     {

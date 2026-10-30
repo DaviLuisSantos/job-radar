@@ -11,7 +11,7 @@ public class ListingMapperTests
         Id: new ListingId("seek", sourceId),
         Title: title,
         Company: "Acme",
-        Location: new ListingLocation("Osborne Park", "Perth", AustralianState.WA, "6017"),
+        Location: new ListingLocation(Country.AU, "Osborne Park", "Perth", "WA", "6017"),
         WorkType: WorkType.Contract,
         SalaryText: "$90k - $110k",
         PostedAt: Perth.AddDays(-2),
@@ -57,7 +57,7 @@ public class ListingMapperTests
     [Fact]
     public void Unknown_values_are_stored_as_null_and_read_back_as_unknown()
     {
-        var listing = Sample() with { Location = ListingLocation.Unknown, WorkType = WorkType.Unknown };
+        var listing = Sample() with { Location = ListingLocation.Unknown(Country.AU), WorkType = WorkType.Unknown };
 
         var e = ListingMapper.ToNewEntity(listing, Perth);
 
@@ -67,13 +67,30 @@ public class ListingMapperTests
     }
 
     [Theory]
-    [InlineData(" wa ", AustralianState.WA)]
-    [InlineData("XX", AustralianState.Unknown)]
-    [InlineData("99", AustralianState.Unknown)]
-    [InlineData(null, AustralianState.Unknown)]
-    public void State_column_is_read_tolerantly(string? column, AustralianState expected)
+    [InlineData(Country.AU, "AU")]
+    [InlineData(Country.BR, "BR")]
+    public void Country_is_stored_by_its_iso_code(Country country, string column)
     {
-        Assert.Equal(expected, ListingMapper.ToState(column));
+        Assert.Equal(column, ListingMapper.ToColumn(country));
+        Assert.Equal(country, ListingMapper.ToCountry(column));
+    }
+
+    [Fact]
+    public void An_unknown_country_in_the_database_fails_loudly()
+    {
+        // Every row says which market it is: guessing one would mix two markets in a score or a report.
+        Assert.Throws<InvalidOperationException>(() => ListingMapper.ToCountry("NZ"));
+    }
+
+    [Fact]
+    public void A_Brazilian_location_round_trips_with_its_state_and_cep()
+    {
+        var listing = Sample() with { Location = new ListingLocation(Country.BR, "Centro", "Rio de Janeiro", "RJ", "20040-002") };
+
+        var e = ListingMapper.ToNewEntity(listing, Perth);
+
+        Assert.Equal("BR", e.Country);
+        Assert.Equal(listing, ListingMapper.ToRecord(e).Listing);
     }
 
     [Theory]

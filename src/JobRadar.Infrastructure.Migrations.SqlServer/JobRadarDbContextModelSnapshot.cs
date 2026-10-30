@@ -130,6 +130,12 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                         .HasColumnType("nvarchar(300)")
                         .HasColumnName("company");
 
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)")
+                        .HasColumnName("country");
+
                     b.Property<DateTimeOffset>("FirstSeenAt")
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("first_seen_at");
@@ -139,8 +145,8 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                         .HasColumnName("last_seen_at");
 
                     b.Property<string>("Postcode")
-                        .HasMaxLength(4)
-                        .HasColumnType("nvarchar(4)")
+                        .HasMaxLength(9)
+                        .HasColumnType("nvarchar(9)")
                         .HasColumnName("postcode");
 
                     b.Property<DateTimeOffset?>("PostedAt")

@@ -21,7 +21,7 @@ public class SeekListingTranslatorTests
         Assert.Equal(new ListingId("seek", "90000002"), l.Id);
         Assert.Equal("Backend Engineer", l.Title);
         Assert.Equal("Sample Recruitment", l.Company);
-        Assert.Equal(new ListingLocation("Osborne Park", "Perth", AustralianState.WA, null), l.Location);
+        Assert.Equal(new ListingLocation(Country.AU, "Osborne Park", "Perth", "WA", null), l.Location);
         Assert.Equal(WorkType.Contract, l.WorkType);
         Assert.Equal("$90 per hour plus super", l.SalaryText);
         Assert.Equal(new DateTimeOffset(2026, 10, 1, 3, 15, 54, TimeSpan.Zero), l.PostedAt);
@@ -55,17 +55,17 @@ public class SeekListingTranslatorTests
     }
 
     [Theory]
-    [InlineData("Perth WA", null, "Perth", AustralianState.WA)]
-    [InlineData("Osborne Park, Perth WA", "Osborne Park", "Perth", AustralianState.WA)]
-    [InlineData("Austinmer, Wollongong, Illawarra & South Coast NSW", "Austinmer", "Wollongong, Illawarra & South Coast", AustralianState.NSW)]
-    [InlineData("Cape Schanck, Mornington Peninsula & Bass Coast VIC", "Cape Schanck", "Mornington Peninsula & Bass Coast", AustralianState.VIC)]
-    [InlineData("Hobart TAS", null, "Hobart", AustralianState.TAS)]
-    [InlineData("Darwin NT", null, "Darwin", AustralianState.NT)]
-    [InlineData("Canberra ACT", null, "Canberra", AustralianState.ACT)]
-    [InlineData("Auckland", null, "Auckland", AustralianState.Unknown)]
-    public void Parses_location_labels(string label, string? suburb, string? region, AustralianState state)
+    [InlineData("Perth WA", null, "Perth", "WA")]
+    [InlineData("Osborne Park, Perth WA", "Osborne Park", "Perth", "WA")]
+    [InlineData("Austinmer, Wollongong, Illawarra & South Coast NSW", "Austinmer", "Wollongong, Illawarra & South Coast", "NSW")]
+    [InlineData("Cape Schanck, Mornington Peninsula & Bass Coast VIC", "Cape Schanck", "Mornington Peninsula & Bass Coast", "VIC")]
+    [InlineData("Hobart TAS", null, "Hobart", "TAS")]
+    [InlineData("Darwin NT", null, "Darwin", "NT")]
+    [InlineData("Canberra ACT", null, "Canberra", "ACT")]
+    [InlineData("Auckland", null, "Auckland", null)]
+    public void Parses_location_labels(string label, string? suburb, string? region, string? state)
     {
-        Assert.Equal(new ListingLocation(suburb, region, state, null), SeekListingTranslator.ParseLocation(label));
+        Assert.Equal(new ListingLocation(Country.AU, suburb, region, state, null), SeekListingTranslator.ParseLocation(label));
     }
 
     [Theory]
@@ -74,7 +74,7 @@ public class SeekListingTranslatorTests
     [InlineData("   ")]
     public void Missing_location_is_unknown(string? label)
     {
-        Assert.Equal(ListingLocation.Unknown, SeekListingTranslator.ParseLocation(label));
+        Assert.Equal(ListingLocation.Unknown(Country.AU), SeekListingTranslator.ParseLocation(label));
     }
 
     [Theory]

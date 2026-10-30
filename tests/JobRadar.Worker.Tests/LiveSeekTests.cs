@@ -50,7 +50,7 @@ public class LiveSeekTests
             Assert.StartsWith("{", l.RawPayload);
         });
         // The search was for Perth: most ads must parse to WA. Catches a label format change.
-        Assert.True(listings.Count(l => l.Listing.Location.State == AustralianState.WA) * 2 > listings.Count);
+        Assert.True(listings.Count(l => l.Listing.Location.State == "WA") * 2 > listings.Count);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }

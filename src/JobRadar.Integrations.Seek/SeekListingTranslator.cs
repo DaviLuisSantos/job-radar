@@ -38,6 +38,9 @@ public static class SeekListingTranslator
         return text.Length == 0 ? null : text;
     }
 
+    /// <summary>Seek is Australian: its labels end in one of these, upper case.</summary>
+    private static readonly HashSet<string> States = new(StringComparer.Ordinal) { "NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT" };
+
     /// <summary>
     /// Labels are "Region STATE" or "Suburb, Region STATE", and some regions contain a comma
     /// themselves ("Austinmer, Wollongong, Illawarra &amp; South Coast NSW"): split on the first
@@ -46,22 +49,21 @@ public static class SeekListingTranslator
     public static ListingLocation ParseLocation(string? label)
     {
         if (string.IsNullOrWhiteSpace(label))
-            return ListingLocation.Unknown;
+            return ListingLocation.Unknown(Country.AU);
 
         var text = label.Trim();
-        var state = AustralianState.Unknown;
+        string? state = null;
         var lastSpace = text.LastIndexOf(' ');
-        if (lastSpace > 0 && Enum.TryParse<AustralianState>(text[(lastSpace + 1)..], ignoreCase: false, out var parsed)
-            && parsed != AustralianState.Unknown && Enum.IsDefined(parsed))
+        if (lastSpace > 0 && States.Contains(text[(lastSpace + 1)..]))
         {
-            state = parsed;
+            state = text[(lastSpace + 1)..];
             text = text[..lastSpace].TrimEnd();
         }
 
         var comma = text.IndexOf(", ", StringComparison.Ordinal);
         return comma < 0
-            ? new ListingLocation(null, Blank(text), state, null)
-            : new ListingLocation(Blank(text[..comma]), Blank(text[(comma + 2)..]), state, null);
+            ? new ListingLocation(Country.AU, null, Blank(text), state, null)
+            : new ListingLocation(Country.AU, Blank(text[..comma]), Blank(text[(comma + 2)..]), state, null);
     }
 
     public static WorkType ParseWorkType(string? seekWorkType) => seekWorkType?.Trim() switch

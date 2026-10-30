@@ -8,7 +8,7 @@ namespace JobRadar.Application.Tests.Collection;
 internal static class Listings
 {
     public static SourcedListing Of(string source, string id, string? title = null, DateTimeOffset? posted = null) => new(
-        new Listing(new ListingId(source, id), title ?? $"Job {id}", null, ListingLocation.Unknown, WorkType.Unknown,
+        new Listing(new ListingId(source, id), title ?? $"Job {id}", null, ListingLocation.Unknown(Country.AU), WorkType.Unknown,
             null, posted, new Uri($"https://example.test/{id}"), null),
         $$"""{"id":"{{id}}"}""");
 }
