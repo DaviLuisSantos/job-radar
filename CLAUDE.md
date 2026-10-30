@@ -49,6 +49,12 @@ dotnet run --project src/JobRadar.Web
 dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations.Postgres --output-dir .
 ```
 
+```bash
+dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations.SqlServer --output-dir .
+```
+
+- Mudou o modelo? Uma migration em **cada** projeto de migrations, com o mesmo nome. `DatabaseProviderTests` (sem banco)
+  falha se um deles ficar para trás.
 - Build: 0 erros, **0 warnings** — `TreatWarningsAsErrors` em `Directory.Build.props`.
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`) sobem Postgres 18 via Testcontainers
   e só rodam com `JOBRADAR_DB_TESTS=1`. O CI roda os dois.
@@ -62,7 +68,7 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
 
 ## Arquitetura de dados
 
-| | Postgres (`jobradar`) |
+| | Postgres (`jobradar`); SQL Server suportado (`Database:Provider`), sem uso em produção |
 |---|---|
 | Papel | fonte de verdade, do próprio sistema |
 | Dono do schema | este projeto — só muda por migration |
@@ -75,6 +81,7 @@ src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/, Tra
 src/JobRadar.Application     serviços (Collection/, Matching/, Tracking/) + portas em Abstractions/
 src/JobRadar.Infrastructure  Persistence/<Agregado>/: Entity → Configuration → Mapper → Ef<Agregado>Repository
 src/JobRadar.Infrastructure.Migrations.Postgres  migrations do Postgres (EF não compartilha migrations entre bancos)
+src/JobRadar.Infrastructure.Migrations.SqlServer  migrations do SQL Server, geradas do mesmo modelo
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
@@ -197,8 +204,11 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   por `deploy/deploy.ps1`; firewall só `100.64.0.0/10`). A 5080 é de outro serviço local do autor.
 - Serviço do Windows inicia antes do Docker Desktop (que sobe no login): o `DailyPipelineJob` espera o banco
   (`IStorageHealth`) e recupera a passada perdida. Não remova a espera achando que é lentidão.
-- `EF.Functions.ILike` com padrão escapado precisa do terceiro argumento (`@""`): sem ele o Npgsql usa
-  `ESCAPE ''` (`EfListingScoreRepository.ListForTriageAsync`).
+- Dois bancos (`Database:Provider`): o mapeamento que difere por banco mora **só** no `ProviderModel` (jsonb e identity do
+  Postgres, collation do SQL Server); a configuração de cada entidade é a mesma para os dois. Sem `ILike` nem SQL cru:
+  busca de texto é `ToLower().Contains()`, que o EF escapa nos dois. O SQL Server usa collation sensível a caixa e
+  acento (`Latin1_General_100_CS_AS_SC_UTF8`), como o Postgres; ela só vale se o banco for **criado** pelas migrations
+  (`Migrate` num banco que não existe): a migration não altera a collation de um banco já criado.
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
   todas as cópias (`TriageRow.AllIds`).
 - Paralelismo: chamadas ao Seek podem rodar em paralelo à vontade, o `SeekPacingHandler` segura o total

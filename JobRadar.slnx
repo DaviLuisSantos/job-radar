@@ -4,6 +4,7 @@
     <Project Path="src/JobRadar.Domain/JobRadar.Domain.csproj" />
     <Project Path="src/JobRadar.Infrastructure/JobRadar.Infrastructure.csproj" />
     <Project Path="src/JobRadar.Infrastructure.Migrations.Postgres/JobRadar.Infrastructure.Migrations.Postgres.csproj" />
+    <Project Path="src/JobRadar.Infrastructure.Migrations.SqlServer/JobRadar.Infrastructure.Migrations.SqlServer.csproj" />
     <Project Path="src/JobRadar.Integrations.Prototype/JobRadar.Integrations.Prototype.csproj" />
     <Project Path="src/JobRadar.Integrations.Seek/JobRadar.Integrations.Seek.csproj" />
     <Project Path="src/JobRadar.Web/JobRadar.Web.csproj" />

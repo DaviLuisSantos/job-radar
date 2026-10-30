@@ -29,6 +29,9 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<MarketCountEntity> MarketCounts => Set<MarketCountEntity>();
     public DbSet<MarketListingEntity> MarketListings => Set<MarketListingEntity>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(JobRadarDbContext).Assembly);
+        ProviderModel.Apply(modelBuilder, Database);
+    }
 }

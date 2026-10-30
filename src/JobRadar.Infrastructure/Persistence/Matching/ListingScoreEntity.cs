@@ -28,7 +28,7 @@ public class ListingScoreEntityConfiguration : IEntityTypeConfiguration<ListingS
         b.Property(e => e.SourceId).HasColumnName("source_id").HasMaxLength(64);
         b.Property(e => e.Profile).HasColumnName("profile").HasMaxLength(64);
         b.Property(e => e.Score).HasColumnName("score");
-        b.Property(e => e.Explanation).HasColumnName("explanation").HasColumnType("jsonb");
+        b.Property(e => e.Explanation).HasColumnName("explanation");
         b.Property(e => e.RulesHash).HasColumnName("rules_hash").HasMaxLength(16);
         b.Property(e => e.ScoredAt).HasColumnName("scored_at");
 
