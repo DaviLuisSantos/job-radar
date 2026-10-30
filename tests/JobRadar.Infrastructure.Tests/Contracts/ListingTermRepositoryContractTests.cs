@@ -1,11 +1,12 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Tests.Databases;
+using JobRadar.Infrastructure.Tests.Persistence;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Contracts;
 
-[Collection(PostgresCollection.Name)]
-public class ListingTermRepositoryContractTests(PostgresFixture db)
+public abstract class ListingTermRepositoryContractTests(DatabaseFixture db)
 {
     private static readonly DateTimeOffset Monday = new(2026, 10, 19, 6, 0, 0, TimeSpan.FromHours(8));
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -61,3 +62,9 @@ public class ListingTermRepositoryContractTests(PostgresFixture db)
         Assert.Null(await repo.GetOldestPostedAmongFirstSeenSinceAsync("seek", Monday.AddDays(5), Ct));
     }
 }
+
+[Collection(PostgresCollection.Name)]
+public sealed class PostgresListingTermRepositoryContractTests(PostgresFixture db) : ListingTermRepositoryContractTests(db);
+
+[Collection(SqlServerCollection.Name)]
+public sealed class SqlServerListingTermRepositoryContractTests(SqlServerFixture db) : ListingTermRepositoryContractTests(db);

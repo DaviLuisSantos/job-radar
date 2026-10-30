@@ -1,7 +1,7 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Infrastructure.Persistence.Listings;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Persistence;
 
 public class ListingMapperTests
 {

@@ -3,12 +3,13 @@ using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Tests.Databases;
+using JobRadar.Infrastructure.Tests.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Contracts;
 
-[Collection(PostgresCollection.Name)]
-public class ListingScoreRepositoryContractTests(PostgresFixture db)
+public abstract class ListingScoreRepositoryContractTests(DatabaseFixture db)
 {
     private static readonly DateTimeOffset Monday = new(2026, 10, 19, 6, 0, 0, TimeSpan.FromHours(8));
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -105,3 +106,9 @@ public class ListingScoreRepositoryContractTests(PostgresFixture db)
         Assert.Equal(2500, (await RowsAsync()).Count);
     }
 }
+
+[Collection(PostgresCollection.Name)]
+public sealed class PostgresListingScoreRepositoryContractTests(PostgresFixture db) : ListingScoreRepositoryContractTests(db);
+
+[Collection(SqlServerCollection.Name)]
+public sealed class SqlServerListingScoreRepositoryContractTests(SqlServerFixture db) : ListingScoreRepositoryContractTests(db);
