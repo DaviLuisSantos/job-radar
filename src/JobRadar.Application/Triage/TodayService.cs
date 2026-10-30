@@ -5,45 +5,48 @@ using JobRadar.Domain.Triage;
 namespace JobRadar.Application.Triage;
 
 /// <summary>
-/// The "Today" page of a market: what arrived since the last visit, the best of it per profile, and what moved in the
-/// applications. "New" is what the triage list would show (untriaged, not excluded, copies collapsed) and was first
-/// seen after the visit, so the counts match the triage.
+/// The "Today" page of a market: the listings of the last week still to triage, the best of them per profile, what
+/// arrived since the last visit, and what moved in the applications. A listing to triage is what the triage list
+/// would show (untriaged, not excluded, copies collapsed) and was first seen in the window, so the counts match the
+/// triage, and only triaging takes a listing away.
 /// </summary>
 public sealed class TodayService(IListingScoreRepository scores, ITrackingRepository tracking, IMarketVisitRepository visits)
 {
     public const int BestPerProfile = 5;
 
-    /// <summary>What happened since the last visit. Does not record this one: see <see cref="RecordVisitAsync"/>.</summary>
+    /// <summary>The page. Does not record this visit: see <see cref="RecordVisitAsync"/>.</summary>
     public async Task<MarketToday> TodayAsync(JobMarket market, IReadOnlyList<string> profiles, DateTimeOffset now, CancellationToken ct = default)
     {
         var last = (await visits.GetLastVisitsAsync(ct)).TryGetValue(market, out var at) ? at : (DateTimeOffset?)null;
-        var since = last ?? now - MarketToday.FirstVisitWindow;
+        var since = now - MarketToday.Window;
 
         var perProfile = new List<ProfileToday>();
         var ids = new HashSet<ListingId>();
+        var fresh = new HashSet<ListingId>();
         foreach (var profile in profiles)
         {
-            var rows = await NewRowsAsync(profile, since, ct);
-            perProfile.Add(new ProfileToday(profile, rows.Count, rows.Take(BestPerProfile).ToList()));
+            var rows = await ToTriageAsync(profile, since, ct);
+            var arrived = rows.Where(r => last is not { } visit || r.FirstSeenAt > visit).ToList();
+            perProfile.Add(new ProfileToday(profile, rows.Count, rows.Take(BestPerProfile).ToList()) { Fresh = arrived.Count });
             ids.UnionWith(rows.Select(r => r.Id));
+            fresh.UnionWith(arrived.Select(r => r.Id));
         }
 
         var changes = await tracking.ListStatusChangesAsync(profiles.ToList(), since, ct);
-        return new MarketToday(market, since, last is null, perProfile, changes) { New = ids.Count };
+        return new MarketToday(market, since, last, perProfile, changes) { New = ids.Count, Fresh = fresh.Count };
     }
 
-    /// <summary>New listings per market since its last visit, for the market selector.</summary>
+    /// <summary>Listings to triage per market, for the market selector: the same number its "Today" page shows.</summary>
     public async Task<IReadOnlyDictionary<JobMarket, int>> NewCountsAsync(
         IReadOnlyDictionary<JobMarket, IReadOnlyList<string>> profilesByMarket, DateTimeOffset now, CancellationToken ct = default)
     {
-        var last = await visits.GetLastVisitsAsync(ct);
+        var since = now - MarketToday.Window;
         var counts = new Dictionary<JobMarket, int>();
         foreach (var (market, profiles) in profilesByMarket)
         {
-            var since = last.TryGetValue(market, out var at) ? at : now - MarketToday.FirstVisitWindow;
             var ids = new HashSet<ListingId>();
             foreach (var profile in profiles)
-                ids.UnionWith((await NewRowsAsync(profile, since, ct)).Select(r => r.Id));
+                ids.UnionWith((await ToTriageAsync(profile, since, ct)).Select(r => r.Id));
             counts[market] = ids.Count;
         }
         return counts;
@@ -52,6 +55,6 @@ public sealed class TodayService(IListingScoreRepository scores, ITrackingReposi
     public Task RecordVisitAsync(JobMarket market, DateTimeOffset at, CancellationToken ct = default) =>
         visits.RecordVisitAsync(market, at, ct);
 
-    private async Task<IReadOnlyList<TriageRow>> NewRowsAsync(string profile, DateTimeOffset since, CancellationToken ct) =>
+    private async Task<IReadOnlyList<TriageRow>> ToTriageAsync(string profile, DateTimeOffset since, CancellationToken ct) =>
         Duplicates.Collapse(await scores.ListForTriageAsync(new TriageFilter(profile, SeenSince: since), ct));
 }

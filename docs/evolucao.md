@@ -356,6 +356,9 @@ triagem mostraria (sem tratamento, não excluída, cópias juntas) e foi vista p
 `market_visits` (`IMarketVisitRepository`, migration `AddMarketVisits` nos dois bancos) e é gravada só depois da
 renderização interativa: o prerender a gravaria antes de a página mostrar o que era novo. Na primeira visita, uma semana
 para trás. O seletor de mercado mostra a contagem de novas de cada um, recalculada a cada troca de página.
+Revisto em 2026-10-30, a pedido do autor: abrir a "Hoje" (ou trocar de mercado e voltar) esvaziava a página. Agora ela
+mostra o que falta triar da última semana; uma vaga sai quando é triada ou passa dos 7 dias, e a visita só marca com
+"nova" o que chegou desde a anterior. O contador do seletor de mercado é o mesmo número da página.
 
 **5.5 Spike das fontes remotas (sem código no repo)** ([#21](https://github.com/DaviLuisSantos/job-radar/issues/21)). ✅ 2026-10-30, em
 [fontes.md](fontes.md#remoto-spike-de-2026-10-30-passo-55-da-evolução): **Himalayas** para os dois mercados (elegibilidade

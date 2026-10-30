@@ -160,7 +160,7 @@
         await CountNewAsync();
     }
 
-    /// <summary>New listings per market since its last "Today": refreshed on every page change, cheap (filtered in the database).</summary>
+    /// <summary>Listings to triage per market, as its "Today" shows them: refreshed on every page change, cheap (filtered in the database).</summary>
     private async Task CountNewAsync()
     {
         var byMarket = _groups.ToDictionary(g => g.Market, g => g.Profiles);

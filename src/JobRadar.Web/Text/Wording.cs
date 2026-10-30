@@ -38,19 +38,26 @@ public static class Wording
 
     // The "Today" page.
     public const string Today = "Hoje";
-    public const string NothingNew = "Nada novo desde a última visita.";
+    public const string NothingNew = "Nada para triar dos últimos 7 dias.";
+    public const string JustArrived = "nova";
     public const string NoChanges = "Nenhuma candidatura mudou.";
     public const string ApplicationsMoved = "Candidaturas";
 
-    public static string NewListings(int count) => count == 1 ? "1 vaga nova" : $"{count.ToString("N0", Culture)} vagas novas";
+    public static string NewListings(int count) => count == 1 ? "1 a triar" : $"{count.ToString("N0", Culture)} a triar";
+
+    public static string FreshListings(int count) => count == 1 ? "1 nova" : $"{count.ToString("N0", Culture)} novas";
 
     /// <summary>The words after a big number: "1 / vaga nova", "7 / vagas novas".</summary>
-    public static string NewListingsWord(int count) => count == 1 ? "vaga nova" : "vagas novas";
+    public static string NewListingsWord(int count) => count == 1 ? "vaga a triar" : "vagas a triar";
+
+    public static string FreshListingsWord(int count) => count == 1 ? "chegou desde a última visita" : "chegaram desde a última visita";
 
     public static string ApplicationsMovedWord(int count) => count == 1 ? "candidatura mudou" : "candidaturas mudaram";
 
-    public static string SinceVisit(DateTimeOffset since, bool firstVisit) =>
-        firstVisit ? "Primeira visita: o que chegou nos últimos 7 dias." : $"Desde a sua última visita, em {When(since)}.";
+    public static string SinceVisit(DateTimeOffset? lastVisit) =>
+        lastVisit is { } at
+            ? $"O que ainda não foi triado dos últimos 7 dias. Última visita em {When(at)}."
+            : "O que ainda não foi triado dos últimos 7 dias.";
 
     public static string StatusMove(ApplicationStatus? from, ApplicationStatus to) =>
         from is { } f ? $"{Status(f)} → {Status(to)}" : Status(to);

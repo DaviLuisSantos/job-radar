@@ -454,6 +454,7 @@ details.paste summary .chevron { margin-left: auto; }
 .today-profile h2 a { color: var(--text); }
 .today-profile .new { color: var(--muted); font-size: .85rem; }
 .today-profile .new.some { color: var(--accent); font-weight: 650; }
+.chip.fresh { background: var(--accent-soft); color: var(--accent); font-weight: 650; font-size: .72rem; margin-left: 6px; vertical-align: middle; }
 .today-best { list-style: none; margin: 0 -8px; padding: 0; display: grid; gap: 2px; }
 .best { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 8px; border-radius: 10px; color: var(--text); transition: background .15s; }
 .best:hover { background: var(--hover); text-decoration: none; }

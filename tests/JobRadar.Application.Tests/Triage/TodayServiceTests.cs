@@ -62,15 +62,18 @@ public class TodayServiceTests
         new(new ListingId("gupy", id), "Dev .NET", company, ListingLocation.Unknown(Country.BR), WorkType.FullTime, null, null,
             Now.AddHours(-hoursAgo), score, null, null);
 
-    // Two profiles share listing "a"; "old" arrived before the last visit; "b2" is a copy of "b".
+    // Two profiles share listing "a"; "old" arrived before the last visit; "b2" is a copy of "b"; "gone" is out of the week.
     private static Scores Rows() => new(new()
     {
-        ["dotnet-br"] = [Row("a", "A", 90, 2), Row("b", "B", 80, 3), Row("b2", "B", 70, 4), Row("old", "C", 85, 48)],
+        ["dotnet-br"] = [Row("a", "A", 90, 2), Row("b", "B", 80, 3), Row("b2", "B", 70, 4), Row("old", "C", 85, 48), Row("gone", "E", 95, 24 * 8)],
         ["remote"] = [Row("a", "A", 88, 2), Row("d", "D", 60, 1)],
     });
 
+    private static readonly IReadOnlyDictionary<JobMarket, IReadOnlyList<string>> Br =
+        new Dictionary<JobMarket, IReadOnlyList<string>> { [JobMarket.BR] = ["dotnet-br", "remote"] };
+
     [Fact]
-    public async Task New_is_what_arrived_since_the_last_visit_copies_collapsed_and_counted_once_per_market()
+    public async Task The_week_untriaged_stays_and_the_last_visit_only_marks_what_arrived_since()
     {
         var visits = new Visits();
         visits.Last[JobMarket.BR] = Now.AddHours(-24);
@@ -78,31 +81,32 @@ public class TodayServiceTests
 
         var today = await new TodayService(Rows(), tracking, visits).TodayAsync(JobMarket.BR, ["dotnet-br", "remote"], Now, Ct);
 
-        Assert.False(today.FirstVisit);
-        Assert.Equal(Now.AddHours(-24), today.Since);
-        Assert.Equal([("dotnet-br", 2), ("remote", 2)], today.Profiles.Select(p => (p.Profile, p.New)));
-        Assert.Equal(["a", "b"], today.Profiles[0].Best.Select(r => r.Id.SourceId));
-        Assert.Equal(3, today.New);   // a, b, d
-        Assert.Equal(Now.AddHours(-24), tracking.AskedSince);
+        Assert.Equal(Now - MarketToday.Window, today.Since);
+        Assert.Equal(Now.AddHours(-24), today.LastVisit);
+        // "old" arrived before the visit and is still to triage; "gone" is older than the week.
+        Assert.Equal([("dotnet-br", 3, 2), ("remote", 2, 2)], today.Profiles.Select(p => (p.Profile, p.New, p.Fresh)));
+        Assert.Equal(["a", "b", "old"], today.Profiles[0].Best.Select(r => r.Id.SourceId));
+        Assert.False(today.IsFresh(today.Profiles[0].Best[2]));
+        Assert.True(today.IsFresh(today.Profiles[0].Best[0]));
+        Assert.Equal((4, 3), (today.New, today.Fresh));   // a, b, old, d; of them a, b, d arrived since the visit
+        Assert.Equal(Now - MarketToday.Window, tracking.AskedSince);
         Assert.Single(today.Changes);
         Assert.DoesNotContain(visits.Last, v => v.Value == Now);   // reading the page does not record the visit
     }
 
     [Fact]
-    public async Task The_first_visit_looks_a_week_back_and_counts_match_the_page()
+    public async Task Opening_the_page_takes_nothing_away_and_the_selector_counts_what_the_page_shows()
     {
         var visits = new Visits();
         var service = new TodayService(Rows(), new Changes(), visits);
 
-        var today = await service.TodayAsync(JobMarket.BR, ["dotnet-br", "remote"], Now, Ct);
-        var counts = await service.NewCountsAsync(new Dictionary<JobMarket, IReadOnlyList<string>> { [JobMarket.BR] = ["dotnet-br", "remote"] }, Now, Ct);
-
-        Assert.True(today.FirstVisit);
-        Assert.Equal(Now - MarketToday.FirstVisitWindow, today.Since);
-        Assert.Equal(4, today.New);   // "old" too: two days back is inside the week
-        Assert.Equal(today.New, counts[JobMarket.BR]);
-
+        var first = await service.TodayAsync(JobMarket.BR, ["dotnet-br", "remote"], Now, Ct);
         await service.RecordVisitAsync(JobMarket.BR, Now, Ct);
-        Assert.Equal(0, (await service.NewCountsAsync(new Dictionary<JobMarket, IReadOnlyList<string>> { [JobMarket.BR] = ["dotnet-br"] }, Now, Ct))[JobMarket.BR]);
+        var again = await service.TodayAsync(JobMarket.BR, ["dotnet-br", "remote"], Now, Ct);
+
+        Assert.Null(first.LastVisit);
+        Assert.Equal((4, 4), (first.New, first.Fresh));   // a first visit: everything is new
+        Assert.Equal((4, 0), (again.New, again.Fresh));   // still there; nothing arrived since
+        Assert.Equal(again.New, (await service.NewCountsAsync(Br, Now, Ct))[JobMarket.BR]);
     }
 }
