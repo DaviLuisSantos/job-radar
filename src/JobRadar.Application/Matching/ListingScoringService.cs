@@ -43,6 +43,10 @@ public sealed class ListingScoringService(
             log.LogInformation(
                 "Scored {Count} listings for {Profile}: {Excluded} excluded, {Strong} at 70 or more",
                 scored.Count, profile.Name, scored.Count(s => s.Score.Excluded), scored.Count(s => s.Score.Final >= 70));
+            // The scorer is pure: what it could not read about pay is said here, once per pass.
+            var unreadable = scored.Where(s => s.Score.Items.Any(i => i.Rule == ScoreRule.PayUnreadable)).Select(s => s.Id.ToString()).ToList();
+            if (unreadable.Count > 0)
+                log.LogInformation("Pay unreadable in {Count} listings for {Profile}: {Listings}", unreadable.Count, profile.Name, string.Join(", ", unreadable));
         }
 
         // Every score this pass wrote carries `now`; anything older is an orphan.

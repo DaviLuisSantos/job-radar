@@ -24,7 +24,8 @@
     private static string Tone(ScoreItem item) => item.Points switch
     {
         _ when item.Points == -50 && item.Rule is ScoreRule.CitizenshipRequired or ScoreRule.WorkRightsIncompatible
-            or ScoreRule.IdentifiedRole or ScoreRule.LeadershipTitle or ScoreRule.SeniorTitle => "exclusion",
+            or ScoreRule.IdentifiedRole or ScoreRule.LeadershipTitle or ScoreRule.SeniorTitle
+            or ScoreRule.RegionRestricted or ScoreRule.OtherRemoteMarket => "exclusion",
         > 0 => "plus",
         < 0 => "minus",
         _ => "neutral",

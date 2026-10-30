@@ -144,6 +144,7 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
                 r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict))
             {
                 Conditions = ListingConditions.Read(listing.Listing.Summary),
+                Eligibility = listing.Listing.Eligibility,
                 // The exclusion is the scorer's last item: it stops at the first rule that excludes.
                 ExcludedBy = r.Explanation is null ? null : JsonSerializer.Deserialize<List<ScoreItem>>(r.Explanation, Json)?.LastOrDefault(),
             };

@@ -18,6 +18,7 @@ public class ListingEntity
     public string Url { get; set; } = "";
     public string? SourceCategory { get; set; }
     public string? Summary { get; set; }
+    public string? Eligibility { get; set; }
     public DateTimeOffset FirstSeenAt { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
 }

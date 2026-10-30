@@ -45,6 +45,19 @@ public sealed record MarketRules
     /// <summary>Work at the employer's site, for <see cref="MatchingProfile.OnSiteLocations"/>.</summary>
     public required Regex OnSite { get; init; }
 
+    // Remote markets: who may apply, and how they are hired. Empty everywhere else.
+    /// <summary>
+    /// The eligibility this market takes (<see cref="RemoteEligibility"/>): worldwide for the global market, a region
+    /// with Brazil for LATAM. Null: not a remote market, eligibility is not read.
+    /// </summary>
+    public EligibilityScope? EligibleScope { get; init; }
+    /// <summary>Residence or work authorisation elsewhere as a condition ("US only"): excludes.</summary>
+    public Regex ResidencyRestricted { get; init; } = BrazilPatterns.Never;
+    public IReadOnlyList<string> ContractorPhrases { get; init; } = [];
+    public IReadOnlyList<string> EorPhrases { get; init; } = [];
+    public IReadOnlyList<string> DirectHirePhrases { get; init; } = [];
+    public IReadOnlyList<string> HiringPlatforms { get; init; } = [];
+
     /// <summary>The rules ported from the prototype: English, a working holiday visa, Australian licences.</summary>
     public static MarketRules Australia { get; } = new()
     {
@@ -110,11 +123,59 @@ public sealed record MarketRules
         OnSite = BrazilPatterns.OnSite,
     };
 
+    /// <summary>
+    /// Remote jobs read from Brazil, in English: seniority like the Brazilian profile (the profile's lists exclude
+    /// junior and internships), no visa, and English expected rather than penalised. Who may apply decides first
+    /// (<see cref="EligibleScope"/>). Written for this project and not yet calibrated.
+    /// </summary>
+    public static MarketRules LatamRemote { get; } = RemoteRules(JobMarket.LatamRemote, EligibilityScope.IncludesBrazil);
+
+    /// <summary>As <see cref="LatamRemote"/>, for jobs open worldwide: a job restricted to a region belongs to LATAM.</summary>
+    public static MarketRules GlobalRemote { get; } = RemoteRules(JobMarket.GlobalRemote, EligibilityScope.Worldwide);
+
+    private static MarketRules RemoteRules(JobMarket market, EligibilityScope scope) => new()
+    {
+        Market = market,
+        CitizenshipRequired = BrazilPatterns.Never,
+        WorkRightsIncompatible = BrazilPatterns.Never,
+        IdentifiedRole = BrazilPatterns.Never,
+        LeadershipTitle = ListingPatterns.LeadershipTitle,
+        SeniorRank = ListingPatterns.SeniorRank,
+        MidTitle = ListingPatterns.MidTitle,
+        JuniorTitle = ListingPatterns.JuniorTitle,
+        SponsorshipDenied = BrazilPatterns.Never,
+        SponsorshipOffered = [],
+        Remote = "remote",
+        Hybrid = "hybrid",
+        Fifo = [],
+        NoExperience = ListingPatterns.NoExperience,
+        WorkingHolidayFriendly = BrazilPatterns.Never,
+        FlexibleWorkType = BrazilPatterns.Never,
+        TrainingTitle = ListingPatterns.TrainingTitle,
+        EntryTitle = ListingPatterns.EntryTitle,
+        QualificationWords = ListingPatterns.QualificationWords,
+        LongContract = BrazilPatterns.Never,
+        CommissionOnly = ListingPatterns.CommissionOnly,
+        TruckLicence = BrazilPatterns.Never,
+        TruckLicenceAsked = _ => null,
+        YearsAsked = ListingPatterns.YearsAsked,
+        EnglishRequired = BrazilPatterns.Never,
+        OnSite = BrazilPatterns.Never,
+        EligibleScope = scope,
+        ResidencyRestricted = RemotePatterns.ResidencyRestricted,
+        ContractorPhrases = RemotePatterns.Contractor,
+        EorPhrases = RemotePatterns.Eor,
+        DirectHirePhrases = RemotePatterns.DirectHire,
+        HiringPlatforms = RemotePatterns.HiringPlatforms,
+    };
+
     /// <summary>The rules of a profile's market. A market without rules is refused, never read as another.</summary>
     public static MarketRules For(JobMarket market) => market switch
     {
         JobMarket.AU => Australia,
         JobMarket.BR => Brazil,
+        JobMarket.LatamRemote => LatamRemote,
+        JobMarket.GlobalRemote => GlobalRemote,
         _ => throw new NotSupportedException($"No scoring rules for {market} yet."),
     };
 }

@@ -69,6 +69,13 @@ public static class Wording
         ScoreRule.LocationExcluded => $"Local que este perfil descarta: {item.Detail}",
         ScoreRule.TitleExcluded => $"Palavra do título que este perfil descarta: {item.Detail}",
         ScoreRule.OnSiteElsewhere => $"Presencial fora de onde este perfil aceita: {item.Detail}",
+        ScoreRule.RegionRestricted => $"Só para quem mora em outro lugar: “{item.Detail}”",
+        ScoreRule.OtherRemoteMarket => $"É do outro mercado remoto (aceita: {item.Detail})",
+        ScoreRule.Engagement => $"Regime: {EngagementName(item.Detail)}",
+        ScoreRule.PayAtTarget => $"Salário no alvo do perfil: {item.Detail}",
+        ScoreRule.PayBelowFloor => $"Salário abaixo do piso do perfil: {item.Detail}",
+        ScoreRule.PayUnreadable => $"Salário que não deu para comparar: {item.Detail}",
+        ScoreRule.TimeZoneOutOfReach => $"Fuso fora do alcance do Brasil: {TimeZones(item.Detail)}",
         ScoreRule.SeniorPenalty => "Título sênior",
         ScoreRule.PositiveSignal => $"Sinal do perfil “{item.Detail}”",
         ScoreRule.NegativeSignal => $"Sinal negativo “{item.Detail}”",
@@ -238,6 +245,27 @@ public static class Wording
         _ => label,
     };
 
+    /// <summary>The engagement as the score item names it ("Contractor"), in Portuguese.</summary>
+    public static string EngagementName(string engagement) => Enum.TryParse<Engagement>(engagement, out var e) ? EngagementName(e) : engagement;
+
+    public static string EngagementName(Engagement engagement) => engagement switch
+    {
+        Engagement.Contractor => "contractor (PJ)",
+        Engagement.Eor => "EOR (CLT por uma empresa terceira)",
+        Engagement.Direct => "contratação direta",
+        _ => "não informado",
+    };
+
+    /// <summary>"UTC-5 to UTC-2" as "fuso UTC-5 a UTC-2".</summary>
+    public static string TimeZones(string window) => $"fuso {window.Replace(" to ", " a ", StringComparison.Ordinal)}";
+
+    /// <summary>Who may apply to a remote job, in Portuguese where it is a word, as the board wrote it otherwise.</summary>
+    public static string Eligibility(string eligibility) => RemoteEligibility.Classify(eligibility) switch
+    {
+        EligibilityScope.Worldwide => "Aberta ao mundo",
+        _ => eligibility.Length > 40 ? $"Aceita: {eligibility[..37].TrimEnd()}…" : $"Aceita: {eligibility}",
+    };
+
     public static string Arrangement(WorkArrangement arrangement) => arrangement switch
     {
         WorkArrangement.Remote => "Remota",
@@ -263,7 +291,10 @@ public static class Wording
         _ => $"Erro inesperado ({ex.GetType().Name}).",
     };
 
-    public static string Location(ListingLocation location) => ScoringInput.FormatLocation(location) ?? "Local não informado";
+    public static string Location(ListingLocation location) =>
+        location.Country == Country.Remote && ScoringInput.FormatLocation(location) == "Remote"
+            ? "Remoto"
+            : ScoringInput.FormatLocation(location) ?? "Local não informado";
 
     /// <summary>A stored instant (UTC) in the local time of the machine running the site.</summary>
     public static string When(DateTimeOffset at) => at.ToLocalTime().ToString("d MMM yyyy HH:mm", Culture);

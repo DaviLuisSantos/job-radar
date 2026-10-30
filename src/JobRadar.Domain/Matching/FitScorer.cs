@@ -1,3 +1,5 @@
+using JobRadar.Domain.Listings;
+
 namespace JobRadar.Domain.Matching;
 
 /// <summary>
@@ -5,14 +7,16 @@ namespace JobRadar.Domain.Matching;
 ///
 /// Order matters and is part of the rules:
 /// 1. Exclusions (score 0): citizenship/PR, work rights a WHV cannot give, identified roles, a location
-///    or a title word the profile rules out, on-site work outside where the profile accepts it, leadership
-///    and (for most profiles) senior titles.
+///    or a title word the profile rules out, on-site work outside where the profile accepts it, a remote job
+///    Brazil cannot apply to or of the other remote market, leadership and (for most profiles) senior titles.
 /// 2. Points from base 50: profile signals (title worth twice the body), sponsorship, remote,
-///    FIFO, entry level, WHV-friendly, flexible work type, preferred location.
+///    FIFO, entry level, WHV-friendly, flexible work type, preferred location, pay at the profile's target
+///    (and the engagement, as a label).
 /// 3. Compression above a threshold, so the best listings keep their order instead of tying at 100.
 /// 4. Restrictions and penalties after compression, so a listing with points to spare cannot
 ///    absorb them: full-text phrases, apprenticeships, long contracts, commission only, English as a
-///    condition, truck licence, no sponsorship (when required), age.
+///    condition, truck licence, no sponsorship (when required), age, time zones out of reach, pay below the
+///    profile's floor.
 /// 5. Qualification cap: a listing that needs a qualification the candidate lacks stays
 ///    visible below the ones they can apply to.
 ///
@@ -22,7 +26,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 14;
+    public const int RulesVersion = 15;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
@@ -72,6 +76,20 @@ public static class FitScorer
         if (profile.OnSiteLocations.Count > 0 && rules.OnSite.IsMatch(full)
             && !profile.OnSiteLocations.Any(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? "")))
             return Excluded(ScoreRule.OnSiteElsewhere, job.LocationLabel ?? "", ScoreWhere.Location);
+
+        // Remote markets: who may apply decides first. The board's eligibility, then the ad's words ("US only").
+        if (rules.EligibleScope is { } wanted)
+        {
+            var scope = RemoteEligibility.Classify(job.Eligibility);
+            if (scope == EligibilityScope.ExcludesBrazil)
+                return Excluded(ScoreRule.RegionRestricted, job.Eligibility!, ScoreWhere.Location);
+            if (scope != EligibilityScope.Unknown && scope != wanted)
+                return Excluded(ScoreRule.OtherRemoteMarket, job.Eligibility!, ScoreWhere.Location);
+            if (rules.ResidencyRestricted.Match(full) is { Success: true } residency)
+                return Excluded(ScoreRule.RegionRestricted, residency.Value, ScoreWhere.Text);
+            if (described && rules.ResidencyRestricted.Match(desc) is { Success: true } descResidency)
+                return Excluded(ScoreRule.RegionRestricted, descResidency.Value, ScoreWhere.Description);
+        }
 
         var juniorTitle = rules.JuniorTitle.IsMatch(title);
         if (policy.ExcludeSeniorTitles && !juniorTitle)
@@ -214,6 +232,30 @@ public static class FitScorer
         foreach (var requirement in held.DistinctBy(r => (r.Kind, r.Truck)))
             Add(ScoreRule.RequirementHeld, requirement.Phrase, requirement.Where, policy.HaveRequirementBonus);
 
+        // How the job hires and what it pays, for the profiles that say what they want to earn.
+        var payBelowFloor = (Pay: (Pay?)null, Floor: 0m);
+        if (profile.Compensation is { } compensation)
+        {
+            var engagement = EngagementDetector.Detect(fullAndDesc, rules);
+            if (engagement != Engagement.Unknown)
+                Add(ScoreRule.Engagement, engagement.ToString(), described ? ScoreWhere.Description : ScoreWhere.Text, 0);
+
+            var pay = PayParser.Parse(job.SalaryText) ?? PayParser.Find(full) ?? (described ? PayParser.Find(desc) : null);
+            if (pay is null && job.SalaryText is { } salaryField && salaryField.Any(char.IsAsciiDigit))
+                Add(ScoreRule.PayUnreadable, salaryField, ScoreWhere.Text, 0);
+            else if (pay is not null && compensation.BandFor(engagement, pay.Currency) is { } band)
+            {
+                var monthly = pay.Monthly(compensation.HoursPerMonth);
+                if (compensation.Convert(monthly.Min, pay.Currency, band.Currency) is not { } min
+                    || compensation.Convert(monthly.Max, pay.Currency, band.Currency) is not { } max)
+                    Add(ScoreRule.PayUnreadable, pay.ToString(), ScoreWhere.Text, 0);
+                else if (min >= band.MonthlyTarget)
+                    Add(ScoreRule.PayAtTarget, pay.ToString(), ScoreWhere.Text, policy.PayAtTargetBonus);
+                else if (max < band.MonthlyFloor)
+                    payBelowFloor = (pay, band.MonthlyFloor);
+            }
+        }
+
         // ── 3. Compression ────────────────────────────────────────────────
         if (score > policy.CompressAbove)
         {
@@ -287,6 +329,11 @@ public static class FitScorer
             Add(ScoreRule.CommissionOnly, commission.Value, ScoreWhere.Text, -policy.CommissionOnlyPenalty);
         if (rules.EnglishRequired.Match(fullAndDesc) is { Success: true } english)
             Add(ScoreRule.EnglishRequired, english.Value, ScoreWhere.Text, -policy.EnglishRequiredPenalty);
+        if (rules.EligibleScope is not null && ListingConditions.Read(job.Summary).TimeZones is { } zones
+            && !zones.Accepts(TimeZoneWindow.Brazil, slack: 1))
+            Add(ScoreRule.TimeZoneOutOfReach, zones.ToString(), ScoreWhere.Body, -policy.TimeZonePenalty);
+        if (payBelowFloor.Pay is { } lowPay)
+            Add(ScoreRule.PayBelowFloor, lowPay.ToString(), ScoreWhere.Text, -policy.PayBelowFloorPenalty);
         if (truckAsked is { } truck && !truckHeld && (described || !groups.ContainsKey(FullTextGroup.Licence)))
         {
             if (truck.Desirable)

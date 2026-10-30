@@ -62,6 +62,22 @@ public abstract class ListingRepositoryContractTests(DatabaseFixture db)
     }
 
     [DatabaseFact]
+    public async Task A_remote_listing_keeps_its_eligibility()
+    {
+        await db.ResetAsync();
+        var listing = ListingMapperTests.Sample("r1") with
+        {
+            Id = new ListingId("himalayas", "example-co/backend-developer"),
+            Location = ListingLocation.Unknown(Country.Remote),
+            Eligibility = "Brazil, Colombia, Mexico",
+        };
+
+        await RecordAsync(Monday, listing);
+
+        Assert.Equal(listing, (await FindAsync(listing.Id))!.Listing);
+    }
+
+    [DatabaseFact]
     public async Task Seeing_a_known_listing_again_refreshes_it_and_keeps_first_seen()
     {
         await db.ResetAsync();

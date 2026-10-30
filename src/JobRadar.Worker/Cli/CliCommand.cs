@@ -24,7 +24,7 @@ public abstract record CliCommand
           collect [--full]                run the daily pass now (--full: ignore the incremental windows)
           market                          take the market snapshot (Raio-X) now
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
-          tech-count [AU|BR] [YYYY-MM]    technologies the month's full ads asked for (default: BR, this month)
+          tech-count [AU|BR|Remote] [YYYY-MM]  technologies the month's full ads asked for (default: BR, this month)
           import-prototype <jobs.db> [--dry-run]  bring the Python prototype history in (safe to repeat)
           copy-database Postgres|SqlServer <connection-string>  every row of this database into another, empty and
                                           migrated (dotnet ef database update)

@@ -46,6 +46,10 @@ public enum ScoreRule
     LocationExcluded,
     TitleExcluded,
     OnSiteElsewhere,
+    /// <summary>A remote job restricted to places without Brazil, by its eligibility or its words ("US only").</summary>
+    RegionRestricted,
+    /// <summary>A remote job of the other remote market: open worldwide in LATAM, restricted to a region in global.</summary>
+    OtherRemoteMarket,
 
     // Points
     SeniorPenalty,
@@ -61,6 +65,10 @@ public enum ScoreRule
     FlexibleWorkType,
     PreferredLocation,
     RequirementHeld,
+    /// <summary>How the job hires (contractor, EOR, direct): a label, 0 points.</summary>
+    Engagement,
+    /// <summary>The bottom of the pay range reaches the profile's target.</summary>
+    PayAtTarget,
     Compression,
 
     // Restrictions applied after compression
@@ -81,6 +89,12 @@ public enum ScoreRule
     NoSponsorship,
     Aging,
     Stale,
+    /// <summary>The time zones the employer accepts leave Brazil out.</summary>
+    TimeZoneOutOfReach,
+    /// <summary>The top of the pay range is below the profile's floor.</summary>
+    PayBelowFloor,
+    /// <summary>Pay given in a currency or a form the scorer cannot read: 0 points, logged.</summary>
+    PayUnreadable,
 
     // Cap
     QualificationRequired,

@@ -52,6 +52,12 @@ public sealed record MatchingProfile(
 
     /// <summary>What the profile looks for: picks the sources searched and the <see cref="MarketRules"/> that read the ads.</summary>
     public JobMarket Market { get; init; } = JobMarket.AU;
+
+    /// <summary>
+    /// Pay expectations by engagement. Only profiles that have it read the engagement and the pay; null (every AU and
+    /// BR profile today) leaves both out.
+    /// </summary>
+    public Compensation? Compensation { get; init; }
 }
 
 /// <summary>
@@ -113,6 +119,16 @@ public sealed record ScoringPolicy
     public int CommissionOnlyPenalty { get; init; } = 30;
     /// <summary>English as a condition, in a market whose ads are not in English: something to train, not a no.</summary>
     public int EnglishRequiredPenalty { get; init; } = 10;
+
+    // Remote markets.
+    /// <summary>Time zones that leave Brazil out (more than an hour away): working hours would not overlap.</summary>
+    public int TimeZonePenalty { get; init; } = 10;
+
+    /// <summary>The top of the pay range below the profile's floor: as heavy as "senior", a reason, not a no.</summary>
+    public int PayBelowFloorPenalty { get; init; } = 15;
+
+    /// <summary>The bottom of the pay range at the profile's target or above.</summary>
+    public int PayAtTargetBonus { get; init; } = 8;
 
     // A requirement of the profile found in the full ad, by the candidate's state on it
     // (CandidateRequirements); a requirement the candidate has costs nothing. Moderate below out of reach:

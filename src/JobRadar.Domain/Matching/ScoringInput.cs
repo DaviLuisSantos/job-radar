@@ -18,6 +18,12 @@ public sealed record ScoringInput(
     /// <summary>The full ad text, when the candidate captured it; null for most listings.</summary>
     public string? Description { get; init; }
 
+    /// <summary>Who may apply, from remote boards (<see cref="Listing.Eligibility"/>).</summary>
+    public string? Eligibility { get; init; }
+
+    /// <summary>The source's pay field, read only by profiles with a <see cref="MatchingProfile.Compensation"/>.</summary>
+    public string? SalaryText { get; init; }
+
     public static ScoringInput From(Listing listing, IReadOnlyCollection<string>? fullTextTerms = null, string? description = null) => new(
         listing.Title,
         listing.Summary,
@@ -27,11 +33,15 @@ public sealed record ScoringInput(
         fullTextTerms ?? [])
     {
         Description = description,
+        Eligibility = listing.Eligibility,
+        SalaryText = listing.SalaryText,
     };
 
-    /// <summary>"Suburb, Region STATE", leaving out what is unknown.</summary>
+    /// <summary>"Suburb, Region STATE", leaving out what is unknown; "Remote" for a job in no country.</summary>
     public static string? FormatLocation(ListingLocation l)
     {
+        if (l.Country == Country.Remote && l is { Suburb: null, Region: null, State: null })
+            return "Remote";
         var place = (l.Suburb, l.Region) switch
         {
             ({ } s, { } r) => $"{s}, {r}",

@@ -10,6 +10,34 @@ public sealed class MatchingOptions
     public const string Section = "Matching";
 
     public Dictionary<string, ProfileOptions> Profiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The numbers every profile's <see cref="ProfileOptions.Compensation"/> is read with.</summary>
+    public CompensationOptions Compensation { get; set; } = new();
+}
+
+/// <summary>Section <c>Matching:Compensation</c>: how pay in dollars and by the hour compares with a monthly band.</summary>
+public sealed class CompensationOptions
+{
+    /// <summary>Reais per dollar. Update it when the rate moves enough to matter; it is in the rules hash.</summary>
+    public decimal UsdToBrl { get; set; } = 5.5m;
+
+    /// <summary>Hours in a month of full-time work, for hourly rates.</summary>
+    public decimal HoursPerMonth { get; set; } = 168;
+}
+
+/// <summary>What a profile wants to earn in one engagement, per month.</summary>
+public sealed class PayBandOptions
+{
+    public string Currency { get; set; } = "USD";
+    public decimal MonthlyFloor { get; set; }
+    public decimal MonthlyTarget { get; set; }
+}
+
+/// <summary>A profile's pay expectations, by engagement (<c>Compensation</c> in the domain).</summary>
+public sealed class ProfileCompensationOptions
+{
+    public PayBandOptions? Contractor { get; set; }
+    public PayBandOptions? Eor { get; set; }
 }
 
 /// <summary>One line of work: what to search for and how to score what comes back.</summary>
@@ -51,6 +79,9 @@ public sealed class ProfileOptions
 
     /// <summary>Requirements looked for in the full ad (see <c>ProfileRequirements</c>).</summary>
     public RequirementOptions Requirements { get; set; } = new();
+
+    /// <summary>Pay expectations; without it the profile reads neither the engagement nor the pay.</summary>
+    public ProfileCompensationOptions? Compensation { get; set; }
 }
 
 public sealed class RequirementOptions

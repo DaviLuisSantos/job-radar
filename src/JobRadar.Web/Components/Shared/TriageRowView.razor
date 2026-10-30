@@ -21,7 +21,7 @@
             <p class="excluded-by">@(Row.ExcludedBy is { } item ? Wording.Describe(item) : Wording.ExcludedReasonUnknown)</p>
         }
         <div class="tags">
-            <ListingTags Conditions="Row.Conditions" />
+            <ListingTags Conditions="Row.Conditions" Eligibility="@Row.Eligibility" Engagement="Row.Engagement" />
             <FactChips Facts="Row.Facts" />
         </div>
     </div>

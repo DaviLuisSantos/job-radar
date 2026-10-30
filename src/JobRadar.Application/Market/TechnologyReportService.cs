@@ -2,6 +2,7 @@ using System.Globalization;
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
+using JobRadar.Domain.Matching;
 
 namespace JobRadar.Application.Market;
 
@@ -17,6 +18,14 @@ public sealed class TechnologyReportService(IListingDescriptionRepository descri
         var start = DateTime.ParseExact(month, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
         var from = new DateTimeOffset(start, TimeSpan.Zero);
         var ads = await descriptions.ListAdsFirstSeenAsync(country, from, from.AddMonths(1), ct);
-        return TechnologyCount.Count(month, ads);
+        var report = TechnologyCount.Count(month, ads);
+        if (country != Country.Remote)
+            return report;
+        // Remote ads also say how they hire: contractor, EOR or direct, read the way remote profiles read them.
+        var engagements = ads
+            .Where(a => a.Description is not null)
+            .GroupBy(a => EngagementDetector.Detect($"{a.Title} {a.Description}", MarketRules.GlobalRemote))
+            .ToDictionary(g => g.Key, g => g.Count());
+        return report with { Engagements = engagements };
     }
 }

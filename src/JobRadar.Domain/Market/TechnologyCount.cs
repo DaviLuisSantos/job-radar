@@ -11,7 +11,11 @@ public sealed record Technology(string Name, string Group, Regex Pattern);
 public sealed record TechnologyShare(string Name, string Group, int Listings, double Share);
 
 /// <summary>The technologies the listings of a month ask for, most asked first. Personal use: counts only.</summary>
-public sealed record TechnologyReport(string Month, int Listings, int Described, IReadOnlyList<TechnologyShare> Technologies);
+public sealed record TechnologyReport(string Month, int Listings, int Described, IReadOnlyList<TechnologyShare> Technologies)
+{
+    /// <summary>Remote ads by how they hire (<see cref="Matching.Engagement"/>); empty for other countries.</summary>
+    public IReadOnlyDictionary<Matching.Engagement, int> Engagements { get; init; } = new Dictionary<Matching.Engagement, int>();
+}
 
 /// <summary>
 /// Counts the technologies ads ask for, to see the market from the ads instead of by hand. Each listing counts once

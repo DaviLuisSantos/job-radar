@@ -13,9 +13,9 @@
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras ([#28](https://github.com/DaviLuisSantos/job-radar/issues/28)) |
-| 5 | Mercados remotos e interface | ~10 | 🔨 5.1 a 5.4 implantadas; o resto nas issues abaixo |
+| 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7); faltam os prints do README |
 
-**O que falta, como issues:** 5.6 [#22](https://github.com/DaviLuisSantos/job-radar/issues/22), 5.7 [#23](https://github.com/DaviLuisSantos/job-radar/issues/23); prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
+**O que falta, como issues:** prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
 
 ## O que a auditoria mudou no plano original
 
@@ -326,9 +326,21 @@ para trás. O seletor de mercado mostra a contagem de novas de cada um, recalcul
 numa lista de países, vazia = mundo; salário estruturado) e **Jobicy** para o LATAM (`jobGeo`). Remotive, RemoteOK e We
 Work Remotely quase não têm .NET para quem está no Brasil; Get on Board espera os termos.
 
-**5.6 Fontes remotas** ([#22](https://github.com/DaviLuisSantos/job-radar/issues/22)). `JobRadar.Integrations.<Site>` para as escolhidas, no molde do Seek e da Gupy, com teste ao vivo.
+**5.6 Fontes remotas** ([#22](https://github.com/DaviLuisSantos/job-radar/issues/22)). ✅ 2026-10-30. `JobRadar.Integrations.Himalayas` (os dois mercados: `worldwide=true`
+para o global, `country=BR` para o LATAM) e `JobRadar.Integrations.Jobicy` (LATAM: o feed `geo=latam`, engenharia, últimos
+7 dias, filtrado aqui pelas palavras-chave, porque o `tag` da API só olha o título), no molde da Gupy: opções na classe,
+orçamento próprio (0,5 req/s, 1 simultânea), resiliência padrão, teste ao vivo (`LiveRemoteTests`, passou). A vaga remota
+fica em `Country.Remote` (`ZZ`, sem migration: a coluna já tem 2 caracteres) e ganhou `Listing.Eligibility` (migration
+`AddListingEligibility` nos dois bancos); o fuso aceito vai no resumo ("UTC-5 to UTC-2", lido por `ListingConditions`). O
+anúncio vem em HTML e é gravado como texto (`HtmlText`). O Himalayas não tem id numérico: o id é "empresa/slug" da URL,
+encurtado com hash quando passa de 64.
 
-**5.7 Regras remotas** ([#23](https://github.com/DaviLuisSantos/job-radar/issues/23)). `MarketRules` dos dois mercados remotos, em inglês: elegibilidade que não inclui o Brasil exclui
+**5.7 Regras remotas** ([#23](https://github.com/DaviLuisSantos/job-radar/issues/23)). ✅ 2026-10-30, `RulesVersion` 15, paridade do AU intacta. Feito como descrito abaixo; o que mudou
+no caminho: elegibilidade por `RemoteEligibility` (parte a parte) mais as frases de `RemotePatterns.ResidencyRestricted`
+("US only", "must reside in", "authorized to work in the UK"), que excluem como `RegionRestricted`; a vaga do outro mercado
+remoto sai como `OtherRemoteMarket`; fuso a mais de 1 h do Brasil custa `TimeZonePenalty` (10). Salário do anúncio só com
+palavra de salário perto (uma passada real leu vale-refeição e "US$ 2 bilhões" como salário). Regime aparece na triagem
+(etiqueta e filtro) e no `tech-count Remote`. `MarketRules` dos dois mercados remotos, em inglês: elegibilidade que não inclui o Brasil exclui
 ("US only", "must reside in", "EU only"); fuso fora do alcance penaliza; contractor e pagamento em dólar são dados, não
 penalidade; inglês é esperado, não penaliza. LATAM e global diferem no que aceitam como elegível. `RulesVersion` +1.
 
@@ -352,7 +364,10 @@ penalidade; inglês é esperado, não penaliza. LATAM e global diferem no que ac
 - **Testes:** exemplos inventados (anúncio real não entra no repo); as vagas reais são conferidas com
   `calibrate --rescore` no banco de produção.
 
-**Pronto:** os quatro mercados aparecem separados, a Austrália segue igual (paridade), um perfil remoto recebe vagas de
+**Pronto (2026-10-30):** ✅ os quatro mercados separados; ✅ paridade do AU; ✅ perfis remotos (`dotnet-latam`,
+`dotnet-global`) recebem vagas do Himalayas e do Jobicy e excluem as que não aceitam o Brasil (passada de ensaio contra as
+APIs reais: 192 vagas LATAM, 50 excluídas; 26 globais); ✅ celular. As faixas de salário dos perfis reais ficam para o
+autor preencher (`Compensation`, fora do Git): sem elas, regime e salário não pesam. Original: os quatro mercados aparecem separados, a Austrália segue igual (paridade), um perfil remoto recebe vagas de
 uma fonte remota e exclui as que não aceitam o Brasil, e a interface funciona no celular.
 
 ## Fora de escopo

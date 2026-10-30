@@ -1,0 +1,23 @@
+{
+  "apiVersion": "2.2.19", "jobCount": 3, "hasMore": false, "nextCursor": null, "success": true,
+  "jobs": [
+    {
+      "id": "900001", "url": "https://jobicy.com/jobs/900001-dotnet-developer", "jobSlug": "900001-dotnet-developer",
+      "jobTitle": "Senior .NET Developer", "companyName": "Example Labs", "jobIndustry": ["Software Engineering"],
+      "jobType": ["Full-Time"], "jobGeo": "LATAM", "jobLevel": "Senior", "jobExcerpt": "Fictional excerpt.",
+      "jobDescription": "<p>Build services in <b>C#</b> and .NET.</p>", "pubDate": "2026-10-29T12:00:00+00:00",
+      "salaryMin": 60000, "salaryMax": 80000, "salaryCurrency": "USD", "salaryPeriod": "yearly"
+    },
+    {
+      "id": 900002, "url": "https://jobicy.com/jobs/900002-designer", "jobTitle": "Product Designer",
+      "companyName": "Example Studio", "jobType": ["Contract"], "jobGeo": "Anywhere",
+      "jobDescription": "<p>Figma all day.</p>", "pubDate": "2026-10-29T10:00:00+00:00"
+    },
+    {
+      "id": 900003, "url": "https://jobicy.com/jobs/900003-backend", "jobTitle": "Backend Engineer",
+      "companyName": "Example Cloud", "jobType": ["Full-Time"], "jobGeo": "Anywhere",
+      "jobDescription": "<p>Our stack is .NET 10 and Postgres. You are a strong developer.</p>",
+      "pubDate": "2026-10-28T10:00:00+00:00"
+    }
+  ]
+}

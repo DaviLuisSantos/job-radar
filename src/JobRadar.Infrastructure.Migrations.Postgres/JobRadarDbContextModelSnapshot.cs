@@ -135,6 +135,11 @@ namespace JobRadar.Infrastructure.Migrations.Postgres
                         .HasColumnType("character varying(2)")
                         .HasColumnName("country");
 
+                    b.Property<string>("Eligibility")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("eligibility");
+
                     b.Property<DateTimeOffset>("FirstSeenAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("first_seen_at");

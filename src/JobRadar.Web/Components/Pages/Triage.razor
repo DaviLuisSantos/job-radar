@@ -3,6 +3,7 @@
 @inject TimeProvider Time
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject ProfileCatalog Catalog
 
 <PageTitle>@Profile · Triagem · JobRadar</PageTitle>
 
@@ -42,6 +43,17 @@
                    title="Por faixa de nota distribui algumas vagas de cada faixa por página, para as avaliações não virem só do topo">
             <MudSelectItem Value="TriageOrder.BestFirst">melhores primeiro</MudSelectItem>
             <MudSelectItem Value="TriageOrder.AcrossScores">por faixa de nota, para avaliar</MudSelectItem>
+        </MudSelect>
+    }
+    @if (IsRemote)
+    {
+        <MudSelect T="Engagement?" @bind-Value="_engagement" @bind-Value:after="FiltersChangedAsync" Label="Regime"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="narrow" Clearable="true"
+                   ToStringFunc="@(e => e is { } v ? Wording.EngagementName(v) : "")">
+            @foreach (var e in new[] { Engagement.Contractor, Engagement.Eor, Engagement.Direct, Engagement.Unknown })
+            {
+                <MudSelectItem T="Engagement?" Value="e">@Wording.EngagementName(e)</MudSelectItem>
+            }
         </MudSelect>
     }
     <MudSwitch T="bool" @bind-Value="_showHandled" @bind-Value:after="FiltersChangedAsync" Label="Mostrar tratadas" Color="Color.Primary" />
@@ -112,6 +124,11 @@ else if (_page is not null)
     private int _minScore;
     private TriageOrder _order;
     private bool _showHandled;
+    private Engagement? _engagement;
+
+    /// <summary>A remote market's profile: its ads say how they hire, and the list can filter on it.</summary>
+    private bool IsRemote => Catalog.Profiles.FirstOrDefault(p => string.Equals(p.Name, Profile, StringComparison.OrdinalIgnoreCase))?.Market
+        is JobMarket.LatamRemote or JobMarket.GlobalRemote;
 
     private string HeadCount => _page is null ? "Carregando…"
         : _filter.Excluded ? $"{Wording.Excluded(_page.Total)}, fora da lista"
@@ -122,7 +139,7 @@ else if (_page is not null)
         if (_filter.Profile == Profile)
             return;
         _filter = new TriageFilter(Profile);
-        (_text, _minScore, _order, _showHandled) = (null, 0, TriageOrder.BestFirst, false);
+        (_text, _minScore, _order, _showHandled, _engagement) = (null, 0, TriageOrder.BestFirst, false, null);
         (_cursor, _undo) = (0, null);
         await LoadAsync();
     }
@@ -139,7 +156,7 @@ else if (_page is not null)
     {
         _filter = _filter with
         {
-            Text = _text, MinScore = _minScore, Order = _order, OnlyUntriaged = !_showHandled, Page = 1,
+            Text = _text, MinScore = _minScore, Order = _order, OnlyUntriaged = !_showHandled, Engagement = _engagement, Page = 1,
         };
         _cursor = 0;
         return LoadAsync();

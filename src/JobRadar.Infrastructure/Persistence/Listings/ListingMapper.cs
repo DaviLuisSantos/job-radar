@@ -37,6 +37,7 @@ internal static class ListingMapper
         e.Url = listing.Url.ToString();
         e.SourceCategory = listing.SourceCategory;
         e.Summary = listing.Summary;
+        e.Eligibility = listing.Eligibility;
         e.LastSeenAt = observedAt.ToUniversalTime();
     }
 
@@ -51,7 +52,8 @@ internal static class ListingMapper
             PostedAt: e.PostedAt,
             Url: new Uri(e.Url),
             SourceCategory: e.SourceCategory,
-            Summary: e.Summary),
+            Summary: e.Summary,
+            Eligibility: e.Eligibility),
         FirstSeenAt: e.FirstSeenAt,
         LastSeenAt: e.LastSeenAt);
 
@@ -59,6 +61,7 @@ internal static class ListingMapper
     {
         Country.AU => "AU",
         Country.BR => "BR",
+        Country.Remote => "ZZ",
         _ => throw new ArgumentOutOfRangeException(nameof(country), country, null),
     };
 
@@ -66,6 +69,7 @@ internal static class ListingMapper
     {
         "AU" => Country.AU,
         "BR" => Country.BR,
+        "ZZ" => Country.Remote,
         _ => throw new InvalidOperationException($"Unknown country '{column}' in listings.country."),
     };
 

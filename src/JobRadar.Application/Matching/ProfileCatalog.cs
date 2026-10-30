@@ -32,7 +32,7 @@ public sealed class ProfileCatalog
         Policy = policy;
         Profiles = options.Value.Profiles
             .OrderBy(p => p.Key, StringComparer.Ordinal)
-            .Select(p => Build(p.Key, p.Value, policy))
+            .Select(p => Build(p.Key, p.Value, policy, options.Value.Compensation))
             .ToList();
         Searches = Profiles.SelectMany(p => p.Searches).DistinctBy(s => s.Key).ToList();
     }
@@ -47,7 +47,7 @@ public sealed class ProfileCatalog
     /// <summary>Every search of every profile, once: a search shared by two profiles runs once.</summary>
     public IReadOnlyList<ListingSearch> Searches { get; }
 
-    internal static ProfileDefinition Build(string name, ProfileOptions o, ScoringPolicy policy)
+    internal static ProfileDefinition Build(string name, ProfileOptions o, ScoringPolicy policy, CompensationOptions? compensation = null)
     {
         var written = string.IsNullOrWhiteSpace(o.Market) ? o.Country : o.Market;
         var market = string.IsNullOrWhiteSpace(written) ? JobMarket.AU
@@ -63,12 +63,22 @@ public sealed class ProfileCatalog
             ExcludedTitles = o.ExcludedTitles,
             OnSiteLocations = o.OnSiteLocations,
             Market = market,
+            Compensation = Compensation(o.Compensation, compensation ?? new CompensationOptions()),
         };
         var searches = o.Keywords
             .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Market: market)))
             .DistinctBy(s => s.Key)
             .ToList();
         return new ProfileDefinition(profile, searches, RulesHash(profile, policy));
+    }
+
+    private static Compensation? Compensation(ProfileCompensationOptions? o, CompensationOptions numbers)
+    {
+        static PayBand? Band(PayBandOptions? b) =>
+            b is null ? null : new PayBand(b.Currency.Trim().ToUpperInvariant(), b.MonthlyFloor, b.MonthlyTarget);
+        return o is null || (o.Contractor is null && o.Eor is null)
+            ? null
+            : new Compensation(Band(o.Contractor), Band(o.Eor), numbers.UsdToBrl, numbers.HoursPerMonth);
     }
 
     /// <summary>

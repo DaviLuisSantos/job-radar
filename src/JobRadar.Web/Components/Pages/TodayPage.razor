@@ -46,7 +46,7 @@ else if (_today is { } t)
                                         <span>@(row.Company ?? "Empresa não informada")</span>
                                         <span>@Wording.Location(row.Location)</span>
                                     </div>
-                                    <div class="tags"><ListingTags Conditions="row.Conditions" /></div>
+                                    <div class="tags"><ListingTags Conditions="row.Conditions" Eligibility="@row.Eligibility" /></div>
                                 </div>
                             </li>
                         }

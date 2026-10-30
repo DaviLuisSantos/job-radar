@@ -91,6 +91,8 @@ public static class CliRunner
                         await output.WriteLineAsync($"  {t.Name,-22}{t.Group,-13}{t.Listings,6:N0}  {t.Share,6:P0}");
                     if (tech.Described == 0)
                         await output.WriteLineAsync("  No full ads this month: nothing to count.");
+                    foreach (var (engagement, count) in tech.Engagements.OrderByDescending(e => e.Value))
+                        await output.WriteLineAsync($"  engagement {engagement,-12}{count,6:N0}");
                     break;
                 case CliCommand.CopyDatabase c:
                     await using (var target = new JobRadarDbContext(new DbContextOptionsBuilder<JobRadarDbContext>()

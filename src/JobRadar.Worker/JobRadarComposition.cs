@@ -2,6 +2,8 @@ using JobRadar.Application;
 using JobRadar.Infrastructure.Persistence;
 using JobRadar.Infrastructure.Telemetry;
 using JobRadar.Integrations.Gupy;
+using JobRadar.Integrations.Himalayas;
+using JobRadar.Integrations.Jobicy;
 using JobRadar.Integrations.Prototype;
 using JobRadar.Integrations.Seek;
 
@@ -20,6 +22,8 @@ public static class JobRadarComposition
         services.AddJobRadarTelemetry(configuration, "jobradar-worker");
         services.AddSeekIntegration(configuration);
         services.AddGupyIntegration(configuration);
+        services.AddHimalayasIntegration(configuration);
+        services.AddJobicyIntegration(configuration);
         // One-off import command: the archive reader and the service that uses it live only in the worker.
         services.AddPrototypeImport();
         services.AddScoped<JobRadar.Application.Import.PrototypeImportService>();

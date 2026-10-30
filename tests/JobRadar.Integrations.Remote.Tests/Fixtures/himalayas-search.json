@@ -1,0 +1,35 @@
+{
+  "comments": "Fictional page in the shape of the real search.",
+  "updatedAt": 1793325690, "offset": 0, "limit": 20, "totalCount": 3,
+  "jobs": [
+    {
+      "title": "Desenvolvedor .NET Pleno", "excerpt": "Empresa fictícia de saúde busca pessoa desenvolvedora.",
+      "companyName": "Acme Saúde", "companySlug": "acme-saude", "employmentType": "Full Time",
+      "minSalary": null, "maxSalary": null, "salaryPeriod": "annual", "currency": null,
+      "seniority": ["Mid-level"], "locationRestrictions": ["Brazil"], "timezoneRestrictions": [-5, -4, -3, -2],
+      "categories": ["Desenvolvedor-.NET"], "parentCategories": ["Developer"],
+      "description": "<p>Vaga <strong>fictícia</strong>.</p><ul><li>C#</li><li>Azure</li></ul>",
+      "pubDate": 1792838011, "expiryDate": 1798022010,
+      "applicationLink": "https://himalayas.app/companies/acme-saude/jobs/desenvolvedor-net-pleno",
+      "guid": "https://himalayas.app/companies/acme-saude/jobs/desenvolvedor-net-pleno"
+    },
+    {
+      "title": "Backend Developer (.NET - C#)", "excerpt": "Fictional fleet company.",
+      "companyName": "Example Fleet", "companySlug": "example-fleet", "employmentType": "Contractor",
+      "minSalary": 4000, "maxSalary": 6000, "salaryPeriod": "monthly", "currency": "USD",
+      "seniority": ["Senior", "Mid-level"], "locationRestrictions": [],
+      "timezoneRestrictions": [-11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "description": "<h3>About</h3><p>Fictional &amp; remote.</p>", "pubDate": 1793076981,
+      "applicationLink": "https://himalayas.app/companies/example-fleet/jobs/backend-developer-net-c",
+      "guid": "https://himalayas.app/companies/example-fleet/jobs/backend-developer-net-c"
+    },
+    {
+      "title": "Senior .NET Engineer", "excerpt": "Fictional bank.", "companyName": "Example Bank",
+      "companySlug": "example-bank", "employmentType": "Full Time", "minSalary": null, "maxSalary": null,
+      "locationRestrictions": ["Brazil", "Colombia", "Mexico"], "timezoneRestrictions": [],
+      "description": null, "pubDate": 1793000000,
+      "applicationLink": "https://himalayas.app/companies/example-bank/jobs/senior-net-engineer",
+      "guid": "https://himalayas.app/companies/example-bank/jobs/senior-net-engineer"
+    }
+  ]
+}

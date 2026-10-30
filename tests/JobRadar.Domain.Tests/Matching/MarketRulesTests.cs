@@ -44,10 +44,7 @@ public class MarketRulesTests
     [Theory]
     [InlineData(JobMarket.LatamRemote)]
     [InlineData(JobMarket.GlobalRemote)]
-    public void A_market_without_rules_yet_is_refused_instead_of_read_as_another(JobMarket market)
-    {
-        Assert.Throws<NotSupportedException>(() => Score(Br("Backend Developer"), Tech with { Market = market }));
-    }
+    public void Every_market_has_its_own_rules(JobMarket market) => Assert.Equal(market, MarketRules.For(market).Market);
 
     [Fact]
     public void Australia_keeps_the_prototype_phrases()

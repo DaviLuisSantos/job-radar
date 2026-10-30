@@ -180,6 +180,15 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-30 — Mercados remotos: Himalayas, Jobicy e as regras (5.6 e 5.7, `RulesVersion` 15)
+Duas fontes novas para os mercados remotos e as regras que leem as vagas a partir do Brasil. Uma passada de ensaio contra
+as APIs reais (sem gravar nada) mostrou o que as regras fazem: no LATAM, 192 vagas, 24 excluídas por serem do outro mercado
+(abertas ao mundo), 24 por liderança; no global, 26 vagas. Ela também achou o erro da primeira versão do leitor de
+salário, que lia vale-refeição, auxílio e rodada de investimento como salário; agora o anúncio só dá salário com palavra de
+salário perto. A paridade do AU passou igual (5.388 vagas). Os perfis `dotnet-br`, `dotnet-latam` e `dotnet-global` entraram
+no `appsettings.Local.json` da produção (o `dotnet-br` nunca tinha sido configurado lá: é a primeira passada com perfil
+BR); as faixas de salário (`Compensation`) ficam para o autor.
+
 ### 2026-10-30 — Tela "Hoje" (5.4), erros em português e a cópia para o SQL Server
 `hoje/{mercado}` virou a página inicial: o que chegou desde a última visita àquele mercado, as melhores novas de cada
 perfil e as candidaturas que mudaram. A visita fica no banco (`market_visits`) para valer entre o celular e o PC, e o

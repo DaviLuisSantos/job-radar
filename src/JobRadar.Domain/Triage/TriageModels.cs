@@ -10,6 +10,7 @@ namespace JobRadar.Domain.Triage;
 /// <param name="IncludeExcluded">For the repository: also the listings scored 0.</param>
 /// <param name="Excluded">For the screen: the excluded listings instead of the open ones.</param>
 /// <param name="SeenSince">Only listings first seen after this instant (the "Today" page).</param>
+/// <param name="Engagement">Only remote listings that hire this way (read from the full ad).</param>
 public sealed record TriageFilter(
     string Profile,
     bool IncludeExcluded = false,
@@ -20,7 +21,8 @@ public sealed record TriageFilter(
     int PageSize = 50,
     TriageOrder Order = TriageOrder.BestFirst,
     bool Excluded = false,
-    DateTimeOffset? SeenSince = null);
+    DateTimeOffset? SeenSince = null,
+    Engagement? Engagement = null);
 
 public enum TriageOrder
 {
@@ -63,6 +65,12 @@ public sealed record TriageRow(
 
     /// <summary>The rule that excluded the listing, when it scored 0.</summary>
     public ScoreItem? ExcludedBy { get; init; }
+
+    /// <summary>Who may apply, from remote boards (<see cref="Listing.Eligibility"/>).</summary>
+    public string? Eligibility { get; init; }
+
+    /// <summary>How a remote job hires, read from its full ad; null outside the remote markets.</summary>
+    public Engagement? Engagement { get; init; }
 }
 
 /// <param name="Total">Rows after collapsing duplicates, across all pages.</param>

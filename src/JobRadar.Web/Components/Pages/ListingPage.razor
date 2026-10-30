@@ -30,7 +30,7 @@ else if (_detail is { } d)
                 }
             </p>
             <div class="tags">
-                <ListingTags Conditions="ListingConditions.Read(listing.Summary)" />
+                <ListingTags Conditions="ListingConditions.Read(listing.Summary)" Eligibility="@listing.Eligibility" />
                 <FactChips Facts="d.Facts" />
             </div>
             <p class="muted">

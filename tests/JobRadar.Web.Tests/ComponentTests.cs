@@ -84,6 +84,23 @@ public class ComponentTests : BunitContext
     }
 
     [Fact]
+    public void A_remote_row_shows_who_may_apply_the_time_zones_and_how_it_hires()
+    {
+        var cut = RenderRow(Row(72) with
+        {
+            Location = ListingLocation.Unknown(Country.Remote),
+            Eligibility = "Brazil, Colombia, Mexico",
+            Conditions = new ListingConditions(WorkArrangement.Remote, null) { TimeZones = new TimeZoneWindow(-5, -2) },
+            Engagement = Engagement.Contractor,
+        });
+
+        Assert.Equal(["Aceita: Brazil, Colombia, Mexico", "Remota", "fuso UTC-5 a UTC-2", "contractor (PJ)"],
+            cut.FindAll(".tags .tag").Select(c => c.TextContent.Trim()));
+        Assert.Contains("Remoto", cut.Find(".meta").TextContent);
+        Assert.Equal("Aberta ao mundo", Wording.Eligibility(RemoteEligibility.Worldwide));
+    }
+
+    [Fact]
     public void A_row_without_conditions_shows_no_tags()
     {
         var cut = RenderRow(Row(72));

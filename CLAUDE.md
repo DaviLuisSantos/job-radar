@@ -59,8 +59,8 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
 - Testes: sem banco por padrão. Os de contrato (`[DatabaseFact]`, em `Contracts/`) são classes abstratas com uma
   derivada por banco: sobem Postgres 18 **e** SQL Server 2022 via Testcontainers e só rodam com `JOBRADAR_DB_TESTS=1`.
   O CI roda os dois. Contrato novo ganha as duas derivadas no fim do arquivo.
-- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek e da Gupy pela composição completa.
-  Fora do CI de propósito. Rode ao mexer em `Integrations.Seek` ou `Integrations.Gupy`, ou quando a coleta começar a falhar.
+- Teste ao vivo (`[LiveFact]`, `JOBRADAR_LIVE_TESTS=1`) chama a API real do Seek, da Gupy, do Himalayas e do Jobicy pela composição completa.
+  Fora do CI de propósito. Rode ao mexer numa `Integrations.*`, ou quando a coleta começar a falhar.
 - Paridade do score (`[ParityFact]`, `JOBRADAR_PARITY_FILE`): 5.388 vagas reais exportadas do protótipo,
   fora do repo (são anúncios reais). **Mexeu em `Domain/Matching`? Rode.** Mudança de regra intencional
   quebra a paridade: aí registre no `docs/plano.md` e incremente `FitScorer.RulesVersion`.
@@ -85,6 +85,8 @@ src/JobRadar.Infrastructure.Migrations.Postgres  migrations do Postgres (EF não
 src/JobRadar.Infrastructure.Migrations.SqlServer  migrations do SQL Server, geradas do mesmo modelo
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Integrations.Gupy  IJobSource da Gupy (Brasil): busca do portal, tradutor; o anúncio inteiro vem na busca
+src/JobRadar.Integrations.Himalayas  IJobSource remoto (LATAM e global): busca pública; elegibilidade, fuso, salário
+src/JobRadar.Integrations.Jobicy  IJobSource remoto (LATAM): feed de 7 dias filtrado pelas palavras-chave aqui
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
 src/JobRadar.Web             triagem em Blazor + MudBlazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
@@ -256,6 +258,12 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   contam lá); `ExcludedTitles`, por uma palavra do título (júnior, Java); `OnSiteLocations`, quando a vaga é presencial
   fora delas (`MarketRules.OnSite`). Regra que é do candidato vai para o perfil; o que uma frase quer dizer, para o mercado.
   O enum se chama `JobMarket` porque `Market` colide com o namespace `JobRadar.Domain.Market` (o do Raio-X).
+- Remoto: a vaga fica em `Country.Remote` (gravado `ZZ`) e diz quem pode se candidatar em `Listing.Eligibility`
+  ("Worldwide", "LATAM", "Brazil, Colombia"), que `RemoteEligibility` classifica parte a parte ("North America" não é
+  "Americas"). Uma vaga cai num só mercado remoto: aberta ao mundo é do global, restrita a uma região com o Brasil é do
+  LATAM. Salário lido do **anúncio** só conta com palavra de salário logo antes e sem palavra de benefício
+  (`PayParser.Find`): vale-refeição, auxílio e rodada de investimento eram lidos como salário. O campo de salário da fonte
+  é lido direto (`PayParser.Parse`). Regime e salário só pesam em perfil com `Compensation`.
 
 ## Convenções
 

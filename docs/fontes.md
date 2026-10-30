@@ -114,3 +114,14 @@ Brasil) e **global** (abertas ao mundo). Uma chamada por endpoint; amostras fora
 
 **Decidido (2026-10-30): Himalayas para os dois mercados e Jobicy para o LATAM**, nas mesmas regras (uso pessoal, ritmo
 baixo, nada público). Get on Board fica para quando os termos e a semântica de `remote_local` forem conferidos.
+
+## Himalayas e Jobicy — como as integrações funcionam (passo 5.6)
+
+- **Himalayas:** `GET himalayas.app/jobs/api/search?q=<palavra>&page=N` com `worldwide=true` (global) ou `country=BR`
+  (LATAM); 20 por página, até 15 páginas. `locationRestrictions` vira `Listing.Eligibility` (vazia = "Worldwide");
+  `timezoneRestrictions` vira "UTC-5 to UTC-2" no resumo (o mundo inteiro não restringe e fica de fora); salário
+  estruturado vira "USD 4,000–6,000 per month". Id: "empresa/slug" do `guid`. Resposta lida como UTF-8 sempre.
+- **Jobicy:** `GET jobicy.com/api/v2/remote-jobs?count=100&geo=latam&industry=engineering`, paginado por `nextCursor`;
+  cada busca lê o feed e fica com as vagas que têm todas as palavras-chave no título ou no anúncio. `jobGeo` "Anywhere" vira
+  "Worldwide".
+- Os dois: orçamento de 0,5 requisição por segundo, uma por vez, User-Agent identificado; anúncio HTML gravado como texto.

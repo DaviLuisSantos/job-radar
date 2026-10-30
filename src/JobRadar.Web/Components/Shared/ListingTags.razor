@@ -1,4 +1,9 @@
-@* What decides an application, as the source gives it: arrangement and contract (ListingConditions). *@
+@* What decides an application, as the source gives it: who may apply, arrangement, contract, time zones. *@
+@if (Eligibility is { Length: > 0 } eligibility)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" Class="tag tag-eligibility"
+             title="@eligibility">@Wording.Eligibility(eligibility)</MudChip>
+}
 @if (Wording.Arrangement(Conditions.Arrangement) is { Length: > 0 } arrangement)
 {
     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
@@ -9,6 +14,21 @@
     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-contract">@contract</MudChip>
 }
 
+@if (Conditions.TimeZones is { } zones)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-timezones">@Wording.TimeZones(zones.ToString())</MudChip>
+}
+@if (Engagement is { } engagement and not JobRadar.Domain.Matching.Engagement.Unknown)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-engagement">@Wording.EngagementName(engagement)</MudChip>
+}
+
 @code {
     [Parameter, EditorRequired] public ListingConditions Conditions { get; set; } = ListingConditions.None;
+
+    /// <summary>Who may apply, from remote boards (<c>Listing.Eligibility</c>).</summary>
+    [Parameter] public string? Eligibility { get; set; }
+
+    /// <summary>How a remote job hires, when the profile reads it.</summary>
+    [Parameter] public Engagement? Engagement { get; set; }
 }
