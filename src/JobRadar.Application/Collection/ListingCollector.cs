@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Collection;
 using JobRadar.Domain.Listings;
@@ -55,6 +56,11 @@ public sealed class ListingCollector(
 
     private async Task<CollectionRun> RunOneAsync(IJobSource source, ListingSearch search, bool fullHistory, CancellationToken ct)
     {
+        using var activity = JobRadarTelemetry.Source.StartActivity("collect search");
+        activity?.SetTag("jobradar.source", source.Name);
+        activity?.SetTag("jobradar.country", source.Country.ToString());
+        activity?.SetTag("jobradar.search", search.Key);
+        var tags = new TagList { { "source", source.Name }, { "country", source.Country.ToString() } };
         var started = time.GetUtcNow();
         var last = fullHistory ? null : await StoredAsync(() => runs.GetLastCompleteStartAsync(source.Name, search.Key, ct), ct);
         var window = IncrementalWindow(last, started);
@@ -64,12 +70,20 @@ public sealed class ListingCollector(
             var result = await source.SearchAsync(search with { PostedWithinDays = window }, ct);
             var observed = await StoredAsync(() => listings.RecordObservationsAsync(result.Listings, search.Key, started, ct), ct);
             await StoredAsync(() => SaveDescriptionsAsync(result.Listings, started, ct), ct);
+            JobRadarTelemetry.JobsCollected.Add(result.Listings.Count, tags);
+            JobRadarTelemetry.JobsNew.Add(observed.New, tags);
+            JobRadarTelemetry.JobsKnown.Add(observed.AlreadyKnown, tags);
+            activity?.SetTag("jobradar.found", result.Listings.Count);
+            activity?.SetTag("jobradar.new", observed.New);
             return new CollectionRun(source.Name, search.Key, window, started, time.GetUtcNow(),
                 result.Listings.Count, observed.New, result.Complete, Error: null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            log.LogError(ex, "Search {SearchKey} on {Source} failed", search.Key, source.Name);
+            log.LogError(ex, "Search {SearchKey} on {Source} ({Country}) failed", search.Key, source.Name, source.Country);
+            tags.Add("error", ex.GetType().Name);
+            JobRadarTelemetry.SourceErrors.Add(1, tags);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
             return new CollectionRun(source.Name, search.Key, window, started, time.GetUtcNow(),
                 Found: 0, New: 0, Complete: false, Error: $"{ex.GetType().Name}: {ex.Message}");
         }

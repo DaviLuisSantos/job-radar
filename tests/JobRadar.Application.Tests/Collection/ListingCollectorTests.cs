@@ -1,3 +1,4 @@
+using JobRadar.Application;
 using JobRadar.Application.Collection;
 using JobRadar.Domain.Listings;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,6 +24,41 @@ public class ListingCollectorTests
     private ListingCollector Collector(int parallel, params FakeSource[] sources) =>
         new(sources, _listings, _descriptions, _runs, Options.Create(new CollectionOptions { MaxParallelSearches = parallel }), _time,
             NullLogger<ListingCollector>.Instance);
+
+    [Fact]
+    public async Task Each_run_counts_what_it_found_new_and_known_and_its_failures()
+    {
+        // The meter is process-wide: the source name keeps other tests' measurements out.
+        var source = $"metrics-{Guid.NewGuid():N}";
+        var measured = new List<(string Name, long Value, string? Error)>();
+        using var listener = new System.Diagnostics.Metrics.MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Meter.Name == JobRadarTelemetry.Name)
+                l.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
+        {
+            var all = tags.ToArray();
+            if (all.Any(t => t.Key == "source" && (string?)t.Value == source))
+                lock (measured)
+                    measured.Add((instrument.Name, value, all.FirstOrDefault(t => t.Key == "error").Value as string));
+        });
+        listener.Start();
+
+        var fake = new FakeSource(source);
+        fake.Respond = s => s == Hospo
+            ? throw new HttpRequestException("down")
+            : new SearchResult([Listings.Of(source, "1")], Complete: true);
+        await Collector(fake).CollectAsync([Dev, Hospo], Ct);
+        await Collector(fake).CollectAsync([Dev], Ct);
+
+        Assert.Equal(2, measured.Where(m => m.Name == "jobradar.jobs.collected").Sum(m => m.Value));
+        Assert.Equal(1, measured.Where(m => m.Name == "jobradar.jobs.new").Sum(m => m.Value));
+        Assert.Equal(1, measured.Where(m => m.Name == "jobradar.jobs.known").Sum(m => m.Value));
+        Assert.Equal([("jobradar.source.errors", 1L, "HttpRequestException")],
+            measured.Where(m => m.Name == "jobradar.source.errors").ToList());
+    }
 
     [Fact]
     public async Task A_search_runs_only_on_the_sources_of_its_country()

@@ -34,6 +34,17 @@ services:
     volumes:
       - mssqldata:/var/opt/mssql
 
+  # Only with --profile telemetry: a local view of the traces, metrics and logs of a pass. Point the worker and the
+  # site at it with Telemetry__OtlpEndpoint=http://localhost:4317; the dashboard is at http://localhost:18888.
+  aspire:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.5.2
+    profiles: [telemetry]
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "18888:18888"
+      - "4317:18889"
+
 volumes:
   pgdata:
   mssqldata:

@@ -206,12 +206,18 @@ por país ✅; relatório mensal separado ✅ (o Raio-X segue só AU); contagem 
 
 ## Fase 3 — Observabilidade (3 PRs)
 
-**3.1 OpenTelemetry e escopos.** `OpenTelemetry.Extensions.Hosting` com ASP.NET Core, HttpClient e EF Core no
-Worker e na Web. `BeginScope` com `RunId`, `Country`, `Source` no `DailyPipeline`. Exportador console por padrão;
-OTLP opcional para o Aspire Dashboard (um container a mais no `docker-compose.yml`, só local).
+**3.1 OpenTelemetry e escopos.** ✅ `AddJobRadarTelemetry` (Infrastructure/Telemetry) no Worker e no site: traces,
+métricas e logs por OTLP, com HttpClient, Npgsql (a fonte `Npgsql`, sem pacote beta do EF) e, no site, ASP.NET Core.
+**Só com `Telemetry:OtlpEndpoint`**: sem ele nada é coletado e os logs seguem como estavam (o original previa
+exportador de console por padrão; num serviço do Windows isso só duplicaria o log). `RunId` (o id do trace da passada)
+e `Stage` vão em escopos de log; fonte e país, no texto do erro de busca. Aspire Dashboard 13.5.2 no
+`docker-compose.yml`, `--profile telemetry`.
 
-**3.2 Métricas e traces da passada.** `Meter` `JobRadar`: as 6 métricas do original. Uma `Activity` por etapa
-do `DailyPipeline` e por busca. As tags são fonte, país e etapa, nunca título ou empresa.
+**3.2 Métricas e traces da passada.** ✅ `JobRadarTelemetry` (Application, só com o que o .NET traz): um trace por
+passada (`daily pass`), uma `Activity` por etapa e por busca (`collect search`, com fonte, país, chave, achadas e
+novas). Métricas: `jobradar.jobs.collected`, `.jobs.new`, `.jobs.known` (o "deduplicated" do original: já conhecidas
+quando a busca as devolveu), `jobradar.source.errors` (por fonte, país e tipo de erro), `jobradar.stage.duration` (por
+etapa e resultado, cobre o "enrichment") e `jobradar.run.duration`. Tags nunca levam título, empresa ou dado do candidato.
 
 **3.3 `/health` e o vigia.** Na Web, reusando o `StatusService`: banco acessível e última passada com sucesso
 há menos de 26 h. O vigia passa a consultar `/health` **além** de olhar o serviço parado (o Worker não tem HTTP;

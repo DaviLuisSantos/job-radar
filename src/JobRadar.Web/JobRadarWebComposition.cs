@@ -1,5 +1,8 @@
 using JobRadar.Application;
 using JobRadar.Infrastructure.Persistence;
+using JobRadar.Infrastructure.Telemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace JobRadar.Web;
 
@@ -13,6 +16,8 @@ public static class JobRadarWebComposition
     {
         services.AddApplication(configuration);
         services.AddPersistence(configuration);
+        services.AddJobRadarTelemetry(configuration, "jobradar-web",
+            tracing: t => t.AddAspNetCoreInstrumentation(), metrics: m => m.AddAspNetCoreInstrumentation());
         services.AddRazorComponents().AddInteractiveServerComponents();
         services.AddSingleton<Backend>();
         return services;

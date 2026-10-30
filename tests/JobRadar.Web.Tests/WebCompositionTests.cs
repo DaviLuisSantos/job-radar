@@ -10,14 +10,17 @@ namespace JobRadar.Web.Tests;
 
 public class WebCompositionTests
 {
-    [Fact]
-    public void The_site_container_builds_and_resolves_what_the_pages_use()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("http://localhost:4317")]
+    public void The_site_container_builds_and_resolves_what_the_pages_use(string? otlpEndpoint)
     {
         // Same host as Program.cs: Blazor needs the web host services (environment, configuration).
         var builder = WebApplication.CreateBuilder();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:JobRadar"] = "Host=localhost;Database=unused",
+            ["Telemetry:OtlpEndpoint"] = otlpEndpoint,
         });
         builder.Host.UseDefaultServiceProvider(o => (o.ValidateOnBuild, o.ValidateScopes) = (true, true));
         builder.Services.AddJobRadarWeb(builder.Configuration);

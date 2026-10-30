@@ -6,13 +6,14 @@ namespace JobRadar.Worker.Tests;
 
 public class CompositionTests
 {
-    private static ServiceProvider BuildAsInProgram()
+    private static ServiceProvider BuildAsInProgram(string? otlpEndpoint = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 // Never opened: resolving services does not connect.
                 ["ConnectionStrings:JobRadar"] = "Host=localhost;Database=unused",
+                ["Telemetry:OtlpEndpoint"] = otlpEndpoint,
             })
             .Build();
 
@@ -27,6 +28,17 @@ public class CompositionTests
     public void Container_builds_with_no_missing_or_captive_dependency()
     {
         using var sp = BuildAsInProgram();
+    }
+
+    [Fact]
+    public void Telemetry_is_only_wired_when_a_collector_is_configured()
+    {
+        using var off = BuildAsInProgram();
+        using var on = BuildAsInProgram("http://localhost:4317");
+
+        Assert.Null(off.GetService<OpenTelemetry.Trace.TracerProvider>());
+        Assert.NotNull(on.GetService<OpenTelemetry.Trace.TracerProvider>());
+        Assert.NotNull(on.GetService<OpenTelemetry.Metrics.MeterProvider>());
     }
 
     [Fact]
