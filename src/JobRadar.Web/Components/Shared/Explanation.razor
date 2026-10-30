@@ -6,7 +6,7 @@
     }
     @foreach (var item in Score.Items)
     {
-        <li class="@Tone(item)">
+        <li class="@Tone(item, Score)">
             <span class="pts">@Wording.Points(item.Points)</span>
             <span>@Wording.Describe(item)</span>
             @if (Wording.Where(item.Where) is { Length: > 0 } where)
@@ -21,11 +21,10 @@
 @code {
     [Parameter, EditorRequired] public FitScore Score { get; set; } = default!;
 
-    private static string Tone(ScoreItem item) => item.Points switch
+    // The scorer stops at the first rule that excludes: in an excluded score, that rule is the last item.
+    private static string Tone(ScoreItem item, FitScore score) => item.Points switch
     {
-        _ when item.Points == -50 && item.Rule is ScoreRule.CitizenshipRequired or ScoreRule.WorkRightsIncompatible
-            or ScoreRule.IdentifiedRole or ScoreRule.LeadershipTitle or ScoreRule.SeniorTitle
-            or ScoreRule.RegionRestricted or ScoreRule.OtherRemoteMarket => "exclusion",
+        _ when score.Excluded && ReferenceEquals(item, score.Items[^1]) => "exclusion",
         > 0 => "plus",
         < 0 => "minus",
         _ => "neutral",

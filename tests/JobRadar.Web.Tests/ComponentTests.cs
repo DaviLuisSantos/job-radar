@@ -51,6 +51,17 @@ public class ComponentTests : BunitContext
     }
 
     [Fact]
+    public void A_rule_an_earlier_build_stored_still_shows_with_its_points()
+    {
+        var score = new FitScore(41, [new ScoreItem(ScoreRule.Unknown, "some phrase", ScoreWhere.FullText, -9)]);
+
+        var cut = Render<Explanation>(p => p.Add(x => x.Score, score));
+
+        Assert.Contains("Regra de uma versão anterior: “some phrase”", cut.Find("li.minus").TextContent);
+        Assert.Empty(cut.FindAll("li.exclusion"));
+    }
+
+    [Fact]
     public void Facts_show_as_labels_and_nothing_shows_without_them()
     {
         var cut = Render<FactChips>(p => p.Add(x => x.Facts,

@@ -13,7 +13,7 @@ Escopo, públicos, não-objetivos e fases: [docs/visao.md](docs/visao.md). Fonte
 Evolução para mais de um país (SQL Server, Brasil, observabilidade, mensageria): [docs/evolucao.md](docs/evolucao.md).
 
 **Onde estamos e o que vem a seguir: [docs/plano.md](docs/plano.md).** Ao fechar uma etapa, atualize o
-plano (estado, Diário) e passe para a próxima na ordem.
+plano (estado) e o Diário (`docs/private/diario.md` no checkout principal, fora do git) e passe para a próxima na ordem.
 
 ## Comandos
 

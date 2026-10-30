@@ -481,9 +481,14 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Real candidate profiles (see src/JobRadar.Worker/appsettings.Local.example.json)
+# Real candidate profiles (see src/JobRadar.Worker/appsettings.Local.example.json) and the scoring cases written from
+# real ads that check them
 appsettings.Local.json
 appsettings.Local.json.*
+scoring-cases.Local.json
+
+# The author's journal and notes: dated, with production numbers and personal context
+docs/private/
 
 # Real candidate facts and CVs: only the schema, the fictional example and the README are versioned
 candidate/*

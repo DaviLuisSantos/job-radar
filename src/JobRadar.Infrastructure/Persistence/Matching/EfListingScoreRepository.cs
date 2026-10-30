@@ -17,7 +17,8 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
 
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
-        Converters = { new JsonStringEnumConverter() },
+        // First: the score rule, read by name with a way out for names an earlier build stored.
+        Converters = { new ScoreRuleJsonConverter(), new JsonStringEnumConverter() },
     };
 
     public async Task SaveAsync(IReadOnlyCollection<ListingScore> scores, CancellationToken ct = default)

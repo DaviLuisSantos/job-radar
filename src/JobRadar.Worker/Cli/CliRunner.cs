@@ -106,13 +106,14 @@ public static class CliRunner
                     break;
                 case CliCommand.MarketReport c:
                     var month = c.Month ?? LocalToday(sp).ToString("yyyy-MM", CultureInfo.InvariantCulture);
-                    var report = await sp.GetRequiredService<MarketReportService>().BuildAsync("seek", month, ct);
+                    var reports = sp.GetRequiredService<MarketReportService>();
+                    var report = await reports.BuildAsync("seek", month, ct);
                     if (report is null)
                     {
                         await output.WriteLineAsync($"No good market snapshot in {month}. Take one with: market");
                         return 1;
                     }
-                    var markdown = RaioXMarkdown.Render(report);
+                    var markdown = RaioXMarkdown.Render(report, phrases: reports.TermPhrases);
                     if (c.OutputFile is { } file)
                     {
                         await File.WriteAllTextAsync(file, markdown, ct);

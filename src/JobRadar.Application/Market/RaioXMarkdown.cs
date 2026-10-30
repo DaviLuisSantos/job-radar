@@ -12,15 +12,8 @@ public static class RaioXMarkdown
 {
     private static readonly CultureInfo Pt = CultureInfo.GetCultureInfo("pt-BR");
 
-    private static readonly Dictionary<string, string> TermLabels = new(StringComparer.Ordinal)
-    {
-        ["sponsorship"] = "citam \"sponsorship\"",
-        ["482"] = "citam \"482\"",
-        ["working_rights"] = "citam \"working rights\"",
-        ["citizen"] = "citam \"citizen\"",
-    };
-
-    public static string Render(MarketReport report, string sourceName = "Seek")
+    /// <param name="phrases">Each term's phrase by its name (<see cref="MarketOptions.Terms"/>); a term without one shows its name.</param>
+    public static string Render(MarketReport report, string sourceName = "Seek", IReadOnlyDictionary<string, string>? phrases = null)
     {
         var md = new StringBuilder();
         md.AppendLine(Pt, $"# Raio-X do mercado australiano — {report.Month}").AppendLine();
@@ -39,7 +32,7 @@ public static class RaioXMarkdown
                 md.AppendLine(city.ChangeVsPreviousMonth is { } change ? string.Create(Pt, $" ({Signed(change)} vs. mês anterior)") : "");
 
                 foreach (var m in city.Mentions)
-                    md.AppendLine(Pt, $"- {TermLabels.GetValueOrDefault(m.Term, m.Term)}: {Count(m.Average)} ({Share(m.Share)})");
+                    md.AppendLine(Pt, $"- citam \"{phrases?.GetValueOrDefault(m.Term) ?? m.Term}\": {Count(m.Average)} ({Share(m.Share)})");
 
                 if (city.Listings is { } l)
                 {
@@ -57,7 +50,7 @@ public static class RaioXMarkdown
 
         md.AppendLine("## Metodologia").AppendLine();
         md.AppendLine("- **Vagas abertas**: total de anúncios ativos na subclassificação, média dos retratos diários do mês.");
-        md.AppendLine("- **Menções**: anúncios cujo texto contém o termo, segundo a busca da própria fonte. Mede menção, não oferta — \"no sponsorship\" também conta em \"sponsorship\".");
+        md.AppendLine("- **Menções**: anúncios cujo texto contém o termo, segundo a busca da própria fonte. Mede menção, não oferta: a negação do termo também conta.");
         md.AppendLine("- **Repetidos**: mesmo título e empresa na mesma cidade, com IDs diferentes.");
         md.AppendLine("- **Salário**: só anúncios que informam valor; por hora × 2.080 h, por dia × 260 dias.");
         md.AppendLine("- Retratos com contagem falha, listagem incompleta ou variação suspeita ficam fora da média.");

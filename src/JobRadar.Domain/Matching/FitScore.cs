@@ -98,4 +98,7 @@ public enum ScoreRule
 
     // Cap
     QualificationRequired,
+
+    /// <summary>A rule name an earlier build stored and this one no longer has: read back, never scored.</summary>
+    Unknown,
 }

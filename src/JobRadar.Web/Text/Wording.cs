@@ -108,6 +108,7 @@ public static class Wording
         ScoreRule.Aging => $"Publicada há {item.Detail} dias",
         ScoreRule.Stale => $"Publicada há {item.Detail} dias, provavelmente encerrada",
         ScoreRule.QualificationRequired => $"Exige formação: {item.Detail}",
+        ScoreRule.Unknown => $"Regra de uma versão anterior: “{item.Detail}”",
         _ => $"{item.Rule}: {item.Detail}",
     };
 

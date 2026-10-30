@@ -32,6 +32,14 @@ public class RaioXMarkdownTests
     }
 
     [Fact]
+    public void A_term_shows_its_configured_phrase()
+    {
+        var md = RaioXMarkdown.Render(Report(), phrases: new Dictionary<string, string> { ["482"] = "four eight two" });
+
+        Assert.Contains("- citam \"four eight two\": 62 (5,0%)", md);
+    }
+
+    [Fact]
     public void Says_how_many_snapshots_were_left_out()
     {
         var md = RaioXMarkdown.Render(Report([new MarketSnapshot("seek", new DateOnly(2026, 10, 3), SnapshotStatus.Partial, 30, 28, 0, ["x"])]));

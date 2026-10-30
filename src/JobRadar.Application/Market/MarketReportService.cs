@@ -8,6 +8,10 @@ namespace JobRadar.Application.Market;
 /// <summary>Builds the monthly Raio-X of a source from its stored snapshots.</summary>
 public sealed class MarketReportService(IMarketRepository market, IOptions<MarketOptions> options)
 {
+    /// <summary>The phrase of each counted term, by the name stored with its counts: the report shows the phrase.</summary>
+    public IReadOnlyDictionary<string, string> TermPhrases =>
+        options.Value.Terms.GroupBy(t => t.Name, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Phrase, StringComparer.Ordinal);
+
     /// <summary>Null when the month has no good snapshot.</summary>
     public async Task<MarketReport?> BuildAsync(string source, string month, CancellationToken ct = default)
     {

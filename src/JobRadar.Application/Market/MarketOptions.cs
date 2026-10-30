@@ -4,7 +4,8 @@ namespace JobRadar.Application.Market;
 
 /// <summary>
 /// What the Raio-X measures. Section: <c>Market</c>. Each list, when present in configuration,
-/// replaces the default (the prototype's choice) instead of being merged into it.
+/// replaces the default (the prototype's choice) instead of being merged into it. Terms have no default: the
+/// phrases a snapshot counts are the publisher's choice, kept in the local configuration.
 /// </summary>
 public sealed class MarketOptions
 {
@@ -19,7 +20,10 @@ public sealed class MarketOptions
     /// <summary>Cities with counts only: one request per term, cheap.</summary>
     public List<string> CountOnlyCities { get; set; } = [];
 
-    /// <summary>Phrases counted in the full ad. A mention, not an offer: "no sponsorship" counts for "sponsorship".</summary>
+    /// <summary>
+    /// Phrases counted in the full ad. A mention, not an offer: the phrase negated counts too. <c>Name</c> is the key
+    /// stored with each count, so renaming one splits its history; none configured: totals only.
+    /// </summary>
     public List<MarketTermOptions> Terms { get; set; } = [];
 
     /// <summary>Wait before retrying the counts that failed (a passing rate limit, usually).</summary>
@@ -32,14 +36,6 @@ public sealed class MarketOptions
         new() { Name = "HVAC-R", Codes = new() { ["seek"] = "1313" } },          // Air Conditioning & Refrigeration
         new() { Name = "Elétrica", Codes = new() { ["seek"] = "6230" } },        // Electricians
         new() { Name = "Desenvolvimento", Codes = new() { ["seek"] = "6287,6290" } }, // Developers/Programmers + Engineering - Software
-    ];
-
-    internal static readonly MarketTermOptions[] DefaultTerms =
-    [
-        new() { Name = "sponsorship", Phrase = "sponsorship" },
-        new() { Name = "482", Phrase = "482" },
-        new() { Name = "working_rights", Phrase = "working rights" },
-        new() { Name = "citizen", Phrase = "citizen" },
     ];
 }
 
@@ -57,7 +53,7 @@ public sealed class MarketTermOptions
     public string Phrase { get; set; } = "";
 }
 
-/// <summary>Fills each list the configuration left empty with the default.</summary>
+/// <summary>Fills each list the configuration left empty with the default (terms have none).</summary>
 internal sealed class MarketDefaults : IPostConfigureOptions<MarketOptions>
 {
     public void PostConfigure(string? name, MarketOptions o)
@@ -68,7 +64,5 @@ internal sealed class MarketDefaults : IPostConfigureOptions<MarketOptions>
             o.FullCities = ["Perth WA"];
         if (o.CountOnlyCities.Count == 0)
             o.CountOnlyCities = ["All Australia"];
-        if (o.Terms.Count == 0)
-            o.Terms = [.. MarketOptions.DefaultTerms];
     }
 }

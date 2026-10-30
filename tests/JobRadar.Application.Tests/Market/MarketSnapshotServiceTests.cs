@@ -72,7 +72,7 @@ public class MarketSnapshotServiceTests
         new([source], _repo, Microsoft.Extensions.Options.Options.Create(options ?? Options()), new FakeTimeProvider(), NullLogger<MarketSnapshotService>.Instance);
 
     [Fact]
-    public void Defaults_are_the_prototype_categories_cities_and_terms()
+    public void Defaults_are_the_prototype_categories_and_cities_and_no_terms()
     {
         var o = new MarketOptions();
         new MarketDefaults().PostConfigure(null, o);
@@ -81,7 +81,7 @@ public class MarketSnapshotServiceTests
         Assert.Equal("6287,6290", o.Categories[2].Codes["seek"]);
         Assert.Equal(["Perth WA"], o.FullCities);
         Assert.Equal(["All Australia"], o.CountOnlyCities);
-        Assert.Equal(["sponsorship", "482", "working_rights", "citizen"], o.Terms.Select(t => t.Name));
+        Assert.Empty(o.Terms);
     }
 
     [Fact]

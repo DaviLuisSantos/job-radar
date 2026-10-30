@@ -73,12 +73,10 @@ public class PrototypeParityTests
         [property: JsonPropertyName("profiles")] Dictionary<string, ParityProfile> Profiles,
         [property: JsonPropertyName("cases")] List<ParityCase> Cases);
 
+    // The file's employer-assistance keys hold the policy defaults (required: no, 10 and 10): not read.
     private sealed record ParityPolicy(
         [property: JsonPropertyName("disqualify_max_score")] int DisqualifyMaxScore,
-        [property: JsonPropertyName("visa_required")] bool VisaRequired,
-        [property: JsonPropertyName("no_sponsor_penalty")] int NoSponsorPenalty,
         [property: JsonPropertyName("exclude_senior")] bool ExcludeSenior,
-        [property: JsonPropertyName("sponsor_bonus")] int SponsorBonus,
         [property: JsonPropertyName("apprenticeship_penalty")] int ApprenticeshipPenalty,
         [property: JsonPropertyName("long_contract_penalty")] int LongContractPenalty,
         [property: JsonPropertyName("fulltext_groups")] Dictionary<string, List<string>> FullTextGroups,
@@ -90,10 +88,7 @@ public class PrototypeParityTests
         public ScoringPolicy ToPolicy() => new()
         {
             DisqualifyMaxScore = DisqualifyMaxScore,
-            VisaRequired = VisaRequired,
-            NoSponsorPenalty = NoSponsorPenalty,
             ExcludeSeniorTitles = ExcludeSenior,
-            SponsorBonus = SponsorBonus,
             ApprenticeshipPenalty = ApprenticeshipPenalty,
             LongContractPenalty = LongContractPenalty,
             FullTextGroups = FullTextGroups.ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Value),
