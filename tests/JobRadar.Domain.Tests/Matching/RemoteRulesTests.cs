@@ -27,7 +27,7 @@ public class RemoteRulesTests
         new(title, summary, "Remote", null, null, []) { Eligibility = eligibility, Description = description, SalaryText = salary };
 
     private static FitScore Score(ScoringInput ad, JobMarket market = JobMarket.LatamRemote, Compensation? pay = null) =>
-        FitScorer.Score(ad, Profile(market, pay), ScoringPolicy.Default, Today);
+        FitScorer.Score(ad, Profile(market, pay), MarketRules.For(market), ScoringPolicy.Default, Today);
 
     private static ScoreItem? Item(FitScore score, ScoreRule rule) => score.Items.FirstOrDefault(i => i.Rule == rule);
 

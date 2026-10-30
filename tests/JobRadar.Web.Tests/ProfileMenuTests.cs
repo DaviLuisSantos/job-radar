@@ -7,7 +7,8 @@ namespace JobRadar.Web.Tests;
 public class ProfileMenuTests
 {
     private static ProfileDefinition Profile(string name, JobMarket market) =>
-        new(new MatchingProfile(name, [], [], [], [], false, false, []) { Market = market }, [], "hash");
+        new(new MatchingProfile(name, [], [], [], [], false, false, []) { Market = market },
+            market == JobMarket.AU ? MarketRules.Australia(EligibilityRules.None) : MarketRules.For(market), [], "hash");
 
     [Fact]
     public void Profiles_are_grouped_by_market_and_a_new_one_shows_before_its_first_pass()

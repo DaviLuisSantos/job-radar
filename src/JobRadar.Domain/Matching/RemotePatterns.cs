@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace JobRadar.Domain.Matching;
 
 /// <summary>
@@ -8,23 +6,20 @@ namespace JobRadar.Domain.Matching;
 /// </summary>
 public static class RemotePatterns
 {
-    private const RegexOptions Options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled;
-
     // Places that leave Brazil out, as ads name them.
-    private const string Elsewhere =
+    internal const string Elsewhere =
         @"(?:the\s+)?(?:us|u\.s\.|usa|united\s+states|canada|uk|u\.k\.|united\s+kingdom|eu|europe|emea|apac|india|australia|germany|spain|portugal|philippines)";
 
     /// <summary>
     /// Residence or work authorisation elsewhere as a condition: "US only", "must reside in the United States",
-    /// "authorized to work in the UK", "must be based in Europe".
+    /// "authorized to work in the UK", "must be based in Europe". The market's
+    /// <see cref="EligibilityRules.RestrictedPattern"/> is added to it (<see cref="MarketRules.ResidencyRestricted"/>).
     /// </summary>
-    public static readonly Regex ResidencyRestricted = new(
+    public const string ResidencyRestricted =
         $@"\b{Elsewhere}[\s-]+(?:only|based\s+only|residents\s+only)\b"
         + $@"|\bonly\s+(?:open\s+to\s+)?(?:candidates|applicants|residents)\s+(?:in|from|of)\s+{Elsewhere}\b"
         + $@"|\bmust\s+(?:be\s+)?(?:reside|residing|live|living|located|based|a\s+resident)\s+(?:in|of)\s+{Elsewhere}\b"
-        + $@"|\b(?:legally\s+)?authori[sz]ed\s+to\s+work\s+in\s+{Elsewhere}\b"
-        + $@"|\b{Elsewhere}\s+(?:citizens?|citizenship)\s+(?:only|required)\b",
-        Options);
+        + $@"|\b(?:legally\s+)?authori[sz]ed\s+to\s+work\s+in\s+{Elsewhere}\b";
 
     /// <summary>Paid against invoices: the candidate's own company or tax registration (PJ, in Brazil).</summary>
     public static readonly IReadOnlyList<string> Contractor =

@@ -31,12 +31,14 @@ public static class FitScorer
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
 
+    /// <param name="rules">The rules of the profile's market (<see cref="MarketRules.For"/>), with its eligibility block.</param>
     /// <param name="candidate">The candidate's state on each requirement; none means every requirement at its default.</param>
     public static FitScore Score(
-        ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today, CandidateRequirements? candidate = null)
+        ScoringInput job, MatchingProfile profile, MarketRules rules, ScoringPolicy policy, DateOnly today, CandidateRequirements? candidate = null)
     {
+        if (rules.Market != profile.Market)
+            throw new ArgumentException($"Profile '{profile.Name}' is in market {profile.Market}, the rules are {rules.Market}'s.", nameof(rules));
         candidate ??= CandidateRequirements.None;
-        var rules = MarketRules.For(profile.Market);
         var title = job.Title.ToLowerInvariant();
         var body = string.Join(" ", job.Summary ?? "", job.LocationLabel ?? "", job.WorkTypeLabel ?? "").ToLowerInvariant();
         var full = $"{title} {body}";
@@ -54,7 +56,7 @@ public static class FitScorer
             return new FitScore(0, items);
         }
 
-        var groups = FullTextHits(job.FullTextTerms, policy.FullTextGroups);
+        var groups = FullTextHits(job.FullTextTerms, rules.FullTextGroups);
 
         // ── 1. Exclusions ─────────────────────────────────────────────────
         if (rules.CitizenshipRequired.Match(full) is { Success: true } citizen)
@@ -137,7 +139,7 @@ public static class FitScorer
         // the denial pattern.
         var sponsorDenied = rules.SponsorshipDenied.IsMatch(full);
         var sponsorConfirmed = !sponsorDenied && rules.SponsorshipOffered.Any(full.Contains);
-        if (sponsorConfirmed || (full.Contains("sponsor", StringComparison.Ordinal) && !sponsorDenied))
+        if (sponsorConfirmed || (rules.AssistanceWord is { } word && full.Contains(word, StringComparison.Ordinal) && !sponsorDenied))
             Add(ScoreRule.SponsorshipMentioned, "sponsor", ScoreWhere.Text, policy.SponsorBonus);
         else if (sponsorDenied)
             Add(ScoreRule.SponsorshipDenied, "sponsor", ScoreWhere.Text, 0);
@@ -171,8 +173,8 @@ public static class FitScorer
         var whvDescribed = described && rules.WorkingHolidayFriendly.Match(desc) is { Success: true } inDesc && ListingPatterns.MatchesUnnegated(inDesc.Value, desc)
             ? inDesc.Value
             : null;
-        var whvDoubtful = groups.ContainsKey(FullTextGroup.WhvWithResidency);
-        var whvHits = described || whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Whv);
+        var whvDoubtful = groups.ContainsKey(FullTextGroup.WelcomeRetracted);
+        var whvHits = described || whvDoubtful ? null : groups.GetValueOrDefault(FullTextGroup.Welcome);
         var whv = whvLocal.Success || whvDescribed is not null || whvHits is not null;
         if (whvLocal.Success)
             Add(ScoreRule.WorkingHolidayFriendly, whvLocal.Value, ScoreWhere.Text, policy.WorkingHolidayBonus);
@@ -271,13 +273,13 @@ public static class FitScorer
                 continue;
             // The work-rights phrases and the truck licence are read from a captured ad instead (below):
             // the search gives no context ("HR licence desirable"), the ad does.
-            if (described && group is FullTextGroup.Citizen or FullTextGroup.Ambiguous or FullTextGroup.Rights12Months
-                    or FullTextGroup.WhvWithResidency or FullTextGroup.Licence)
+            if (described && group is FullTextGroup.Doubt or FullTextGroup.Ambiguous or FullTextGroup.Tenure
+                    or FullTextGroup.WelcomeRetracted or FullTextGroup.Licence)
                 continue;
-            if (whv && group is FullTextGroup.Citizen or FullTextGroup.Rights12Months or FullTextGroup.WhvWithResidency)
+            if (whv && group is FullTextGroup.Doubt or FullTextGroup.Tenure or FullTextGroup.WelcomeRetracted)
                 continue;
             // Same reason, counted once.
-            if (group == FullTextGroup.WhvWithResidency && groups.ContainsKey(FullTextGroup.Citizen))
+            if (group == FullTextGroup.WelcomeRetracted && groups.ContainsKey(FullTextGroup.Doubt))
                 continue;
             if (group == FullTextGroup.Licence && truckGroupHeld && (truckAsked is null || truckHeld))
                 continue;
@@ -288,7 +290,7 @@ public static class FitScorer
         {
             if (!whv && rules.CitizenshipRequired.Match(desc) is { Success: true } descCitizen)
                 Add(ScoreRule.FullTextCitizenship, descCitizen.Value, ScoreWhere.Description, -policy.CitizenshipPenalty);
-            if (policy.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => ListingPatterns.Signal(p).IsMatch(desc)) is { } ambiguous)
+            if (rules.FullTextGroups.GetValueOrDefault(FullTextGroup.Ambiguous)?.FirstOrDefault(p => ListingPatterns.Signal(p).IsMatch(desc)) is { } ambiguous)
                 Add(ScoreRule.FullTextAmbiguousRights, ambiguous, ScoreWhere.Description, -policy.AmbiguousRightsPenalty);
         }
 
@@ -377,10 +379,10 @@ public static class FitScorer
 
     private static (string Group, ScoreRule Rule, int Points)[] FullTextRestrictions(ScoringPolicy policy) =>
     [
-        (FullTextGroup.Citizen, ScoreRule.FullTextCitizenship, -policy.CitizenshipPenalty),
-        (FullTextGroup.WhvWithResidency, ScoreRule.FullTextWhvWithResidency, -policy.WhvWithResidencyPenalty),
+        (FullTextGroup.Doubt, ScoreRule.FullTextCitizenship, -policy.CitizenshipPenalty),
+        (FullTextGroup.WelcomeRetracted, ScoreRule.FullTextWhvWithResidency, -policy.WhvWithResidencyPenalty),
         (FullTextGroup.Ambiguous, ScoreRule.FullTextAmbiguousRights, -policy.AmbiguousRightsPenalty),
-        (FullTextGroup.Rights12Months, ScoreRule.FullTextTwelveMonthRights, -policy.TwelveMonthRightsPenalty),
+        (FullTextGroup.Tenure, ScoreRule.FullTextTwelveMonthRights, -policy.TwelveMonthRightsPenalty),
         (FullTextGroup.Commission, ScoreRule.FullTextCommission, -policy.CommissionOnlyPenalty),
         (FullTextGroup.Licence, ScoreRule.FullTextTruckLicence, -policy.TruckLicencePenalty),
     ];

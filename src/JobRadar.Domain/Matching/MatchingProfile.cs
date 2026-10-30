@@ -161,17 +161,11 @@ public sealed record ScoringPolicy
     public int DesirableTruckLicencePenalty { get; init; } = 10;
 
     /// <summary>
-    /// Phrases searched in the full ad text, by group (<see cref="FullTextGroup"/>). A listing
-    /// carries the phrases found for it in <see cref="ScoringInput.FullTextTerms"/>.
+    /// Groups whose phrases pass a source's result cap even state by state (thousands of ads a month): also searched
+    /// with each profile's context words ("phrase + FIFO"), which stays under it. The phrase alone is still searched,
+    /// for profiles without context words. The phrases themselves are the market's (<see cref="MarketRules.FullTextGroups"/>).
     /// </summary>
-    public IReadOnlyDictionary<string, IReadOnlyList<string>> FullTextGroups { get; init; } = FullTextGroup.Defaults;
-
-    /// <summary>
-    /// Groups whose phrases pass the 500-result cap even state by state ("australian citizen" is in
-    /// ~2,400 ads a month): also searched with each profile's context words ("australian citizen + FIFO"),
-    /// which stays under it. The phrase alone is still searched, for profiles without context words.
-    /// </summary>
-    public IReadOnlyList<string> ContextGroups { get; init; } = [FullTextGroup.Citizen, FullTextGroup.Ambiguous];
+    public IReadOnlyList<string> ContextGroups { get; init; } = [FullTextGroup.Doubt, FullTextGroup.Ambiguous];
 
     /// <summary>Requirements profiles pick by id, so a phrase is written once, not in every profile.</summary>
     public IReadOnlyList<RequirementItem> Requirements { get; init; } = RequirementCatalog.Defaults;
@@ -179,50 +173,41 @@ public sealed record ScoringPolicy
     public static ScoringPolicy Default { get; } = new();
 }
 
-/// <summary>Groups of full-text phrases and what each does to the score.</summary>
+/// <summary>
+/// Groups of full-text phrases and what each does to the score. The eligibility groups are a market's words and come
+/// from its <see cref="EligibilityRules.Phrases"/>; the others are in code (<see cref="Code"/>).
+/// </summary>
 public static class FullTextGroup
 {
-    /// <summary>Work rights a Working Holiday visa cannot give: excludes.</summary>
+    /// <summary>A condition the profile's status cannot meet: excludes, like <see cref="EligibilityRules.IncompatiblePattern"/>.</summary>
     public const string Exclude = "exclude";
-    /// <summary><see cref="ScoringPolicy.CitizenshipPenalty"/>, unless the ad also mentions working holidays.</summary>
-    public const string Citizen = "citizen";
-    /// <summary><see cref="ScoringPolicy.AmbiguousRightsPenalty"/>: "full working rights" may or may not include a WHV.</summary>
+    /// <summary><see cref="ScoringPolicy.CitizenshipPenalty"/>: a status the profile lacks, unless the ad also welcomes the profile.</summary>
+    public const string Doubt = "doubt";
+    /// <summary><see cref="ScoringPolicy.AmbiguousRightsPenalty"/>: wording that may or may not leave the profile out.</summary>
     public const string Ambiguous = "ambiguous";
-    /// <summary><see cref="ScoringPolicy.WorkingHolidayBonus"/>, unless the same ad also names citizenship or residency (<see cref="WhvWithResidency"/>).</summary>
-    public const string Whv = "whv";
+    /// <summary><see cref="ScoringPolicy.WorkingHolidayBonus"/>, unless the same ad also has a <see cref="WelcomeRetracted"/> phrase.</summary>
+    public const string Welcome = "welcome";
     /// <summary>
-    /// <see cref="ScoringPolicy.WhvWithResidencyPenalty"/>: working holidays and citizenship or residency in the same ad. In practice that is mostly
-    /// turning working holiday visas down ("citizens or PR only, no WHV"), so the mention neither
-    /// earns the WHV bonus nor cancels the citizenship penalties. Seek matches citizen/citizens and
-    /// resident/residents alike, but not citizenship or residency: those are terms of their own.
+    /// <see cref="ScoringPolicy.WhvWithResidencyPenalty"/>: a welcome and a reserved status in the same ad ("a + b"). In practice
+    /// that is mostly turning the profile down, so the mention neither earns the welcome bonus nor cancels the doubt
+    /// penalties.
     /// </summary>
-    public const string WhvWithResidency = "whv_residency";
+    public const string WelcomeRetracted = "welcome_retracted";
+    /// <summary><see cref="ScoringPolicy.TwelveMonthRightsPenalty"/>: a duration the profile's status cannot cover, unless the ad also welcomes it.</summary>
+    public const string Tenure = "tenure";
     /// <summary><see cref="ScoringPolicy.CommissionOnlyPenalty"/>.</summary>
     public const string Commission = "commission";
     /// <summary><see cref="ScoringPolicy.TruckLicencePenalty"/>.</summary>
     public const string Licence = "licence";
-    /// <summary><see cref="ScoringPolicy.TwelveMonthRightsPenalty"/>: 12 months of work rights, unless the ad also mentions working holidays.</summary>
-    public const string Rights12Months = "rights_12m";
 
-    public static IReadOnlyDictionary<string, IReadOnlyList<string>> Defaults { get; } =
-        new Dictionary<string, IReadOnlyList<string>>
+    /// <summary>The groups a market's eligibility rules may fill.</summary>
+    public static IReadOnlyList<string> Eligibility { get; } = [Exclude, Doubt, Ambiguous, Welcome, WelcomeRetracted, Tenure];
+
+    /// <summary>The groups that are not about eligibility, the same in every market.</summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<string>> Code { get; } =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
         {
-            [Exclude] =
-            [
-                "unlimited working rights", "unlimited australian working rights",
-                "unrestricted working rights", "unrestricted australian working rights",
-                "permanent working rights", "permanent australian working rights",
-            ],
-            [Citizen] = ["australian citizen", "permanent resident"],
-            [Ambiguous] = ["full working rights", "full australian working rights"],
-            [Whv] = ["working holiday", "backpackers", "88 days"],
-            [WhvWithResidency] =
-            [
-                "working holiday + citizen", "working holiday + citizenship",
-                "working holiday + resident", "working holiday + residency",
-            ],
             [Commission] = ["commission only"],
             [Licence] = ["HR licence", "heavy rigid"],
-            [Rights12Months] = ["12 months + working rights"],
         };
 }

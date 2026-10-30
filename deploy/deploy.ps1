@@ -89,6 +89,9 @@ if ($dirty) { Write-Warning 'The working tree has uncommitted changes: they go t
 if ($ParityFile -and (Test-Path $ParityFile)) {
     Write-Host '== Scoring parity' -ForegroundColor Cyan
     $env:JOBRADAR_PARITY_FILE = $ParityFile
+    # The profiles production mounts hold each market's eligibility rules, which the parity scores with.
+    $profiles = (Read-DotEnv).JOBRADAR_PROFILES
+    if ($profiles) { $env:JOBRADAR_LOCAL_SETTINGS = $profiles }
     try {
         # No --nologo: the testing platform hands it to the test app, which then runs zero tests and fails.
         $parity = dotnet test --project (Join-Path $Repo 'tests/JobRadar.Domain.Tests') 2>&1
@@ -97,7 +100,7 @@ if ($ParityFile -and (Test-Path $ParityFile)) {
             throw 'Scoring parity failed: the real listings would score differently. Not deploying.'
         }
     }
-    finally { Remove-Item Env:JOBRADAR_PARITY_FILE -ErrorAction SilentlyContinue }
+    finally { Remove-Item Env:JOBRADAR_PARITY_FILE, Env:JOBRADAR_LOCAL_SETTINGS -ErrorAction SilentlyContinue }
 }
 else { Write-Warning 'No parity file (JOBRADAR_PARITY_FILE): deploying without the parity check.' }
 

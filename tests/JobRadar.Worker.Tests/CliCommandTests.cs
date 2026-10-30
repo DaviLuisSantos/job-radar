@@ -72,6 +72,13 @@ public class CliCommandTests
     }
 
     [Fact]
+    public void Eligibility_names_a_market()
+    {
+        Assert.Equal(new CliCommand.ShowEligibility(JobMarket.AU), Parse("eligibility", "au"));
+        Assert.Equal(new CliCommand.ShowEligibility(JobMarket.LatamRemote), Parse("eligibility", "LatamRemote"));
+    }
+
+    [Fact]
     public void Copy_database_names_the_target_provider_by_name()
     {
         Assert.Equal(new CliCommand.CopyDatabase(DatabaseProvider.SqlServer, "Server=x"), Parse("copy-database", "sqlserver", "Server=x"));
@@ -108,6 +115,8 @@ public class CliCommandTests
     [InlineData("copy-database", "Oracle", "Server=x")]
     [InlineData("tech-count", "NZ", "2026-10")]
     [InlineData("tech-count", "outubro")]
+    [InlineData("eligibility")]
+    [InlineData("eligibility", "NZ")]
     [InlineData("copy-database", "", "Server=x")]
     [InlineData("copy-database", "SqlServer")]
     [InlineData("status", "seek:1", "hired")]

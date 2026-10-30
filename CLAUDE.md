@@ -161,6 +161,7 @@ no perfil, e vale para todo perfil que usa o item.
 (tecnologias pedidas nos anúncios inteiros do mês; padrão BR), `copy-database Postgres|SqlServer <conexão>`
 (todas as linhas para outro banco vazio e migrado; abaixo dos repositórios, em `DatabaseCopy`), `requirements`,
 `requirement <item> have|obtainable|missing|out-of-reach|default`, `experience <perfil> <anos>|default`,
+`eligibility <mercado>` (o bloco de elegibilidade em uso, em JSON de configuração),
 `import-candidate <candidate.json> [--dry-run]`
 (estado do candidato em cada item do `RequirementCatalog`, em `candidate_requirements`; item sem estado fica com o
 padrão do tipo, que é o peso de antes; mudar um estado repontua na hora as vagas que podem pedir o item; no site,

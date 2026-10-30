@@ -1,3 +1,4 @@
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 
 namespace JobRadar.Domain.Tests.Matching;
@@ -6,6 +7,7 @@ namespace JobRadar.Domain.Tests.Matching;
 public class FitScorerTests
 {
     private static readonly DateOnly Today = new(2026, 10, 21);
+    private static readonly MarketRules Au = MarketRules.For(JobMarket.AU);
     private static readonly DateTimeOffset Yesterday = new(2026, 10, 20, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly MatchingProfile Tech = new(
@@ -34,7 +36,7 @@ public class FitScorerTests
         new(title, summary, location, workType, posted ?? Yesterday, fullText);
 
     private static FitScore Score(ScoringInput job, MatchingProfile? profile = null, ScoringPolicy? policy = null) =>
-        FitScorer.Score(job, profile ?? Tech, policy ?? ScoringPolicy.Default, Today);
+        FitScorer.Score(job, profile ?? Tech, Au, policy ?? ScoringPolicy.Default, Today);
 
     private static ScoreItem Item(FitScore score, ScoreRule rule) => Assert.Single(score.Items, i => i.Rule == rule);
 
@@ -653,7 +655,7 @@ public class FitScorerTests
         new(states.ToDictionary(s => s.Id, s => s.State));
 
     private static FitScore Score(ScoringInput job, CandidateRequirements candidate) =>
-        FitScorer.Score(job, Fifo, ScoringPolicy.Default, Today, candidate);
+        FitScorer.Score(job, Fifo, Au, ScoringPolicy.Default, Today, candidate);
 
     [Fact]
     public void Without_states_requirements_weigh_the_default_of_their_kind()
@@ -716,7 +718,7 @@ public class FitScorerTests
     public void A_truck_licence_class_includes_the_lower_ones(string held, string ad, bool covered)
     {
         var candidate = Candidate((held, RequirementState.Have));
-        var score = FitScorer.Score(Job("Labourer", ad), Trades, ScoringPolicy.Default, Today, candidate);
+        var score = FitScorer.Score(Job("Labourer", ad), Trades, Au, ScoringPolicy.Default, Today, candidate);
 
         Assert.Equal(covered, candidate.CoversTruck(ad));
         Assert.Equal(covered, !score.Items.Any(i => i.Rule == ScoreRule.TruckLicence));
@@ -730,7 +732,7 @@ public class FitScorerTests
         var profile = Fifo with { Requirements = Fifo.Requirements with { Licence = ["HR licence", "MR licence"] } };
         var candidate = Candidate(("truck-hr", RequirementState.Have));
 
-        var score = FitScorer.Score(job, profile, ScoringPolicy.Default, Today, candidate);
+        var score = FitScorer.Score(job, profile, Au, ScoringPolicy.Default, Today, candidate);
 
         Assert.DoesNotContain(score.Items, i => i.Rule is ScoreRule.FullTextTruckLicence or ScoreRule.TruckLicence);
         Assert.Equal(10, Item(score, ScoreRule.RequirementHeld).Points);
@@ -782,8 +784,8 @@ public class FitScorerTests
         };
 
         var senior = Score(job, Tech, null);
-        var held = Item(FitScorer.Score(job, Tech, ScoringPolicy.Default, Today, Years(8)), ScoreRule.RequirementHeld);
-        var missing = Item(FitScorer.Score(job, Tech, ScoringPolicy.Default, Today, Years(2)), ScoreRule.FullTextExperience);
+        var held = Item(FitScorer.Score(job, Tech, Au, ScoringPolicy.Default, Today, Years(8)), ScoreRule.RequirementHeld);
+        var missing = Item(FitScorer.Score(job, Tech, Au, ScoringPolicy.Default, Today, Years(2)), ScoreRule.FullTextExperience);
 
         Assert.DoesNotContain(senior.Items, i => i.Rule is ScoreRule.RequirementHeld or ScoreRule.FullTextExperience);
         Assert.Equal(("experience (5 years asked)", ScoreWhere.Text, 10), (held.Detail, held.Where, held.Points));

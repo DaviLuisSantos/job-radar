@@ -151,4 +151,94 @@ public class ProfileCatalogTests
             ProfileCatalog.Build("fifo", options, wider).RulesHash);
         Assert.Equal(["HRWL", "high risk work licence"], ProfileCatalog.Build("fifo", options, wider).Profile.Requirements.Licence);
     }
+
+    private static ProfileCatalog WithMarkets(Dictionary<string, MarketRulesOptions> markets, params (string Name, ProfileOptions Options)[] profiles) =>
+        new(Options.Create(new MatchingOptions
+        {
+            Profiles = profiles.ToDictionary(p => p.Name, p => p.Options),
+            Markets = new(markets, StringComparer.OrdinalIgnoreCase),
+        }), ScoringPolicy.Default);
+
+    private static Dictionary<string, MarketRulesOptions> Au(EligibilityOptions eligibility) =>
+        new() { ["AU"] = new MarketRulesOptions { Eligibility = eligibility } };
+
+    private static EligibilityOptions Fictional() => new()
+    {
+        RestrictedPattern = @"guild\s+members?\s+only",
+        AssistanceWord = "relocation",
+        Phrases = new(StringComparer.OrdinalIgnoreCase) { ["Doubt"] = ["guild member"], ["welcome"] = ["seasonal member", " "] },
+    };
+
+    [Fact]
+    public void A_market_reads_its_configured_eligibility_block()
+    {
+        var rules = Assert.Single(WithMarkets(Au(Fictional()), ("tech", Dotnet())).Profiles).Rules;
+
+        Assert.Equal(JobMarket.AU, rules.Market);
+        Assert.Equal("relocation", rules.AssistanceWord);
+        Assert.Matches(rules.CitizenshipRequired, "guild members only");
+        // Group keys in lower case, blank phrases dropped, the code's groups kept.
+        Assert.Equal(["seasonal member"], rules.FullTextGroups[FullTextGroup.Welcome]);
+        Assert.Equal(["guild member"], rules.FullTextGroups[FullTextGroup.Doubt]);
+        Assert.Contains(FullTextGroup.Licence, rules.FullTextGroups.Keys);
+    }
+
+    [Fact]
+    public void A_configured_market_without_profiles_is_still_built_and_checked()
+    {
+        var catalog = WithMarkets(Au(Fictional()));
+
+        Assert.Empty(catalog.Profiles);
+        Assert.Equal("relocation", catalog.RulesOf(JobMarket.AU).AssistanceWord);
+    }
+
+    [Theory]
+    [InlineData("RestrictedPattern", "Matching:Markets:AU:Eligibility:RestrictedPattern is not a valid regular expression")]
+    [InlineData("Phrases", "unknown groups: citizens")]
+    public void A_block_that_would_not_score_stops_the_start(string broken, string message)
+    {
+        var block = Fictional();
+        if (broken == "RestrictedPattern")
+            block.RestrictedPattern = "guild (members";
+        else
+            block.Phrases["citizens"] = ["x"];
+
+        var error = Assert.Throws<InvalidOperationException>(() => WithMarkets(Au(block), ("tech", Dotnet())));
+        Assert.Contains(message, error.Message);
+        Assert.Contains(message, new MatchingOptionsValidation().Validate(null, new MatchingOptions { Markets = Au(block) }).FailureMessage);
+    }
+
+    [Fact]
+    public void Markets_that_read_no_such_rules_refuse_a_block()
+    {
+        Assert.Contains("unknown market", Assert.Throws<InvalidOperationException>(
+            () => WithMarkets(new() { ["Mars"] = new MarketRulesOptions { Eligibility = Fictional() } })).Message);
+        Assert.Contains("BR reads no eligibility", Assert.Throws<InvalidOperationException>(
+            () => WithMarkets(new() { ["BR"] = new MarketRulesOptions { Eligibility = Fictional() } })).Message);
+        Assert.Contains("may only set RestrictedPattern", Assert.Throws<InvalidOperationException>(
+            () => WithMarkets(new() { ["LatamRemote"] = new MarketRulesOptions { Eligibility = Fictional() } })).Message);
+    }
+
+    [Fact]
+    public void A_remote_block_adds_to_the_residency_phrases()
+    {
+        var latam = new MarketRulesOptions { Eligibility = new EligibilityOptions { RestrictedPattern = @"\bmars\s+guild\s+only\b" } };
+
+        var rules = WithMarkets(new() { ["LatamRemote"] = latam }).RulesOf(JobMarket.LatamRemote);
+
+        Assert.Matches(rules.ResidencyRestricted, "open to mars guild only");
+        Assert.Matches(rules.ResidencyRestricted, "us only");
+    }
+
+    [Fact]
+    public void Rules_hash_follows_the_market_eligibility_block()
+    {
+        var other = Fictional();
+        other.Phrases["welcome"] = ["seasonal members"];
+
+        var hash = Assert.Single(WithMarkets(Au(Fictional()), ("tech", Dotnet())).Profiles).RulesHash;
+
+        Assert.Equal(hash, Assert.Single(WithMarkets(Au(Fictional()), ("tech", Dotnet())).Profiles).RulesHash);
+        Assert.NotEqual(hash, Assert.Single(WithMarkets(Au(other), ("tech", Dotnet())).Profiles).RulesHash);
+    }
 }

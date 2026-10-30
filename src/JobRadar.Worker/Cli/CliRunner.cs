@@ -51,6 +51,10 @@ public static class CliRunner
                             + "; nothing saved.");
                     WriteCalibration(c.Rescore ? await calibration.MeasureRescoredAsync(LocalZone(sp), ct, c.Assume) : await calibration.MeasureAsync(ct), output);
                     break;
+                case CliCommand.ShowEligibility c:
+                    var rulesInUse = sp.GetRequiredService<ProfileCatalog>().RulesOf(c.Market);
+                    await output.WriteLineAsync(EligibilityJson.Section(c.Market, rulesInUse.Eligibility));
+                    break;
                 case CliCommand.ListRequirements:
                     WriteRequirements(await sp.GetRequiredService<CandidateRequirementService>().ListAsync(ct), output);
                     break;
@@ -141,6 +145,11 @@ public static class CliRunner
         {
             await output.WriteLineAsync(ex.Message);
             return 1;
+        }
+        catch (InvalidOperationException ex) when (command is CliCommand.ShowEligibility)
+        {
+            await output.WriteLineAsync(ex.Message);
+            return 2;
         }
         catch (Exception ex) when (ex is UnknownRequirementException or UnknownProfileException or FormatException)
         {

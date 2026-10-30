@@ -32,7 +32,9 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateOnStart();
         services.AddScoped<DescriptionFetchService>();
 
-        services.AddOptions<MatchingOptions>().Bind(configuration.GetSection(MatchingOptions.Section));
+        // A market's rules that do not build (a pattern that does not parse, a group that does not exist) stop the start.
+        services.AddOptions<MatchingOptions>().Bind(configuration.GetSection(MatchingOptions.Section)).ValidateOnStart();
+        services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<MatchingOptions>, MatchingOptionsValidation>();
         // The defaults are the calibrated weights; overriding them is a code change, on purpose.
         services.TryAddSingleton(ScoringPolicy.Default);
         services.AddSingleton<ProfileCatalog>();

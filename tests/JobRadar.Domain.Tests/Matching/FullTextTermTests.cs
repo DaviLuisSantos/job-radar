@@ -17,38 +17,33 @@ public class FullTextTermTests
         Assert.Equal("term: hr licence", new FullTextTerm(" HR licence ").RunKey);
     }
 
-    [Fact]
-    public void All_terms_of_a_policy_once_each_in_a_stable_order()
+    private static MarketRules Market(params (string Group, string[] Phrases)[] groups) => MarketRules.Australia(new EligibilityRules
     {
-        var policy = ScoringPolicy.Default with
-        {
-            FullTextGroups = new Dictionary<string, IReadOnlyList<string>>
-            {
-                ["a"] = ["working holiday", "backpackers"],
-                ["b"] = ["Working Holiday"],
-            },
-        };
+        Phrases = groups.ToDictionary(g => g.Group, g => (IReadOnlyList<string>)g.Phrases),
+    });
 
-        Assert.Equal(["backpackers", "working holiday"], FullTextTerm.AllOf(policy).Select(t => t.Text));
+    [Fact]
+    public void All_terms_of_the_markets_once_each_in_a_stable_order()
+    {
+        var au = Market((FullTextGroup.Welcome, ["seasonal member", "newcomers", "Guild Member"]), (FullTextGroup.Doubt, ["guild member"]));
+
+        // The code's groups, then the market's phrases; "Guild Member" is "guild member" again.
+        Assert.Equal(["HR licence", "commission only", "guild member", "heavy rigid", "newcomers", "seasonal member"],
+            FullTextTerm.AllOf([au, MarketRules.Brazil], ScoringPolicy.Default).Select(t => t.Text));
     }
 
     [Fact]
     public void Terms_of_the_context_groups_are_also_searched_with_each_profile_context_word()
     {
-        var policy = ScoringPolicy.Default with
-        {
-            FullTextGroups = new Dictionary<string, IReadOnlyList<string>>
-            {
-                [FullTextGroup.Citizen] = ["australian citizen"],
-                [FullTextGroup.Whv] = ["working holiday"],
-            },
-        };
+        var au = Market((FullTextGroup.Doubt, ["guild member"]), (FullTextGroup.Welcome, ["seasonal member"]));
         static MatchingProfile Profile(string name, params string[] contexts) =>
             new(name, [], [], [], [], false, false, []) { Requirements = ProfileRequirements.None with { Contexts = contexts } };
 
-        var terms = FullTextTerm.AllOf(policy, [Profile("fifo", "FIFO"), Profile("construction", "labourer", "fifo"), Profile("tech")]);
+        var terms = FullTextTerm.AllOf([au], ScoringPolicy.Default,
+            [Profile("fifo", "FIFO"), Profile("construction", "labourer", "fifo"), Profile("tech")]);
 
-        Assert.Equal(["australian citizen", "australian citizen + FIFO", "australian citizen + labourer", "working holiday"],
+        Assert.Equal(
+            ["HR licence", "commission only", "guild member", "guild member + FIFO", "guild member + labourer", "heavy rigid", "seasonal member"],
             terms.Select(t => t.Text));
     }
 }

@@ -7,8 +7,8 @@ using Microsoft.Extensions.Options;
 
 namespace JobRadar.Application.Matching;
 
-/// <summary>A profile ready to use: its scoring rules, its searches and the hash of its rules.</summary>
-public sealed record ProfileDefinition(MatchingProfile Profile, IReadOnlyList<ListingSearch> Searches, string RulesHash)
+/// <summary>A profile ready to use: its scoring rules, its market's rules, its searches and the hash of its rules.</summary>
+public sealed record ProfileDefinition(MatchingProfile Profile, MarketRules Rules, IReadOnlyList<ListingSearch> Searches, string RulesHash)
 {
     public string Name => Profile.Name;
 
@@ -30,14 +30,41 @@ public sealed class ProfileCatalog
     public ProfileCatalog(IOptions<MatchingOptions> options, ScoringPolicy policy)
     {
         Policy = policy;
+        Markets = BuildMarkets(options.Value);
         Profiles = options.Value.Profiles
             .OrderBy(p => p.Key, StringComparer.Ordinal)
-            .Select(p => Build(p.Key, p.Value, policy, options.Value.Compensation))
+            .Select(p => Build(p.Key, p.Value, policy, options.Value.Compensation, Markets[MarketOf(p.Key, p.Value)]))
             .ToList();
         Searches = Profiles.SelectMany(p => p.Searches).DistinctBy(s => s.Key).ToList();
     }
 
     public ScoringPolicy Policy { get; }
+
+    /// <summary>The rules of every market a profile uses or the configuration describes, built once.</summary>
+    public IReadOnlyDictionary<JobMarket, MarketRules> Markets { get; }
+
+    /// <summary>The rules a market's profiles are scored with: <see cref="Markets"/>, or the market's own without configuration.</summary>
+    public MarketRules RulesOf(JobMarket market) => Markets.TryGetValue(market, out var rules) ? rules : MarketRules.For(market);
+
+    /// <summary>
+    /// Each market's rules, from its configured eligibility block: every market a profile uses, and every market with a
+    /// block, so a block with a typo stops the start even before a profile uses it.
+    /// </summary>
+    internal static IReadOnlyDictionary<JobMarket, MarketRules> BuildMarkets(MatchingOptions o)
+    {
+        var configured = new Dictionary<JobMarket, EligibilityRules>();
+        foreach (var (key, value) in o.Markets)
+        {
+            var market = JobMarkets.Parse(key) ?? throw new InvalidOperationException(
+                $"Matching:Markets:{key}: unknown market. Use one of: {string.Join(", ", Enum.GetNames<JobMarket>())}.");
+            if (value.Eligibility is { } eligibility)
+                configured[market] = eligibility.ToRules();
+        }
+        return o.Profiles.Select(p => MarketOf(p.Key, p.Value))
+            .Concat(configured.Keys)
+            .Distinct()
+            .ToDictionary(m => m, m => MarketRules.For(m, configured.GetValueOrDefault(m)));
+    }
 
     /// <summary>Hit key for a listing attached to a profile directly, not found by one of its searches.</summary>
     public static string DirectKey(string profile) => $"profile: {profile.Trim().ToLowerInvariant()}";
@@ -47,12 +74,20 @@ public sealed class ProfileCatalog
     /// <summary>Every search of every profile, once: a search shared by two profiles runs once.</summary>
     public IReadOnlyList<ListingSearch> Searches { get; }
 
-    internal static ProfileDefinition Build(string name, ProfileOptions o, ScoringPolicy policy, CompensationOptions? compensation = null)
+    private static JobMarket MarketOf(string name, ProfileOptions o)
     {
         var written = string.IsNullOrWhiteSpace(o.Market) ? o.Country : o.Market;
-        var market = string.IsNullOrWhiteSpace(written) ? JobMarket.AU
+        return string.IsNullOrWhiteSpace(written) ? JobMarket.AU
             : JobMarkets.Parse(written) ?? throw new InvalidOperationException(
                 $"Profile '{name}': unknown market '{written}' (Matching:Profiles:{name}:Market). Use one of: {string.Join(", ", Enum.GetNames<JobMarket>())}.");
+    }
+
+    /// <param name="rules">The rules of the profile's market; none: the market's own, without configuration.</param>
+    internal static ProfileDefinition Build(
+        string name, ProfileOptions o, ScoringPolicy policy, CompensationOptions? compensation = null, MarketRules? rules = null)
+    {
+        var market = MarketOf(name, o);
+        rules ??= MarketRules.For(market);
         var profile = new MatchingProfile(
             name, o.PositiveSignals, o.NegativeSignals, o.DisqualifySignals, o.QualifiedTitles,
             o.EntryLevelBoost, o.AllowSenior, o.PreferredLocations)
@@ -69,7 +104,7 @@ public sealed class ProfileCatalog
             .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Market: market)))
             .DistinctBy(s => s.Key)
             .ToList();
-        return new ProfileDefinition(profile, searches, RulesHash(profile, policy));
+        return new ProfileDefinition(profile, rules, searches, RulesHash(profile, policy, rules.Eligibility));
     }
 
     private static Compensation? Compensation(ProfileCompensationOptions? o, CompensationOptions numbers)
@@ -109,11 +144,11 @@ public sealed class ProfileCatalog
     }
 
     /// <summary>
-    /// Changes when the scorer version, a profile signal or a policy weight changes. Searches are
-    /// left out: they change what is collected, not how it is scored.
+    /// Changes when the scorer version, a profile signal, a policy weight or the market's eligibility block changes.
+    /// Searches are left out: they change what is collected, not how it is scored.
     /// </summary>
-    internal static string RulesHash(MatchingProfile profile, ScoringPolicy policy) =>
-        Hash(new { FitScorer.RulesVersion, profile, policy });
+    internal static string RulesHash(MatchingProfile profile, ScoringPolicy policy, EligibilityRules eligibility) =>
+        Hash(new { FitScorer.RulesVersion, profile, policy, eligibility });
 
     /// <summary>
     /// The profile's rules hash with the candidate's states on its requirements: the same hash while every

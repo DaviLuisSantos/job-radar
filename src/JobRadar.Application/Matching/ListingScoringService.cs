@@ -101,7 +101,7 @@ public sealed class ListingScoringService(
             if (!profiles.TryGetValue(j.Profile, out var profile) || await listings.FindAsync(j.Id, ct) is not { } record)
                 continue;
             var input = ScoringInput.From(record.Listing, termsById.GetValueOrDefault(j.Id), textsById.GetValueOrDefault(j.Id));
-            rescored.Add(j with { Score = FitScorer.Score(input, profile.Profile, catalog.Policy, today, candidate) });
+            rescored.Add(j with { Score = FitScorer.Score(input, profile.Profile, profile.Rules, catalog.Policy, today, candidate) });
         }
         return rescored;
     }
@@ -137,8 +137,8 @@ public sealed class ListingScoringService(
                     .Where(i => item.MayBeAskedIn(i.Input))
                     .AsParallel()
                     .Select(i => (i.Id,
-                        Without: FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, without).Final,
-                        With: FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, with).Final))
+                        Without: FitScorer.Score(i.Input, profile.Profile, profile.Rules, catalog.Policy, today, without).Final,
+                        With: FitScorer.Score(i.Input, profile.Profile, profile.Rules, catalog.Policy, today, with).Final))
                     .Where(r => r.Without != r.With)
                     .ToList();
                 var judged = moved.Select(m => verdicts.TryGetValue((m.Id, profile.Name), out var v) ? v : (Domain.Tracking.Verdict?)null).ToList();
@@ -166,7 +166,7 @@ public sealed class ListingScoringService(
         var hash = ProfileCatalog.RulesHash(profile, candidate, catalog.Policy);
         var scored = (await InputsAsync(profile, ct))
             .AsParallel()
-            .Select(i => new ListingScore(i.Id, profile.Name, FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, candidate), hash, now))
+            .Select(i => new ListingScore(i.Id, profile.Name, FitScorer.Score(i.Input, profile.Profile, profile.Rules, catalog.Policy, today, candidate), hash, now))
             .ToList();
         await scores.SaveAsync(scored, ct);
         return scored.Count;
@@ -190,7 +190,7 @@ public sealed class ListingScoringService(
             var hash = ProfileCatalog.RulesHash(profile, candidate, catalog.Policy);
             var scored = (await InputsAsync(profile, ct))
                 .Where(i => item.MayBeAskedIn(i.Input))
-                .Select(i => new ListingScore(i.Id, profile.Name, FitScorer.Score(i.Input, profile.Profile, catalog.Policy, today, candidate), hash, now))
+                .Select(i => new ListingScore(i.Id, profile.Name, FitScorer.Score(i.Input, profile.Profile, profile.Rules, catalog.Policy, today, candidate), hash, now))
                 .ToList();
             await scores.SaveAsync(scored, ct);
             saved += scored.Count;
@@ -252,7 +252,7 @@ public sealed class ListingScoringService(
         Listing listing, IReadOnlyCollection<string>? listingTerms, string? text, ProfileDefinition profile,
         CandidateRequirements candidate, DateOnly today, DateTimeOffset now) =>
         new(listing.Id, profile.Name,
-            FitScorer.Score(ScoringInput.From(listing, listingTerms, text), profile.Profile, catalog.Policy, today, candidate),
+            FitScorer.Score(ScoringInput.From(listing, listingTerms, text), profile.Profile, profile.Rules, catalog.Policy, today, candidate),
             ProfileCatalog.RulesHash(profile, candidate, catalog.Policy), now);
 
     private static DateOnly Today(DateTimeOffset now, TimeZoneInfo zone) =>

@@ -33,7 +33,7 @@ public sealed class TriageService(
         IReadOnlyList<TriageRow> rows = f.Excluded ? excluded : all.Where(r => r.Score > 0 && r.Score >= f.MinScore).ToList();
         // A remote profile's rows say how the job hires, read from the full ad; filtering on it reads every row's ad.
         var rules = catalog?.Profiles.FirstOrDefault(p => string.Equals(p.Name, f.Profile, StringComparison.OrdinalIgnoreCase)) is { } profile
-            && MarketRules.For(profile.Market) is { EligibleScope: not null } remote ? remote : null;
+            && profile.Rules is { EligibleScope: not null } remote ? remote : null;
         if (rules is not null && f.Engagement is { } wanted)
         {
             var adTexts = await descriptions.GetTextsAsync(rows.Select(r => r.Id).ToList(), ct);

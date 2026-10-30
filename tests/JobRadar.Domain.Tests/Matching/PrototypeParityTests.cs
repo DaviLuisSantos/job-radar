@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 
 namespace JobRadar.Domain.Tests.Matching;
@@ -32,6 +33,11 @@ public class PrototypeParityTests
         var today = DateOnly.Parse(file.Today, System.Globalization.CultureInfo.InvariantCulture);
         var policy = file.Policy.ToPolicy();
         var profiles = file.Profiles.ToDictionary(p => p.Key, p => p.Value.ToProfile(p.Key));
+        // Who may apply is the market's words: the local block, else (until it is pasted) the rules that were in code.
+        var rules = MarketRules.For(JobMarket.AU, LocalSettings.Eligibility(JobMarket.AU) ?? LegacyEligibility.Australia);
+        var searched = rules.FullTextGroups.Values.SelectMany(p => p).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unsearched = file.Policy.FullTextGroups.Values.SelectMany(p => p).Where(p => !searched.Contains(p)).ToList();
+        Assert.True(unsearched.Count == 0, $"The prototype searched phrases the AU rules do not: {string.Join(", ", unsearched)}.");
 
         var mismatches = new List<string>();
         var byDesign = 0;
@@ -40,7 +46,7 @@ public class PrototypeParityTests
             var input = new ScoringInput(c.Title, c.Description, c.Location, c.WorkType,
                 c.ListedAt is null ? null : DateTimeOffset.Parse(c.ListedAt, System.Globalization.CultureInfo.InvariantCulture),
                 c.FullTextTerms);
-            var score = FitScorer.Score(input, profiles[c.Profile], policy, today);
+            var score = FitScorer.Score(input, profiles[c.Profile], rules, policy, today);
             var points = score.Items.Select(i => i.Points).ToList();
 
             if (score.Final != c.Final || !points.SequenceEqual(c.Points))
@@ -73,7 +79,8 @@ public class PrototypeParityTests
         [property: JsonPropertyName("profiles")] Dictionary<string, ParityProfile> Profiles,
         [property: JsonPropertyName("cases")] List<ParityCase> Cases);
 
-    // The file's employer-assistance keys hold the policy defaults (required: no, 10 and 10): not read.
+    // The file's employer-assistance keys hold the policy defaults (required: no, 10 and 10): not read. Its phrase
+    // groups are only checked against the market's: the market's own block decides what is searched.
     private sealed record ParityPolicy(
         [property: JsonPropertyName("disqualify_max_score")] int DisqualifyMaxScore,
         [property: JsonPropertyName("exclude_senior")] bool ExcludeSenior,
@@ -91,7 +98,6 @@ public class PrototypeParityTests
             ExcludeSeniorTitles = ExcludeSenior,
             ApprenticeshipPenalty = ApprenticeshipPenalty,
             LongContractPenalty = LongContractPenalty,
-            FullTextGroups = FullTextGroups.ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Value),
             AgingAfterDays = AgingAfterDays,
             AgingPenalty = AgingPenalty,
             StaleAfterDays = StaleAfterDays,

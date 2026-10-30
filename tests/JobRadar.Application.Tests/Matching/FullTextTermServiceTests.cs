@@ -12,22 +12,29 @@ public class FullTextTermServiceTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static readonly ScoringPolicy TwoTerms = ScoringPolicy.Default with
+    /// <summary>Two eligibility phrases; the code's three (commission, licence) come with every market.</summary>
+    private static readonly EligibilityOptions TwoTerms = new()
     {
-        FullTextGroups = new Dictionary<string, IReadOnlyList<string>>
+        Phrases = new(StringComparer.OrdinalIgnoreCase)
         {
-            [FullTextGroup.Citizen] = ["australian citizen"],
-            [FullTextGroup.Whv] = ["working holiday"],
+            [FullTextGroup.Doubt] = ["guild member"],
+            [FullTextGroup.Welcome] = ["seasonal member"],
         },
     };
+
+    private static readonly string[] FiveTerms = ["HR licence", "commission only", "guild member", "heavy rigid", "seasonal member"];
 
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 21, 0, 0, 0, TimeSpan.Zero));
     private readonly InMemoryListings _listings = new();
     private readonly InMemoryTerms _terms = new();
     private readonly InMemoryRuns _runs = new();
 
-    private FullTextTermService Service(FakeFullTextSearch search, ScoringPolicy? policy = null, params (string, ProfileOptions)[] profiles) =>
-        new([search], new ProfileCatalog(Options.Create(new MatchingOptions { Profiles = profiles.ToDictionary(p => p.Item1, p => p.Item2) }), policy ?? TwoTerms),
+    private FullTextTermService Service(FakeFullTextSearch search, EligibilityOptions? au = null, params (string, ProfileOptions)[] profiles) =>
+        new([search], new ProfileCatalog(Options.Create(new MatchingOptions
+            {
+                Profiles = profiles.ToDictionary(p => p.Item1, p => p.Item2),
+                Markets = new() { ["AU"] = new MarketRulesOptions { Eligibility = au ?? TwoTerms } },
+            }), ScoringPolicy.Default),
             _listings, _terms, _runs,
             Options.Create(new CollectionOptions { MaxParallelSearches = 1 }), _time, NullLogger<FullTextTermService>.Instance);
 
@@ -41,11 +48,11 @@ public class FullTextTermServiceTests
 
         await Service(seek, profiles: [("fifo", fifo), ("mining", mining)]).TagAsync(Ct);
 
-        // The second profile's "Years Experience + FIFO" is the same search, in another case. The citizen
+        // The second profile's "Years Experience + FIFO" is the same search, in another case. The doubt
         // group is a context group: its term also goes with each context word.
         Assert.Equal(
-            ["HRWL + FIFO", "HRWL + offsider", "australian citizen", "australian citizen + FIFO", "australian citizen + offsider",
-                "working holiday", "years experience + FIFO", "years experience + offsider"],
+            ["HR licence", "HRWL + FIFO", "HRWL + offsider", "commission only", "guild member", "guild member + FIFO", "guild member + offsider",
+                "heavy rigid", "seasonal member", "years experience + FIFO", "years experience + offsider"],
             seek.Received.Select(r => r.Term));
     }
 
@@ -56,21 +63,19 @@ public class FullTextTermServiceTests
 
         await Service(seek).TagAsync(Ct);
 
-        Assert.Equal(["australian citizen", "working holiday"], seek.Received.Select(r => r.Term));
-        Assert.Equal(["term: australian citizen", "term: working holiday"], _runs.Runs.Select(r => r.SearchKey));
+        Assert.Equal(FiveTerms, seek.Received.Select(r => r.Term));
+        Assert.Equal(FiveTerms.Select(t => $"term: {t.ToLowerInvariant()}"), _runs.Runs.Select(r => r.SearchKey));
     }
 
     [Fact]
-    public async Task The_default_policy_has_every_term_once()
+    public async Task An_australian_profile_without_a_block_searches_the_rules_that_were_in_code()
     {
         var seek = new FakeFullTextSearch("seek");
 
-        await Service(seek, ScoringPolicy.Default).TagAsync(Ct);
+        await Service(seek, new EligibilityOptions(), ("tech", new ProfileOptions())).TagAsync(Ct);
 
-        // The prototype's 17 (6 exclude + 2 citizen + 2 ambiguous + 3 whv + 1 + 2 + 1) and 4 whv + residency.
+        // The prototype's 17 and 4 of a retracted welcome: the code's 3 and the market's 18.
         Assert.Equal(21, seek.Received.Count);
-        Assert.Contains(seek.Received, r => r.Term == "12 months + working rights");
-        Assert.Contains(seek.Received, r => r.Term == "working holiday + residency");
     }
 
     [Fact]
@@ -83,8 +88,8 @@ public class FullTextTermServiceTests
         _time.Advance(TimeSpan.FromDays(1));
         await service.TagAsync(Ct);
 
-        Assert.Equal([2, 2, 0, 0], _runs.Runs.Select(r => r.New));
-        Assert.Equal(4, _terms.Marks.Count);
+        Assert.Equal([2, 2, 2, 2, 2, 0, 0, 0, 0, 0], _runs.Runs.Select(r => r.New));
+        Assert.Equal(10, _terms.Marks.Count);
     }
 
     [Fact]
@@ -92,7 +97,7 @@ public class FullTextTermServiceTests
     {
         var seek = new FakeFullTextSearch("seek")
         {
-            Respond = t => t.Text == "australian citizen"
+            Respond = t => t.Text == "HR licence"
                 ? throw new HttpRequestException("429")
                 : new FullTextResult(new HashSet<string> { "1" }, true),
         };
@@ -113,7 +118,7 @@ public class FullTextTermServiceTests
         _time.Advance(TimeSpan.FromDays(3));
         await service.TagAsync(Ct);
 
-        Assert.Equal([31, 31, 5, 5], seek.Received.Select(r => r.Days));
+        Assert.Equal([31, 31, 31, 31, 31, 5, 5, 5, 5, 5], seek.Received.Select(r => r.Days));
     }
 
     [Fact]

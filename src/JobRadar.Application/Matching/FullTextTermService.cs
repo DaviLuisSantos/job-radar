@@ -34,7 +34,7 @@ public sealed class FullTextTermService(
 
     public async Task TagAsync(CancellationToken ct)
     {
-        var all = FullTextTerm.AllOf(catalog.Policy, catalog.Profiles.Select(p => p.Profile));
+        var all = FullTextTerm.AllOf(catalog.Markets.Values, catalog.Policy, catalog.Profiles.Select(p => p.Profile));
         var parallel = new ParallelOptions { MaxDegreeOfParallelism = options.Value.MaxParallelSearches, CancellationToken = ct };
         foreach (var search in searches)
         {

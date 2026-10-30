@@ -13,18 +13,21 @@ public sealed record FullTextTerm(string Text)
     public string RunKey => $"term: {Text.Trim().ToLowerInvariant()}";
 
     /// <summary>
-    /// Every distinct term of the policy's groups (those of <see cref="ScoringPolicy.ContextGroups"/> also
-    /// with each profile context word) and of the profiles' requirements, in a stable order.
+    /// Every distinct term of the markets' groups (those of <see cref="ScoringPolicy.ContextGroups"/> also with each
+    /// profile context word) and of the profiles' requirements, in a stable order.
     /// </summary>
-    public static IReadOnlyList<FullTextTerm> AllOf(ScoringPolicy policy, IEnumerable<MatchingProfile>? profiles = null)
+    public static IReadOnlyList<FullTextTerm> AllOf(
+        IEnumerable<MarketRules> markets, ScoringPolicy policy, IEnumerable<MatchingProfile>? profiles = null)
     {
+        var groups = markets.SelectMany(m => m.FullTextGroups).ToList();
         var all = (profiles ?? []).ToList();
         var contexts = all.SelectMany(p => p.Requirements.Contexts).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var narrowed = policy.ContextGroups
-            .SelectMany(g => policy.FullTextGroups.GetValueOrDefault(g) ?? [])
+        var narrowed = groups
+            .Where(g => policy.ContextGroups.Contains(g.Key))
+            .SelectMany(g => g.Value)
             .SelectMany(term => contexts.Select(c => $"{term} + {c}"));
-        return policy.FullTextGroups.Values
-            .SelectMany(t => t)
+        return groups
+            .SelectMany(g => g.Value)
             .Concat(narrowed)
             .Concat(all.SelectMany(p => p.Requirements.Terms().Select(r => r.Term)))
             .Distinct(StringComparer.OrdinalIgnoreCase)

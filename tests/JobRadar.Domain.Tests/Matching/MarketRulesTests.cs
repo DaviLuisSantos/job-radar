@@ -25,7 +25,7 @@ public class MarketRulesTests
         new(title, summary, location, null, null, []) { Description = description };
 
     private static FitScore Score(ScoringInput job, MatchingProfile? profile = null) =>
-        FitScorer.Score(job, profile ?? Dotnet, ScoringPolicy.Default, Today);
+        FitScorer.Score(job, profile ?? Dotnet, MarketRules.For((profile ?? Dotnet).Market), ScoringPolicy.Default, Today);
 
     private static bool Has(FitScore score, ScoreRule rule) => score.Items.Any(i => i.Rule == rule);
 
@@ -37,7 +37,7 @@ public class MarketRulesTests
 
         Assert.Equal(ScoreRule.CitizenshipRequired, Assert.Single(Score(ad, Tech).Items).Rule);
         Assert.True(Has(Score(ad), ScoreRule.SeniorPenalty));
-        Assert.Same(MarketRules.Australia, MarketRules.For(JobMarket.AU));
+        Assert.Equal(JobMarket.AU, MarketRules.For(JobMarket.AU).Market);
         Assert.Same(MarketRules.Brazil, MarketRules.For(JobMarket.BR));
     }
 
@@ -52,7 +52,7 @@ public class MarketRulesTests
         // The extraction moved where the phrases live, not what they say: parity depends on it.
         var input = new ScoringInput("Senior C# Developer", "Australian citizens only. Remote.", "Perth WA", "Contract", null, []);
 
-        var score = FitScorer.Score(input, Tech, ScoringPolicy.Default, Today);
+        var score = FitScorer.Score(input, Tech, MarketRules.For(JobMarket.AU), ScoringPolicy.Default, Today);
 
         Assert.Equal(0, score.Final);
         Assert.Equal(ScoreRule.CitizenshipRequired, Assert.Single(score.Items).Rule);
@@ -71,7 +71,7 @@ public class MarketRulesTests
     public void English_as_a_condition_costs_points_only_in_Brazil()
     {
         var br = Score(Br("Desenvolvedor .NET Pleno", description: "Requisitos: C#, SQL e inglês avançado."));
-        var au = FitScorer.Score(new ScoringInput("C# Developer", "Fluent English", "Perth WA", null, null, []), Tech, ScoringPolicy.Default, Today);
+        var au = FitScorer.Score(new ScoringInput("C# Developer", "Fluent English", "Perth WA", null, null, []), Tech, MarketRules.For(JobMarket.AU), ScoringPolicy.Default, Today);
 
         Assert.Equal(-ScoringPolicy.Default.EnglishRequiredPenalty, Assert.Single(br.Items, i => i.Rule == ScoreRule.EnglishRequired).Points);
         Assert.False(Has(au, ScoreRule.EnglishRequired));

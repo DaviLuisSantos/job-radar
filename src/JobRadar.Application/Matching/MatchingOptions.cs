@@ -1,3 +1,5 @@
+using JobRadar.Domain.Matching;
+
 namespace JobRadar.Application.Matching;
 
 /// <summary>
@@ -11,8 +13,50 @@ public sealed class MatchingOptions
 
     public Dictionary<string, ProfileOptions> Profiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// What each market reads as data, by market (AU, BR, LatamRemote, GlobalRemote). Who may apply is said in each
+    /// market's own words, so those words live here, in the local configuration, not in code.
+    /// </summary>
+    public Dictionary<string, MarketRulesOptions> Markets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>The numbers every profile's <see cref="ProfileOptions.Compensation"/> is read with.</summary>
     public CompensationOptions Compensation { get; set; } = new();
+}
+
+/// <summary>Section <c>Matching:Markets:&lt;market&gt;</c>.</summary>
+public sealed class MarketRulesOptions
+{
+    /// <summary>Who may apply, in the market's words (<see cref="EligibilityRules"/>).</summary>
+    public EligibilityOptions? Eligibility { get; set; }
+}
+
+/// <summary>
+/// Section <c>Matching:Markets:&lt;market&gt;:Eligibility</c>, the shape of <see cref="EligibilityRules"/>: patterns are
+/// .NET regular expressions, phrases are searched in the full ad by group (exclude, doubt, ambiguous, welcome,
+/// welcome_retracted, tenure). <c>eligibility &lt;market&gt;</c> prints the block in use.
+/// </summary>
+public sealed class EligibilityOptions
+{
+    public string? RestrictedPattern { get; set; }
+    public string? IncompatiblePattern { get; set; }
+    public string? ReservedTitlePattern { get; set; }
+    public string? WelcomePattern { get; set; }
+    public string? AssistanceDeniedPattern { get; set; }
+    public List<string> AssistanceOfferedPhrases { get; set; } = [];
+    public string? AssistanceWord { get; set; }
+    public Dictionary<string, List<string>> Phrases { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public EligibilityRules ToRules() => new()
+    {
+        RestrictedPattern = RestrictedPattern,
+        IncompatiblePattern = IncompatiblePattern,
+        ReservedTitlePattern = ReservedTitlePattern,
+        WelcomePattern = WelcomePattern,
+        AssistanceDeniedPattern = AssistanceDeniedPattern,
+        AssistanceOfferedPhrases = AssistanceOfferedPhrases,
+        AssistanceWord = AssistanceWord,
+        Phrases = Phrases.ToDictionary(p => p.Key, p => (IReadOnlyList<string>)p.Value, StringComparer.Ordinal),
+    };
 }
 
 /// <summary>Section <c>Matching:Compensation</c>: how pay in dollars and by the hour compares with a monthly band.</summary>
