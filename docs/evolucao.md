@@ -12,8 +12,10 @@
 | 1 | SQL Server ao lado do Postgres | 5 (PRs 2–6) | 🔨 implantado 2026-10-29; falta medir a triagem no SQL Server com os dados reais (1.5) |
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
-| 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras |
-| 5 | Mercados remotos e interface | ~10 | ⏳ planejada em 2026-10-30 |
+| 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras ([#28](https://github.com/DaviLuisSantos/job-radar/issues/28)) |
+| 5 | Mercados remotos e interface | ~10 | 🔨 5.1 e 5.2 implantadas; o resto nas issues abaixo |
+
+**O que falta, como issues:** 5.3 [#19](https://github.com/DaviLuisSantos/job-radar/issues/19), 5.4 [#20](https://github.com/DaviLuisSantos/job-radar/issues/20), 5.5 [#21](https://github.com/DaviLuisSantos/job-radar/issues/21), 5.6 [#22](https://github.com/DaviLuisSantos/job-radar/issues/22), 5.7 [#23](https://github.com/DaviLuisSantos/job-radar/issues/23); prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); textos em inglês vindos do domínio [#25](https://github.com/DaviLuisSantos/job-radar/issues/25); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
 
 ## O que a auditoria mudou no plano original
 
@@ -121,7 +123,7 @@ só um dos bancos; o CI roda os dois no mesmo job.
 - CI: matriz `provider: [postgres, sqlserver]` com `JOBRADAR_DB_PROVIDER` para o job filtrar.
 - `Every_application_port_is_registered` com um caso por provider.
 
-**1.5 Desempenho, cópia e README.**
+**1.5 Desempenho, cópia e README.** A medição falta: [#26](https://github.com/DaviLuisSantos/job-radar/issues/26).
 - ✅ Comando `copy-database Postgres|SqlServer <conexão>`. **Não** pelos repositórios, como o original propunha: eles
   respondem perguntas de negócio e não leem tabelas inteiras. `DatabaseCopy` (Infrastructure) copia entidade por
   entidade, pais primeiro, em páginas de 1.000; recusa um destino com linhas antes de gravar qualquer coisa; ids
@@ -169,7 +171,7 @@ FIFO, os seis meses por empregador) nunca casa. O que é **do candidato** foi pa
 `ExcludedTitles` (júnior, estágio, Java como stack principal) e `OnSiteLocations` (presencial fora de onde ele aceita
 exclui). No AU as regras novas nunca disparam: perfis sem as listas, padrões que não casam.
 
-Ficou para depois, com motivo:
+Ficou para depois, com motivo ([#27](https://github.com/DaviLuisSantos/job-radar/issues/27)):
 - **Salário** (R$ 10–15 mil +, abaixo de 8 mil −): só vem no texto (1 em 6 vagas) e o alvo é do candidato; entra com
   os rótulos, quando der para ver se pesa.
 - **Vaga afirmativa** (exclusiva para PcD, mulheres, pessoas negras): o equivalente da "identified role" do AU, mas a
@@ -304,21 +306,21 @@ regras).
 mercado (contagem de novas em cada um) e os perfis do mercado logo abaixo; Captura, Você, Requisitos, Calibragem e Status
 num menu de ajustes. Layout responsivo, com gaveta no celular. As teclas da triagem (`j` `k` `g` `b` `u` `o`) continuam.
 
-**5.3 Interface: triagem e vaga.** Na linha, etiquetas com o que decide a candidatura: elegibilidade, regime (CLT, PJ,
+**5.3 Interface: triagem e vaga** ([#19](https://github.com/DaviLuisSantos/job-radar/issues/19)). Na linha, etiquetas com o que decide a candidatura: elegibilidade, regime (CLT, PJ,
 contractor), moeda e faixa, arranjo (remoto, híbrido, presencial), fuso e idioma; excluída aparece com o motivo em uma
 linha. Página da vaga com "por que esta nota" em cima, o anúncio inteiro quando existe (Gupy e as remotas trazem) e ações
 fixas.
 
-**5.4 Tela "Hoje".** Página inicial por mercado: o que chegou desde a última visita, as melhores novas de cada perfil e o
+**5.4 Tela "Hoje"** ([#20](https://github.com/DaviLuisSantos/job-radar/issues/20)). Página inicial por mercado: o que chegou desde a última visita, as melhores novas de cada perfil e o
 que mudou nas candidaturas.
 
-**5.5 Spike das fontes remotas (sem código no repo).** Como na Gupy: endpoint, campos (principalmente elegibilidade e
+**5.5 Spike das fontes remotas (sem código no repo)** ([#21](https://github.com/DaviLuisSantos/job-radar/issues/21)). Como na Gupy: endpoint, campos (principalmente elegibilidade e
 salário), paginação, termos de uso. Candidatas: Remotive, Himalayas, RemoteOK, Jobicy e We Work Remotely (global); Get on
 Board (LATAM). Escolher uma ou duas por mercado.
 
-**5.6 Fontes remotas.** `JobRadar.Integrations.<Site>` para as escolhidas, no molde do Seek e da Gupy, com teste ao vivo.
+**5.6 Fontes remotas** ([#22](https://github.com/DaviLuisSantos/job-radar/issues/22)). `JobRadar.Integrations.<Site>` para as escolhidas, no molde do Seek e da Gupy, com teste ao vivo.
 
-**5.7 Regras remotas.** `MarketRules` dos dois mercados remotos, em inglês: elegibilidade que não inclui o Brasil exclui
+**5.7 Regras remotas** ([#23](https://github.com/DaviLuisSantos/job-radar/issues/23)). `MarketRules` dos dois mercados remotos, em inglês: elegibilidade que não inclui o Brasil exclui
 ("US only", "must reside in", "EU only"); fuso fora do alcance penaliza; contractor e pagamento em dólar são dados, não
 penalidade; inglês é esperado, não penaliza. LATAM e global diferem no que aceitam como elegível. `RulesVersion` +1.
 

@@ -27,7 +27,7 @@ Pendências conhecidas, com a etapa onde entram:
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
-- **Voltar sem login (adiado em 2026-10-27, decisão do autor):** depois de um reboot, nada roda até o login,
+- **Voltar sem login (adiado em 2026-10-27, decisão do autor; [#29](https://github.com/DaviLuisSantos/job-radar/issues/29)):** depois de um reboot, nada roda até o login,
   porque o banco vive no Docker Desktop, que não roda como serviço (o `com.docker.service` é só auxiliar).
   Opções avaliadas: (A) Postgres 18 nativo como serviço do Windows, porta 5433 na troca, com dependência dos
   serviços do JobRadar e ajustes em `install.ps1`, `backup.ps1` e na trava do `deploy.ps1`, recomendada;
