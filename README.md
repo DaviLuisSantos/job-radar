@@ -30,13 +30,14 @@ Two products share one core:
 src/
   JobRadar.Domain           pure model: listings, locations, work types (no EF, no HTTP)
   JobRadar.Application      business services + ports (Abstractions/) they depend on
-  JobRadar.Infrastructure   Postgres: entity → configuration → mapper → repository, migrations
+  JobRadar.Infrastructure   EF Core: entity → configuration → mapper → repository, one model for both databases
+  JobRadar.Infrastructure.Migrations.Postgres / .SqlServer   migrations per provider
   JobRadar.Integrations.Seek  Seek search API: resilient HTTP client, translator to the neutral model
   JobRadar.Worker           composition root, daily pipeline and CLI commands
   JobRadar.Web              triage UI (Blazor, server rendering)
 tests/
   *.Domain.Tests            pure unit tests
-  *.Infrastructure.Tests    mapper tests + repository contract tests on real Postgres (opt-in)
+  *.Infrastructure.Tests    mapper tests + repository contract tests on real Postgres and SQL Server (opt-in)
   *.Worker.Tests            DI composition: the container builds and every port is registered
 ```
 
@@ -52,7 +53,7 @@ Requires the .NET 10 SDK and Docker.
 ```bash
 docker compose up -d
 dotnet tool restore
-dotnet ef database update --project src/JobRadar.Infrastructure
+dotnet ef database update --project src/JobRadar.Infrastructure.Migrations.Postgres
 dotnet run --project src/JobRadar.Worker
 ```
 
@@ -96,6 +97,26 @@ dotnet run --project src/JobRadar.Worker -- market-report 2026-10 raio-x_2026-10
 
 The report holds aggregates only: counts, shares, salary medians. Never an individual listing.
 
+### Choosing the database
+
+Postgres is the default and what production runs. SQL Server works the same, behind the same EF Core
+model: `Database:Provider` picks it, and each provider has its own migrations.
+
+```bash
+docker compose --profile sqlserver up -d sqlserver
+JOBRADAR_CONNECTION="Server=localhost,1433;Database=jobradar;User Id=sa;Password=JobRadar-local-1;TrustServerCertificate=True" \
+  dotnet ef database update --project src/JobRadar.Infrastructure.Migrations.SqlServer
+Database__Provider=SqlServer ConnectionStrings__JobRadar="Server=localhost,1433;..." dotnet run --project src/JobRadar.Web
+```
+
+Let the migrations create the database: the case- and accent-sensitive collation that makes SQL Server
+behave like Postgres only applies to a database they create. To bring real data across, `copy-database`
+copies every row of the configured database into another one, empty and migrated:
+
+```bash
+dotnet run --project src/JobRadar.Worker -- copy-database SqlServer "Server=localhost,1433;..."
+```
+
 ## Production
 
 It runs on the author's Windows PC as two Windows services (worker and site), with Postgres in
@@ -109,7 +130,8 @@ migrates and installs everything: see [docs/producao.md](docs/producao.md) (Port
 dotnet test
 ```
 
-Contract tests start a real Postgres in a container and are skipped unless `JOBRADAR_DB_TESTS=1`:
+Contract tests are written once and run against a real Postgres 18 and a real SQL Server 2022, each in a
+container; they are skipped unless `JOBRADAR_DB_TESTS=1`:
 
 ```bash
 JOBRADAR_DB_TESTS=1 dotnet test

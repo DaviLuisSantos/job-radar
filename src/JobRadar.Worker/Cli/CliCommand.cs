@@ -2,6 +2,7 @@ using JobRadar.Application.Matching;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
+using JobRadar.Infrastructure.Persistence;
 
 namespace JobRadar.Worker.Cli;
 
@@ -24,6 +25,8 @@ public abstract record CliCommand
           market                          take the market snapshot (Raio-X) now
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
           import-prototype <jobs.db> [--dry-run]  bring the Python prototype history in (safe to repeat)
+          copy-database Postgres|SqlServer <connection-string>  every row of this database into another, empty and
+                                          migrated (dotnet ef database update)
         <id> is source:id, e.g. seek:81234567
         """;
 
@@ -42,10 +45,11 @@ public abstract record CliCommand
     public sealed record ImportCandidate(string Path, bool DryRun) : CliCommand;
     /// <param name="Years">Null forgets them: experience requirements weigh by their state again.</param>
     public sealed record SetExperience(string Profile, double? Years) : CliCommand;
+    public sealed record CopyDatabase(DatabaseProvider Provider, string ConnectionString) : CliCommand;
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
     public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype",
-        "requirements", "requirement", "import-candidate", "experience"];
+        "requirements", "requirement", "import-candidate", "experience", "copy-database"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -76,6 +80,7 @@ public abstract record CliCommand
                 "experience" when args.Length == 3 => new SetExperience(args[1], ParseYears(args[2])),
                 "import-candidate" when args.Length == 2 && args[1] != "--dry-run" => new ImportCandidate(args[1], DryRun: false),
                 "import-candidate" when args.Length == 3 && args[2] == "--dry-run" => new ImportCandidate(args[1], DryRun: true),
+                "copy-database" when args.Length == 3 => new CopyDatabase(ParseProvider(args[1]), args[2]),
                 "market-report" when args.Length <= 3 => new MarketReport(
                     args.Length > 1 ? ParseMonth(args[1]) : null, args.Length > 2 ? args[2] : null),
                 _ => Fail($"Wrong arguments for '{name}'.", out error),
@@ -95,6 +100,18 @@ public abstract record CliCommand
     }
 
     private static ListingId ParseId(string value) => ListingId.Parse(value);
+
+    private static DatabaseProvider ParseProvider(string value)
+    {
+        try
+        {
+            return string.IsNullOrWhiteSpace(value) ? throw new FormatException("Name the target provider.") : DatabaseProviders.Parse(value);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new FormatException(ex.Message);
+        }
+    }
 
     private static ApplicationStatus ParseStatus(string value) =>
         Enum.TryParse<ApplicationStatus>(value, ignoreCase: true, out var s) && Enum.IsDefined(s)

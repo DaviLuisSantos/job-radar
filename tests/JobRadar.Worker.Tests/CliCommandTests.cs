@@ -1,6 +1,7 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
+using JobRadar.Infrastructure.Persistence;
 using JobRadar.Worker.Cli;
 
 namespace JobRadar.Worker.Tests;
@@ -62,6 +63,13 @@ public class CliCommandTests
     }
 
     [Fact]
+    public void Copy_database_names_the_target_provider_by_name()
+    {
+        Assert.Equal(new CliCommand.CopyDatabase(DatabaseProvider.SqlServer, "Server=x"), Parse("copy-database", "sqlserver", "Server=x"));
+        Assert.Equal(new CliCommand.CopyDatabase(DatabaseProvider.Postgres, "Host=x"), Parse("copy-database", "Postgres", "Host=x"));
+    }
+
+    [Fact]
     public void Requirement_commands()
     {
         Assert.IsType<CliCommand.ListRequirements>(Parse("requirements"));
@@ -88,6 +96,9 @@ public class CliCommandTests
     [InlineData("market-report", "outubro")]
     [InlineData("market-report", "2026-13")]
     [InlineData("market", "now")]
+    [InlineData("copy-database", "Oracle", "Server=x")]
+    [InlineData("copy-database", "", "Server=x")]
+    [InlineData("copy-database", "SqlServer")]
     [InlineData("status", "seek:1", "hired")]
     [InlineData("status", "seek_123", "applied")]
     [InlineData("label", "seek:1", "maybe")]

@@ -121,13 +121,19 @@ só um dos bancos; o CI roda os dois no mesmo job.
 - `Every_application_port_is_registered` com um caso por provider.
 
 **1.5 Desempenho, cópia e README.**
-- Comando `copy-database --to SqlServer` (inglês, como os outros comandos), lendo e gravando pelos repositórios.
-  Dá a base real (as ~10 mil vagas) para medir.
+- ✅ Comando `copy-database Postgres|SqlServer <conexão>`. **Não** pelos repositórios, como o original propunha: eles
+  respondem perguntas de negócio e não leem tabelas inteiras. `DatabaseCopy` (Infrastructure) copia entidade por
+  entidade, pais primeiro, em páginas de 1.000; recusa um destino com linhas antes de gravar qualquer coisa; ids
+  gerados (logs de execução e de status, que nenhuma tabela referencia) são gerados de novo, na ordem da origem.
+  Contrato copia de um Postgres para um SQL Server de verdade e lê de volta pelos repositórios.
 - Medir a triagem no SQL Server com plano real. Atenção: ela hoje traz **todas** as linhas do perfil e agrupa
   duplicatas em memória antes de paginar (armadilha registrada). A história honesta de desempenho é medir
   isso, empurrar ao banco o que dá (filtros, projeção só das colunas usadas) e ajustar o índice
   `ix_listing_scores_profile_score` (com `INCLUDE`). Antes/depois em `docs/perf-sqlserver.md`.
-- README: como escolher o banco.
+  **Pendente, no trabalhopc:** precisa dos dados reais (ficam lá) e de um SQL Server rodando; nesta máquina o Docker
+  Desktop não sobe. Passos: `docker compose --profile sqlserver up -d sqlserver`, migrations do SQL Server,
+  `copy-database`, e medir.
+- ✅ README: como escolher o banco, criar o SQL Server pelas migrations e copiar os dados.
 
 **Pronto:** os seis itens do §2.7 do original. A produção segue em Postgres.
 
