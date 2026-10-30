@@ -5,6 +5,8 @@ using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Tracking;
 using JobRadar.Domain.Matching;
+using JobRadar.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Worker.Cli;
 
@@ -80,6 +82,16 @@ public static class CliRunner
                 case CliCommand.ImportPrototype c:
                     WriteImport(await sp.GetRequiredService<PrototypeImportService>().ImportAsync(c.Path, c.DryRun, ct), c.DryRun, output);
                     break;
+                case CliCommand.CopyDatabase c:
+                    await using (var target = new JobRadarDbContext(new DbContextOptionsBuilder<JobRadarDbContext>()
+                                     .UseJobRadarDatabase(c.Provider, c.ConnectionString).Options))
+                    {
+                        var copied = await DatabaseCopy.CopyAsync(sp.GetRequiredService<JobRadarDbContext>(), target, ct);
+                        foreach (var t in copied)
+                            await output.WriteLineAsync($"{t.Table,-24}{t.Rows,10:N0}");
+                        await output.WriteLineAsync($"Copied {copied.Sum(t => t.Rows):N0} rows to {c.Provider}.");
+                    }
+                    break;
                 case CliCommand.MarketReport c:
                     var month = c.Month ?? LocalToday(sp).ToString("yyyy-MM", CultureInfo.InvariantCulture);
                     var report = await sp.GetRequiredService<MarketReportService>().BuildAsync("seek", month, ct);
@@ -101,6 +113,11 @@ public static class CliRunner
                     break;
             }
             return 0;
+        }
+        catch (TargetNotEmptyException ex)
+        {
+            await output.WriteLineAsync(ex.Message);
+            return 1;
         }
         catch (ListingNotFoundException ex)
         {
