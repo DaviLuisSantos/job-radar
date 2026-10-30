@@ -25,7 +25,7 @@ public class RaioXMarkdownTests
         Assert.Contains("## HVAC-R", md);
         Assert.Contains("- **Vagas abertas (média diária):** 1.234 (+12% vs. mês anterior)", md);
         Assert.Contains("- citam \"fifo\": 62 (5,0%)", md);
-        Assert.Contains("- Anúncios vistos no mês: 400 → 350 únicos (50 repetidos)", md);
+        Assert.Contains("- Anúncios encontrados no mês: 400 → 350 únicos (50 repetidos)", md);
         Assert.Contains("mediana $95k, faixa típica $80k–$110k (140 de 350 anúncios informam salário, 40,0%)", md);
         Assert.Contains("- **Vagas abertas (média diária):** 9.000\n", md.Replace("\r\n", "\n"));
         Assert.Contains("## Metodologia", md);

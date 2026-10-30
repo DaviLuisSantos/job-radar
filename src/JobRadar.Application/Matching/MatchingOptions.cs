@@ -109,7 +109,7 @@ public sealed class ProfileOptions
     public bool AllowSenior { get; set; }
     public List<string> PreferredLocations { get; set; } = [];
 
-    /// <summary>Locations that rule a listing out ("Perth WA" for regional work that must count for a visa).</summary>
+    /// <summary>Locations that rule a listing out ("Perth WA" for a profile of farm work outside the city).</summary>
     public List<string> ExcludedLocations { get; set; } = [];
 
     /// <summary>Title words that rule a listing out: a level ("júnior") or a main stack ("java").</summary>

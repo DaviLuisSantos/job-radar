@@ -61,6 +61,13 @@ public class MarketRulesTests
     }
 
     [Fact]
+    public void Australia_without_its_eligibility_block_is_refused()
+    {
+        Assert.Contains("Matching:Markets:AU:Eligibility", Assert.Throws<InvalidOperationException>(() => MarketRules.For(JobMarket.AU)).Message);
+        Assert.Throws<InvalidOperationException>(() => MarketRules.For(JobMarket.AU, EligibilityRules.None));
+    }
+
+    [Fact]
     public void Rules_of_another_market_are_refused()
     {
         var input = new ScoringInput("C# Developer", null, "Perth WA", null, null, []);

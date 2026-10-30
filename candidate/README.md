@@ -1,6 +1,7 @@
 # Candidate facts
 
-Who the candidate is, as data: visa, training, licences, tickets, experience and the lines of work wanted.
+Who the candidate is, as data: training, licences, tickets, experience and the lines of work wanted. Who may apply to
+a market's jobs is not a fact here: it is the market's eligibility block, in the local configuration.
 Matching profiles (`Matching:Profiles`) are drafted from these facts; what is tuned against the market
 (keywords that pay off, context words, signals found by labelling) stays in the profiles.
 

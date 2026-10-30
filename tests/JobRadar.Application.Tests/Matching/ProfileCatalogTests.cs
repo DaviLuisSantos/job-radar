@@ -15,6 +15,10 @@ public class ProfileCatalogTests
         PositiveSignals = ["C#"],
     };
 
+    /// <summary>A profile built with the fictional AU market: Australia scores only with an eligibility block.</summary>
+    private static ProfileDefinition Build(string name, ProfileOptions o, ScoringPolicy policy) =>
+        ProfileCatalog.Build(name, o, policy, rules: TestMarkets.Au);
+
     internal static ProfileCatalog Catalog(params (string Name, ProfileOptions Options)[] profiles) =>
         new(Options.Create(new MatchingOptions
         {
@@ -97,17 +101,17 @@ public class ProfileCatalogTests
     [Fact]
     public void Rules_hash_follows_the_scoring_rules_not_the_searches()
     {
-        var baseline = ProfileCatalog.Build("tech", Dotnet(), ScoringPolicy.Default).RulesHash;
+        var baseline = Build("tech", Dotnet(), ScoringPolicy.Default).RulesHash;
 
         var moreSearches = Dotnet();
         moreSearches.Locations.Add("Sydney NSW");
         var newSignal = Dotnet();
         newSignal.PositiveSignals.Add("Azure");
 
-        Assert.Equal(baseline, ProfileCatalog.Build("tech", moreSearches, ScoringPolicy.Default).RulesHash);
-        Assert.NotEqual(baseline, ProfileCatalog.Build("tech", newSignal, ScoringPolicy.Default).RulesHash);
-        Assert.NotEqual(baseline, ProfileCatalog.Build("tech", Dotnet(), ScoringPolicy.Default with { AssistanceBonus = 20 }).RulesHash);
-        Assert.Equal(baseline, ProfileCatalog.Build("tech", Dotnet(), ScoringPolicy.Default).RulesHash);
+        Assert.Equal(baseline, Build("tech", moreSearches, ScoringPolicy.Default).RulesHash);
+        Assert.NotEqual(baseline, Build("tech", newSignal, ScoringPolicy.Default).RulesHash);
+        Assert.NotEqual(baseline, Build("tech", Dotnet(), ScoringPolicy.Default with { AssistanceBonus = 20 }).RulesHash);
+        Assert.Equal(baseline, Build("tech", Dotnet(), ScoringPolicy.Default).RulesHash);
     }
 
     [Fact]
@@ -141,7 +145,7 @@ public class ProfileCatalogTests
             Licence = ["white card", "HR licence"],
         };
 
-        var requirements = ProfileCatalog.Build("fifo", options, ScoringPolicy.Default).Profile.Requirements;
+        var requirements = Build("fifo", options, ScoringPolicy.Default).Profile.Requirements;
 
         Assert.Equal(["FIFO"], requirements.Contexts);
         Assert.Empty(requirements.Experience);
@@ -155,7 +159,7 @@ public class ProfileCatalogTests
         var options = Dotnet();
         options.Requirements = new RequirementOptions { Items = ["hrlw"] };
 
-        var error = Assert.Throws<InvalidOperationException>(() => ProfileCatalog.Build("fifo", options, ScoringPolicy.Default));
+        var error = Assert.Throws<InvalidOperationException>(() => Build("fifo", options, ScoringPolicy.Default));
 
         Assert.Contains("'hrlw'", error.Message, StringComparison.Ordinal);
         Assert.Contains("hrwl", error.Message, StringComparison.Ordinal);
@@ -172,9 +176,9 @@ public class ProfileCatalogTests
                 new RequirementItem("hrwl", RequirementKind.Licence, ["HRWL", "high risk work licence"])],
         };
 
-        Assert.NotEqual(ProfileCatalog.Build("fifo", options, ScoringPolicy.Default).RulesHash,
-            ProfileCatalog.Build("fifo", options, wider).RulesHash);
-        Assert.Equal(["HRWL", "high risk work licence"], ProfileCatalog.Build("fifo", options, wider).Profile.Requirements.Licence);
+        Assert.NotEqual(Build("fifo", options, ScoringPolicy.Default).RulesHash,
+            Build("fifo", options, wider).RulesHash);
+        Assert.Equal(["HRWL", "high risk work licence"], Build("fifo", options, wider).Profile.Requirements.Licence);
     }
 
     private static ProfileCatalog WithMarkets(Dictionary<string, MarketRulesOptions> markets, params (string Name, ProfileOptions Options)[] profiles) =>

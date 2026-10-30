@@ -14,65 +14,9 @@ internal static class ListingPatterns
 
     private static Regex R(string pattern) => new(pattern, Options);
 
-    // ── Sponsorship ───────────────────────────────────────────────────────────
+    // ── Contracts ─────────────────────────────────────────────────────────────
 
-    /// <summary>"no sponsorship", "sponsorship is not available", "unable to sponsor"...</summary>
-    public static readonly Regex SponsorshipDenied = R(
-        @"\b(no|not|without)\s+sponsor"
-        + @"|sponsor\w*\s+(?:is\s+)?not\s+\w+"
-        + @"|sponsor\w*\s+not\s+(?:available|offered|provided|considered)"
-        + @"|visa\s+sponsor\w*\s+(?:is\s+)?not"
-        + @"|(?:unable|cannot|can't|not\s+able)\s+to\s+sponsor"
-        + @"|sponsor\w*\s+will\s+not");
-
-    /// <summary>Specific enough to confirm sponsorship ("visa" alone is ambiguous). Substrings.</summary>
-    public static readonly string[] SponsorshipOffered =
-    [
-        "482", "491", "494",
-        "employer sponsor", "employer-sponsor",
-        "visa sponsorship available", "sponsorship available",
-        "sponsorship offered", "sponsorship considered",
-        "will sponsor", "open to sponsor",
-        "we sponsor", "we will sponsor",
-    ];
-
-    // ── Work rights ───────────────────────────────────────────────────────────
-
-    /// <summary>Citizenship or PR required, or clearances that imply it.</summary>
-    public static readonly Regex CitizenshipRequired = R(
-        @"australian\s+citizen"
-        + @"|\bau\s+citizen"
-        + @"|citizen(?:s)?\s+only"
-        + @"|must\s+be\s+(?:an?\s+)?(?:australian|citizen)"
-        + @"|must\s+hold\s+(?:australian\s+)?citizen"
-        + @"|proof\s+of\s+(?:australian\s+)?(?:citizen|permanent\s+residen)"
-        + @"|must\s+(?:hold|have|provide|show)\s+(?:australian\s+)?permanent\s+residen"
-        + @"|nv[12]\s+(?:security\s+)?clearance"
-        + @"|top\s+secret\s+clearance"
-        + @"|new\s+zealand\s+citizen"
-        + @"|(?:full\s+)?australian\s+working\s+rights\s*[-–—]?\s*essential");
-
-    /// <summary>Work rights a Working Holiday visa (12 months, 6 per employer) cannot give.</summary>
-    public static readonly Regex WorkRightsIncompatible = R(
-        @"(?:unlimited|unrestricted|permanent|long[\s-]term)\s+(?:australian\s+)?work(?:ing)?\s+rights"
-        + @"|(?:12|twelve)\s*\+?\s*months?\s+(?:of\s+)?(?:valid\s+|remaining\s+)?(?:australian\s+)?work(?:ing)?\s+rights"
-        + @"|work(?:ing)?\s+rights\s+for\s+(?:at\s+least\s+|a\s+minimum\s+of\s+|minimum\s+)?(?:12|twelve)\s+months"
-        + @"|no\s+(?:temporary|working\s+holiday)\s+visas?"
-        + @"|(?:temporary|working\s+holiday)\s+visa\s+holders?\s+(?:will\s+not|are\s+not|need\s+not|cannot|can't)"
-        + @"|not\s+(?:open|available)\s+to\s+(?:temporary|working\s+holiday)\s+visa");
-
-    /// <summary>Welcomes working holiday makers or short work rights.</summary>
-    public static readonly Regex WorkingHolidayFriendly = R(
-        @"working\s+holiday|backpackers?|\b(?:417|462)\s+visa|\b88\s+days"
-        + @"|second[\s-]year\s+visa|visa\s+holders\s+welcome"
-        + @"|(?:6|six)\s+months?\s+(?:of\s+)?(?:valid\s+)?work(?:ing)?\s+rights"
-        + @"|work(?:ing)?\s+rights\s+(?:valid\s+)?for\s+the\s+next\s+(?:6|six)\s+months");
-
-    /// <summary>Identified position: reserved for Aboriginal and Torres Strait Islander people.</summary>
-    public static readonly Regex IdentifiedRole = R(
-        @"\bindigenous\b|\bfirst\s+nations\b|aboriginal\s+(?:and/or|and|or|&)\s+torres\s+strait");
-
-    /// <summary>Longer than the six months a WHV allows per employer.</summary>
+    /// <summary>A fixed term of nine months or more: longer than a profile with short engagements can take.</summary>
     public static readonly Regex LongContract = R(
         @"\b(?:9|12|18|24|nine|twelve|eighteen)[\s-]+months?\s+(?:fixed[\s-]term\s+)?contract"
         + @"|\b(?:1|2|one|two)[\s-]+years?\s+(?:fixed[\s-]term\s+)?contract");

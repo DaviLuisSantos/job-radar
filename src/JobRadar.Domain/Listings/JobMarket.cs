@@ -7,7 +7,7 @@ namespace JobRadar.Domain.Listings;
 /// </summary>
 public enum JobMarket
 {
-    /// <summary>Jobs in Australia, for a working holiday visa.</summary>
+    /// <summary>Jobs in Australia; who may apply is the market's eligibility block, from the local configuration.</summary>
     AU,
 
     /// <summary>Jobs in Brazil, on site, hybrid or remote within the country.</summary>

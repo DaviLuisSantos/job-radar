@@ -13,7 +13,7 @@ internal static class BrazilPatterns
 
     private static Regex R(string pattern) => new(pattern, Options);
 
-    /// <summary>For a rule Brazil does not have (working holiday, Australian citizenship): never matches.</summary>
+    /// <summary>For a rule a market does not have (an eligibility pattern not configured, a truck licence): never matches.</summary>
     public static readonly Regex Never = R("(?!)");
 
     public static readonly Regex LeadershipTitle = R(

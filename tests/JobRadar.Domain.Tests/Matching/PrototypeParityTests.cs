@@ -33,8 +33,11 @@ public class PrototypeParityTests
         var today = DateOnly.Parse(file.Today, System.Globalization.CultureInfo.InvariantCulture);
         var policy = file.Policy.ToPolicy();
         var profiles = file.Profiles.ToDictionary(p => p.Key, p => p.Value.ToProfile(p.Key));
-        // Who may apply is the market's words: the local block, else (until it is pasted) the rules that were in code.
-        var rules = MarketRules.For(JobMarket.AU, LocalSettings.Eligibility(JobMarket.AU) ?? LegacyEligibility.Australia);
+        // Who may apply is the market's words: the local block. Without it the parity cannot run, and fails rather than
+        // skips: a deploy without the block would start a worker that refuses to score.
+        var rules = MarketRules.For(JobMarket.AU, LocalSettings.Eligibility(JobMarket.AU)
+            ?? throw new InvalidOperationException(
+                $"{ParityFactAttribute.EnvironmentVariable} is set but no AU eligibility block was found: set {LocalSettings.EnvironmentVariable}."));
         var searched = rules.FullTextGroups.Values.SelectMany(p => p).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var unsearched = file.Policy.FullTextGroups.Values.SelectMany(p => p).Where(p => !searched.Contains(p)).ToList();
         Assert.True(unsearched.Count == 0, $"The prototype searched phrases the AU rules do not: {string.Join(", ", unsearched)}.");

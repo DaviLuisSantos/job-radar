@@ -36,7 +36,7 @@ public static class RaioXMarkdown
 
                 if (city.Listings is { } l)
                 {
-                    md.AppendLine(Pt, $"- Anúncios vistos no mês: {l.Seen:N0} → {l.Unique:N0} únicos ({l.Seen - l.Unique:N0} repetidos)");
+                    md.AppendLine(Pt, $"- Anúncios encontrados no mês: {l.Seen:N0} → {l.Unique:N0} únicos ({l.Seen - l.Unique:N0} repetidos)");
                     md.AppendLine(Pt, $"- Publicados no mês: {l.PostedInMonth:N0}");
                     if (l.Salary is { } s)
                     {

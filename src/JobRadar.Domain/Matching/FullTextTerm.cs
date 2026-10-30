@@ -2,7 +2,7 @@ namespace JobRadar.Domain.Matching;
 
 /// <summary>
 /// A phrase looked for in the full ad text. "a + b" means both phrases in the same ad, as in
-/// "12 months + working rights".
+/// "24 months + guild standing".
 /// </summary>
 public sealed record FullTextTerm(string Text)
 {

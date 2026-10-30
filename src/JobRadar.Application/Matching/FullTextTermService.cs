@@ -8,8 +8,8 @@ using Microsoft.Extensions.Options;
 namespace JobRadar.Application.Matching;
 
 /// <summary>
-/// Marks listings with the full-text phrases of the scoring policy (work rights, citizenship,
-/// working holiday...) and of the profiles' requirements (experience, certificates, licences).
+/// Marks listings with the full-text phrases of each market (who may apply, from its eligibility block; commission,
+/// truck licences) and of the profiles' requirements (experience, certificates, licences).
 /// Runs after collection, so the listings it marks are already stored. Each term search is a run in
 /// <c>collection_runs</c> (key <c>term: phrase</c>): a failed one is retried with a wider window
 /// next time, and the next term still runs.

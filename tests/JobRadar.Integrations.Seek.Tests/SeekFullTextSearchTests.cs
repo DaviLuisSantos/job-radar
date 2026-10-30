@@ -60,7 +60,7 @@ public class SeekFullTextSearchTests
             },
         };
 
-        var result = await api.FullText(pageSize: 3, maxPages: 1).FindAsync(new FullTextTerm("permanent resident"), 31, Ct);
+        var result = await api.FullText(pageSize: 3, maxPages: 1).FindAsync(new FullTextTerm("guild pass"), 31, Ct);
 
         Assert.Equal(["1", "100", "2", "200", "3"], result.SourceIds.Order(StringComparer.Ordinal));
         Assert.True(result.Complete);
@@ -75,7 +75,7 @@ public class SeekFullTextSearchTests
             Respond = q => q["where"] == "New South Wales" ? FakeSeekApi.PageOf(9, Ids(50, 3)) : FakeSeekApi.PageOf(9, Ids(1, 3)),
         };
 
-        var result = await api.FullText(pageSize: 3, maxPages: 1).FindAsync(new FullTextTerm("permanent resident"), 31, Ct);
+        var result = await api.FullText(pageSize: 3, maxPages: 1).FindAsync(new FullTextTerm("guild pass"), 31, Ct);
 
         Assert.False(result.Complete);
     }

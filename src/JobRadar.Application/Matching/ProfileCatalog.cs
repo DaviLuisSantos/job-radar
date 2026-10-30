@@ -60,6 +60,15 @@ public sealed class ProfileCatalog
             if (value.Eligibility is { } eligibility)
                 configured[market] = eligibility.ToRules();
         }
+        var unready = o.Profiles
+            .Where(p => MarketRules.RequiresEligibility(MarketOf(p.Key, p.Value)))
+            .GroupBy(p => MarketOf(p.Key, p.Value))
+            .FirstOrDefault(g => !configured.TryGetValue(g.Key, out var block) || block.IsEmpty());
+        if (unready is not null)
+            throw new InvalidOperationException(
+                $"Profiles {string.Join(", ", unready.Select(p => $"'{p.Key}'").Order(StringComparer.Ordinal))} are in market {unready.Key}, "
+                + $"which has no eligibility rules. Set Matching:Markets:{unready.Key}:Eligibility in appsettings.Local.json "
+                + "(shape in appsettings.Local.example.json).");
         return o.Profiles.Select(p => MarketOf(p.Key, p.Value))
             .Concat(configured.Keys)
             .Distinct()

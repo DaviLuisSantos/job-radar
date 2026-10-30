@@ -59,8 +59,8 @@ public sealed record ScoringInput(
     }
 
     /// <summary>
-    /// The usual Australian wording. "Temp" and "casual" matter: they mark work that fits a
-    /// Working Holiday visa's six months per employer.
+    /// The usual Australian wording. "Temp" and "casual" matter: they mark short engagements, which some
+    /// profiles favour (<see cref="ScoringPolicy.FlexibleWorkTypeBonus"/>).
     /// </summary>
     public static string? FormatWorkType(WorkType w) => w switch
     {

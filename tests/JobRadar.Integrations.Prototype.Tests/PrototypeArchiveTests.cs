@@ -51,7 +51,7 @@ public sealed class PrototypeArchiveTests : IDisposable
             VALUES ('seek_81234567', 'seek', 'trades', 'trades,fifo', 'Trade Assistant', 'Acme', 'Osborne Park, Perth WA', '$35 per hour',
                     'Contract/Temp', 'Fictional teaser | Hybrid', 'https://www.seek.com.au/job/81234567', '2026-05-27T06:04:23Z',
                     '2026-06-01 12:54:35', 1, '2026-06-03 09:00:00', 'rejected', 'they said no');
-            INSERT INTO job_terms VALUES ('seek_81234567', 'australian citizen', '2026-10-01'), ('seek_81234567', 'working holiday', '2026-10-01');
+            INSERT INTO job_terms VALUES ('seek_81234567', 'guild member', '2026-10-01'), ('seek_81234567', 'seasonal member', '2026-10-01');
             INSERT INTO job_labels VALUES ('seek_81234567', 'good', 'liked it', '2026-06-02 10:00:00');
             """);
 
@@ -67,7 +67,7 @@ public sealed class PrototypeArchiveTests : IDisposable
         // SQLite datetime('now') has no zone and is UTC.
         Assert.Equal(new DateTimeOffset(2026, 6, 1, 12, 54, 35, TimeSpan.Zero), job.FirstSeenAt);
         Assert.Equal(["trades", "fifo"], job.Profiles);
-        Assert.Equal(["australian citizen", "working holiday"], job.Terms.Order());
+        Assert.Equal(["guild member", "seasonal member"], job.Terms.Order());
         Assert.Equal(("rejected", true, "they said no"), (job.Status, job.Applied, job.Notes));
         Assert.Equal((Verdict.Good, "liked it"), (job.Label, job.LabelNote));
 
@@ -82,8 +82,8 @@ public sealed class PrototypeArchiveTests : IDisposable
         Create(CurrentSchema, """
             INSERT INTO market_runs VALUES ('2026-10-01', 'ok', 30, 30, 400, NULL, '2026-10-01 21:33:23'), ('2026-10-02', 'partial', 30, 28, 0, 'contagem falhou: X
             listagem incompleta: Y', '2026-10-02');
-            INSERT INTO market_counts VALUES ('2026-10-01', 'HVAC-R', 'Perth WA', '', 72), ('2026-10-01', 'HVAC-R', 'Perth WA', '482', 1),
-                                             ('2026-10-01', 'HVAC-R', 'Perth WA', 'citizen', NULL);
+            INSERT INTO market_counts VALUES ('2026-10-01', 'HVAC-R', 'Perth WA', '', 72), ('2026-10-01', 'HVAC-R', 'Perth WA', 'fifo', 1),
+                                             ('2026-10-01', 'HVAC-R', 'Perth WA', 'night_shift', NULL);
             INSERT INTO market_listings (id, city, category, title, company, location, work_type, salary, listed_at, first_seen, last_seen)
             VALUES ('seek_9', 'Perth WA', 'HVAC-R', 'Installer', 'Cool Co', 'Perth WA', 'Full time', '$100k', '2026-09-01T00:00:00Z', '2026-09-02', '2026-09-20');
             """);
@@ -94,7 +94,7 @@ public sealed class PrototypeArchiveTests : IDisposable
         var ok = data.Snapshots[0];
         Assert.Equal((new DateOnly(2026, 10, 1), SnapshotStatus.Ok, 400), (ok.Snapshot.Date, ok.Snapshot.Status, ok.Snapshot.Listings));
         Assert.Equal(new DateTimeOffset(2026, 10, 1, 21, 33, 23, TimeSpan.Zero), ok.TakenAt);   // SQLite's datetime('now'): UTC
-        Assert.Equal([(null, 72), ("482", 1)], ok.Counts.OrderBy(c => c.Term).Select(c => (c.Term, c.Total!.Value)));
+        Assert.Equal([(null, 72), ("fifo", 1)], ok.Counts.OrderBy(c => c.Term).Select(c => (c.Term, c.Total!.Value)));
         Assert.Equal(["contagem falhou: X", "listagem incompleta: Y"], data.Snapshots[1].Snapshot.Issues.Select(i => i.Trim()));
 
         var listing = Assert.Single(data.MarketListings);

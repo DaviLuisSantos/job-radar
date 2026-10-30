@@ -135,7 +135,7 @@ public class CandidateRequirementServiceTests
             [
                 new("tech", ["software", "support"]),       // 8, as already set
                 new("fifo", ["construction"]),
-                new("regional", ["farm"]),                  // not configured here
+                new("orchard", ["farm"]),                   // not configured here
                 new("tech-lead", null),
             ],
         };
@@ -144,7 +144,7 @@ public class CandidateRequirementServiceTests
 
         Assert.Equal([("fifo", (double?)null, 0.5)], report.Experience.Select(e => (e.Profile, e.From, e.To)));
         Assert.Equal(0.5, _repository.Years["fifo"]);
-        Assert.Contains("target profile not configured: regional", report.NotInCatalog);
+        Assert.Contains("target profile not configured: orchard", report.NotInCatalog);
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public class CandidateRequirementServiceTests
         Assert.Empty(facts.HeavyLicences);
         Assert.Equal([new CandidateEducation("technical", false)], facts.Education);
         Assert.Equal([new CandidateWork("software", 2), new CandidateWork("construction", 0.5)], facts.Experience);
-        Assert.Equal(["dotnet", "fifo", "regional"], facts.Targets.Select(t => t.Profile));
+        Assert.Equal(["dotnet", "fifo", "farm"], facts.Targets.Select(t => t.Profile));
         Assert.Equal(["software"], facts.Targets[0].ExperienceAreas);
         Assert.Null(facts.Targets[2].ExperienceAreas);
     }

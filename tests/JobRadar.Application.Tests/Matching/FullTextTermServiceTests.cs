@@ -68,14 +68,13 @@ public class FullTextTermServiceTests
     }
 
     [Fact]
-    public async Task An_australian_profile_without_a_block_searches_the_rules_that_were_in_code()
+    public void An_australian_profile_without_a_block_stops_the_start()
     {
         var seek = new FakeFullTextSearch("seek");
 
-        await Service(seek, new EligibilityOptions(), ("tech", new ProfileOptions())).TagAsync(Ct);
+        var error = Assert.Throws<InvalidOperationException>(() => Service(seek, new EligibilityOptions(), ("tech", new ProfileOptions())));
 
-        // The prototype's 17 and 4 of a retracted welcome: the code's 3 and the market's 18.
-        Assert.Equal(21, seek.Received.Count);
+        Assert.Contains("Profiles 'tech' are in market AU, which has no eligibility rules", error.Message);
     }
 
     [Fact]

@@ -45,7 +45,8 @@ public class LocalScoringCasesTests
     public void Every_local_case_scores_as_written()
     {
         var file = JsonSerializer.Deserialize<CaseFile>(File.ReadAllText(Find()!), Json)!;
-        var rules = MarketRules.For(JobMarket.AU, LocalSettings.Eligibility(JobMarket.AU) ?? LegacyEligibility.Australia);
+        var rules = MarketRules.For(JobMarket.AU, LocalSettings.Eligibility(JobMarket.AU)
+            ?? throw new InvalidOperationException($"No Matching:Markets:AU:Eligibility in {LocalSettings.Find() ?? "the local configuration"}."));
 
         var failures = new List<string>();
         foreach (var c in file.Cases)

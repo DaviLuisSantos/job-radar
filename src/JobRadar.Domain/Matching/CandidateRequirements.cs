@@ -14,7 +14,7 @@ public enum RequirementState
     /// <summary>Does not have it (years of experience, a trade, a degree).</summary>
     Missing,
 
-    /// <summary>Cannot get it on this visa or soon (a truck licence needs years of a car licence).</summary>
+    /// <summary>Cannot get it for the job, or not soon (a truck licence needs years of a car licence).</summary>
     OutOfReach,
 }
 

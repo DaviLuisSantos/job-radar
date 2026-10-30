@@ -1,12 +1,6 @@
 {
   "$schema": "./candidate.schema.json",
   "schemaVersion": 1,
-  "visa": {
-    "type": "working_holiday",
-    "subclass": "462",
-    "expires": "2027-09",
-    "secondYear": { "wanted": true, "daysDone": 0 }
-  },
   "base": {
     "location": "Perth WA",
     "fifo": true,
@@ -65,7 +59,7 @@
       "preferredLocations": ["Perth"],
       "entryLevel": false,
       "workFromHome": true,
-      "avoid": ["NV1"]
+      "avoid": ["on-call"]
     },
     {
       "profile": "fifo",
@@ -77,7 +71,7 @@
       "avoid": []
     },
     {
-      "profile": "regional",
+      "profile": "farm",
       "roles": ["Farm Hand", "Fruit Picker"],
       "locations": ["Western Australia"],
       "excludedLocations": ["Perth WA"],

@@ -4,31 +4,10 @@
   "description": "Who the candidate is, read from a CV and confirmed by the candidate. Facts only: how to search and score (keywords, signals, context words) is tuned against the market and lives in the matching profiles. A profile draft is derived from these facts.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "visa", "base", "education", "licences", "tickets", "experience", "targets"],
+  "required": ["schemaVersion", "base", "education", "licences", "tickets", "experience", "targets"],
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
-    "visa": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type"],
-      "properties": {
-        "type": {
-          "enum": ["working_holiday", "other"],
-          "description": "working_holiday: ads that need citizenship, PR or unlimited work rights are out (the score rules already do this)."
-        },
-        "subclass": { "enum": ["417", "462"] },
-        "expires": { "$ref": "#/$defs/month" },
-        "secondYear": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "wanted": { "type": "boolean", "description": "Wants the 88 days of specified work: a regional target makes sense." },
-            "daysDone": { "type": "integer", "minimum": 0 }
-          }
-        }
-      }
-    },
     "base": {
       "type": "object",
       "additionalProperties": false,
@@ -151,7 +130,7 @@
           "experienceAreas": { "$ref": "#/$defs/names", "description": "Which experience areas count for this target." },
           "locations": { "$ref": "#/$defs/names", "description": "Seek locations to search. Default: the base location." },
           "preferredLocations": { "$ref": "#/$defs/names" },
-          "excludedLocations": { "$ref": "#/$defs/names", "description": "E.g. \"Perth WA\" for the 88 days, which do not count there." },
+          "excludedLocations": { "$ref": "#/$defs/names", "description": "Locations that rule this target out, e.g. \"Perth WA\" for farm work outside the city." },
           "entryLevel": { "type": "boolean", "description": "Rewards \"no experience required\" and the like." },
           "workFromHome": { "type": "boolean", "description": "Remote means working from home here, not a remote site." },
           "avoid": { "$ref": "#/$defs/names", "description": "What the candidate does not want, as ads write it: candidates for negative signals." }

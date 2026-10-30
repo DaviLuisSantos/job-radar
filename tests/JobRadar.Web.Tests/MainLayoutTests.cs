@@ -26,6 +26,8 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton(new ProfileCatalog(Options.Create(new MatchingOptions
         {
             Profiles = profiles.ToDictionary(p => p.Name, p => p.Options),
+            // Australia scores only with an eligibility block; any will do for the menu.
+            Markets = new() { ["AU"] = new MarketRulesOptions { Eligibility = new EligibilityOptions { AssistanceWord = "relocation" } } },
         }), ScoringPolicy.Default));
         Services.AddSingleton(EmptyPort<IListingRepository>());
         Services.AddSingleton(EmptyPort<IListingScoreRepository>());

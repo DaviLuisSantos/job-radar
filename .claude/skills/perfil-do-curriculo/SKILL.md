@@ -5,8 +5,9 @@ description: Lê o currículo do candidato e preenche (ou atualiza) candidate/ca
 
 # Currículo → `candidate/candidate.json`
 
-O `candidate.json` guarda **fatos** sobre o candidato: visto, formação, carteiras, tickets, experiência e linhas
-de trabalho. Como buscar e pontuar (palavras de contexto, sinais achados rotulando) **não** entra aqui: isso é
+O `candidate.json` guarda **fatos** sobre o candidato: formação, carteiras, tickets, experiência e linhas
+de trabalho. Quem pode se candidatar às vagas de um mercado não é fato daqui: é o bloco de elegibilidade do mercado,
+no arquivo local. Como buscar e pontuar (palavras de contexto, sinais achados rotulando) **não** entra aqui: isso é
 ajustado contra o mercado e fica nos perfis (`Matching:Profiles` em `src/JobRadar.Worker/appsettings.Local.json`).
 O formato e o efeito de cada campo no score estão em `candidate/candidate.schema.json`. Leia o esquema antes de
 começar.
@@ -38,7 +39,7 @@ começar.
    - status e data da carteira de carro (provisória, definitiva a partir de quando) e carteiras de caminhão;
    - quais tickets tiraria com um curso curto (`obtainable`) e quais licenças estão fora de alcance, e por quê;
    - se alguma formação é reconhecida na Austrália;
-   - linhas de trabalho desejadas (`targets`), locais, se aceita FIFO, se quer o segundo ano (88 dias);
+   - linhas de trabalho desejadas (`targets`), locais, se aceita FIFO, se aceita trabalho sazonal fora da cidade;
    - o que não quer fazer (`avoid`).
    O que ficar sem resposta vai para `openQuestions`, não vira palpite.
 5. **Gravar** `candidate/candidate.json` com `"$schema": "./candidate.schema.json"` e `schemaVersion` do esquema.

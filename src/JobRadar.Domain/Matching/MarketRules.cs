@@ -152,10 +152,10 @@ public sealed record MarketRules
     /// junior and internships), and English expected rather than penalised. Who may apply decides first
     /// (<see cref="EligibleScope"/>). Written for this project and not yet calibrated.
     /// </summary>
-    public static MarketRules LatamRemote { get; } = RemoteMarket(JobMarket.LatamRemote, LegacyEligibility.Remote);
+    public static MarketRules LatamRemote { get; } = RemoteMarket(JobMarket.LatamRemote, EligibilityRules.None);
 
     /// <summary>As <see cref="LatamRemote"/>, for jobs open worldwide: a job restricted to a region belongs to LATAM.</summary>
-    public static MarketRules GlobalRemote { get; } = RemoteMarket(JobMarket.GlobalRemote, LegacyEligibility.Remote);
+    public static MarketRules GlobalRemote { get; } = RemoteMarket(JobMarket.GlobalRemote, EligibilityRules.None);
 
     /// <summary>
     /// A remote market. Its eligibility block may only add a status elsewhere as a condition
@@ -215,14 +215,18 @@ public sealed record MarketRules
 
     /// <summary>
     /// The rules of a profile's market, with the market's eligibility block. A market without rules is refused, never
-    /// read as another; so is a block for a market that reads none (Brazil).
+    /// read as another; so is a block for a market that reads none (Brazil). Australia scores only with its block:
+    /// without one, no rule would say who may apply, and every listing would look open to the profile.
     /// </summary>
     public static MarketRules For(JobMarket market, EligibilityRules? eligibility = null)
     {
         var configured = eligibility is not null && !eligibility.IsEmpty();
         return market switch
         {
-            JobMarket.AU => Australia(configured ? eligibility! : LegacyEligibility.Australia),
+            JobMarket.AU when configured => Australia(eligibility!),
+            JobMarket.AU => throw new InvalidOperationException(
+                "Market AU scores only with its eligibility rules: set Matching:Markets:AU:Eligibility in appsettings.Local.json "
+                + "(shape in appsettings.Local.example.json)."),
             JobMarket.BR when configured => throw new InvalidOperationException(
                 "Market BR reads no eligibility rules: remove Matching:Markets:BR:Eligibility."),
             JobMarket.BR => Brazil,
@@ -232,6 +236,9 @@ public sealed record MarketRules
             _ => throw new NotSupportedException($"No scoring rules for {market} yet."),
         };
     }
+
+    /// <summary>Whether the market scores only with a configured eligibility block (<see cref="For"/> refuses it without one).</summary>
+    public static bool RequiresEligibility(JobMarket market) => market == JobMarket.AU;
 
     /// <summary>The code's groups, then the market's eligibility phrases.</summary>
     private static Dictionary<string, IReadOnlyList<string>> Groups(EligibilityRules e) =>

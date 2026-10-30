@@ -44,7 +44,7 @@ internal sealed class SeekFullTextSearch(
         return new FullTextResult(ids, allStates);
     }
 
-    /// <summary>Phrases quoted, single words bare: "12 months + working rights" → "12 months" "working rights".</summary>
+    /// <summary>Phrases quoted, single words bare: "24 months + guild standing" → "24 months" "guild standing".</summary>
     internal static string Query(FullTextTerm term) =>
         string.Join(" ", term.Phrases.Select(p => p.Contains(' ') ? $"\"{p}\"" : p));
 
