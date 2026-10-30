@@ -72,7 +72,8 @@ pre { background: var(--surface-2); padding: .75rem 1rem; border-radius: var(--r
 }
 .brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--text); }
 .brand:hover { text-decoration: none; }
-.topbar nav .country { margin-left: .35rem; font-size: .7rem; font-weight: 600; color: var(--accent); }
+.topbar nav .market { align-self: center; margin: 0 .1rem 0 .6rem; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.topbar nav .market:first-child { margin-left: 0; }
 .brand svg { width: 24px; height: 24px; fill: none; stroke: var(--accent); stroke-width: 3; }
 .brand svg .dot { fill: var(--accent); stroke: none; }
 .topbar nav { display: flex; gap: .25rem; flex-wrap: wrap; }

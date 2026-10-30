@@ -8,10 +8,17 @@
         JobRadar
     </a>
     <nav aria-label="Profiles">
-        @foreach (var profile in _profiles)
+        @foreach (var group in _groups)
         {
-            <NavLink href="@($"triage/{Uri.EscapeDataString(profile)}")">@profile@if (CountryOf(profile) is { } country)
-                {<span class="country">@country</span>}</NavLink>
+            @* One market needs no label: a single-country setup looks as it always did. *@
+            @if (_groups.Count > 1)
+            {
+                <span class="market">@group.Label</span>
+            }
+            @foreach (var profile in group.Profiles)
+            {
+                <NavLink href="@($"triage/{Uri.EscapeDataString(profile)}")">@profile</NavLink>
+            }
         }
         <NavLink href="capture" class="secondary">Capture</NavLink>
         <NavLink href="me" class="secondary">About you</NavLink>
@@ -32,14 +39,9 @@
 </div>
 
 @code {
-    private IReadOnlyList<string> _profiles = [];
+    private IReadOnlyList<ProfileGroup> _groups = [];
 
     protected override async Task OnInitializedAsync() =>
-        _profiles = await Backend.RunAsync<TriageService, IReadOnlyList<string>>(t => t.ProfilesAsync());
-
-    /// <summary>Australia is the default and goes unmarked; another market is named next to its profiles.</summary>
-    private string? CountryOf(string profile) =>
-        Catalog.Profiles.FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase)) is { Country: not Country.AU } p
-            ? p.Country.ToString()
-            : null;
+        _groups = ProfileMenu.Groups(Catalog.Profiles,
+            await Backend.RunAsync<TriageService, IReadOnlyList<string>>(t => t.ProfilesAsync()));
 }
