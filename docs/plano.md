@@ -180,6 +180,14 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-29 — Implantação parada desde o PR 3 (bundle sem restore)
+De 22:00 em diante todo deploy automático falhou com `NETSDK1004` no projeto `JobRadar.Infrastructure.Migrations.Postgres`:
+nenhum dos projetos publicados o referencia, então o `dotnet publish` nunca o restaurava, e o `migrations bundle` não
+restaura sozinho. Na máquina de desenvolvimento passou porque o projeto já estava restaurado; num clone limpo, reproduz.
+A falha vem antes de parar os serviços: a produção seguiu no build anterior, sem quebra. O `deploy.ps1` agora restaura
+o projeto antes do bundle (provado num clone limpo). Junto, o checkout de produção tinha ficado na branch da paridade,
+e o auto-deploy, com razão, recusou: depois de conferir uma branch lá, volte para a `main`.
+
 ### 2026-10-29 — Regras do Brasil (`RulesVersion` 14)
 Fase 2.4 da [evolução](evolucao.md). O scorer lê cada vaga pelas regras do país dela (`CountryRules`); o Brasil ganhou
 as suas, escritas para o projeto, sem paridade nem rótulos ainda. Duas listas novas no perfil, `ExcludedTitles` e

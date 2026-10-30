@@ -128,6 +128,10 @@ foreach ($s in $services) {
 Push-Location $repo
 try {
     dotnet tool restore | Out-Null
+    # Neither published project references the migrations, so publishing never restores them, and the bundle
+    # does not restore by itself: a clean checkout fails with NETSDK1004 (2026-10-29, every deploy since #3).
+    dotnet restore src/JobRadar.Infrastructure.Migrations.Postgres | Out-Null
+    if ($LASTEXITCODE) { throw 'Restoring the migrations project failed.' }
     dotnet ef migrations bundle --project src/JobRadar.Infrastructure.Migrations.Postgres `
         -o (Join-Path $staging 'migrate.exe') --force --configuration Release | Out-Null
     if ($LASTEXITCODE) { throw 'Building the migration bundle failed.' }
