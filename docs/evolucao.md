@@ -272,7 +272,7 @@ mexer no que funciona na Austrália, e investir na interface antes que quatro me
 - **Excluídas:** fora da lista, com uma contagem que abre a lista delas, cada uma com o motivo.
 - **Perfis remotos:** começam como cópia do `dotnet-br` (mesmos sinais, palavras-chave em inglês), um por mercado.
 - **"Hoje":** a última visita por mercado fica no banco, para valer entre celular e PC.
-- **Regime e salário no remoto: em aberto** (contractor penaliza? piso em dólar?). Até decidir, só etiqueta.
+- **Regime e salário no remoto:** decididos em 2026-10-30, ver a 5.7.
 - **Biblioteca de componentes: MudBlazor** (9.11.0, MIT, .NET 10), para tema claro e escuro, layout responsivo, chips,
   toggles, avisos e gaveta no celular. Alternativa, se o MudBlazor atrapalhar: Microsoft Fluent UI Blazor.
 
@@ -316,6 +316,26 @@ Board (LATAM). Escolher uma ou duas por mercado.
 **5.7 Regras remotas.** `MarketRules` dos dois mercados remotos, em inglês: elegibilidade que não inclui o Brasil exclui
 ("US only", "must reside in", "EU only"); fuso fora do alcance penaliza; contractor e pagamento em dólar são dados, não
 penalidade; inglês é esperado, não penaliza. LATAM e global diferem no que aceitam como elegível. `RulesVersion` +1.
+
+**5.7, regime e salário (decidido em 2026-10-30, nomes aprovados).** Só nos perfis com `Compensation`; AU e BR não mudam.
+- **Formato** `Engagement { Unknown, Contractor, Eor, Direct }` (na tela: NaoInformado, Contractor, EOR, Direto), lido do
+  título, resumo e anúncio por `EngagementDetector` com frases de `MarketRules` (`ContractorPhrases`, `EorPhrases`,
+  `DirectHirePhrases`); "Deel/Remote.com/Oyster" contam junto de "contractor" ou "employee" numa janela curta. Precedência
+  EOR > Contractor > Direto > Unknown. Só etiqueta (item `Engagement`, 0 ponto), filtro na triagem e contagem no `tech-count`.
+- **Salário** lido por `PayParser` → `Pay(Min, Max, Currency, PayPeriod)`, normalizado ao mês (anual ÷ 12; hora ×
+  `HoursPerMonth`). O `SalaryParser` do Raio-X (AUD, por ano) fica como está.
+- **Configuração, fora do Git:** `Matching:Compensation` (`UsdToBrl`, `HoursPerMonth`) e, por perfil,
+  `Compensation:Contractor` e `Compensation:Eor` com `Currency`, `MonthlyFloor`, `MonthlyTarget` (exemplo neutro versionado).
+  Direto e Unknown usam os valores de Contractor quando o salário vem em USD e os de EOR quando vem em BRL; câmbio só
+  quando as moedas diferem. Os pisos estão no hash das regras do perfil.
+- **No scorer:** bônus `PayAtTarget` na fase 2 (o mínimo da faixa atinge o alvo); penalidade `PayBelowFloor` na fase 4 (o
+  máximo fica abaixo do piso); `PayUnreadable` (0 ponto) quando a moeda ou o valor não se lê. Pesos na `ScoringPolicy`
+  (`PayBelowFloorPenalty` 15, o tamanho da de sênior; `PayAtTargetBonus` 8), não no arquivo local: peso é da regra, alvo é
+  do candidato. Sem salário: neutro.
+- **Log:** uma linha por passada com a contagem e os `fonte:id` de salário ilegível (o scorer é puro; quem loga é o
+  `ListingScoringService`).
+- **Testes:** exemplos inventados (anúncio real não entra no repo); as vagas reais são conferidas com
+  `calibrate --rescore` no banco de produção.
 
 **Pronto:** os quatro mercados aparecem separados, a Austrália segue igual (paridade), um perfil remoto recebe vagas de
 uma fonte remota e exclui as que não aceitam o Brasil, e a interface funciona no celular.
