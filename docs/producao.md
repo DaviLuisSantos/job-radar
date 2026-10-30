@@ -50,7 +50,8 @@ pwsh deploy/deploy.ps1
 ```
 
 No PC do autor o `.env` aponta `JOBRADAR_PROFILES` para `src/JobRadar.Worker/appsettings.Local.json` do checkout
-principal, `JOBRADAR_STATE` para `C:\JobRadar` e `JOBRADAR_PARITY_FILE` para o arquivo da paridade.
+principal, `JOBRADAR_STATE` para `C:\JobRadar`, `JOBRADAR_PARITY_FILE` para o arquivo da paridade e
+`JOBRADAR_TIMEZONE` para `America/Sao_Paulo` (o fuso em que o site mostra os horários; sem ele, UTC).
 
 Agendar os scripts (o agendador é do host):
 - **Windows:** `pwsh deploy/schedule-auto-deploy.ps1`, `pwsh deploy/schedule-watchdog.ps1`,

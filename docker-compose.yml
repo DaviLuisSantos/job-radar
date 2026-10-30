@@ -43,6 +43,8 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Production
       ConnectionStrings__JobRadar: Host=postgres;Port=5432;Database=jobradar;Username=jobradar;Password=jobradar
+      # The reader's time zone, for the times in the logs; the pass keeps its own (Collection:TimeZone).
+      TZ: ${JOBRADAR_TIMEZONE:-UTC}
     volumes:
       # The real profiles: a person's plans, never in the image or in git.
       - ${JOBRADAR_PROFILES:?set JOBRADAR_PROFILES in .env}:/srv/app/worker/appsettings.Local.json:ro
@@ -59,6 +61,8 @@ services:
       ConnectionStrings__JobRadar: Host=postgres;Port=5432;Database=jobradar;Username=jobradar;Password=jobradar
       # No login in the app: only names the author reaches it by (localhost, the Tailscale address and name).
       AllowedHosts: ${JOBRADAR_ALLOWED_HOSTS:-localhost}
+      # The site shows every time in the reader's zone: a container runs in UTC otherwise.
+      TZ: ${JOBRADAR_TIMEZONE:-UTC}
     volumes:
       - ${JOBRADAR_PROFILES:?set JOBRADAR_PROFILES in .env}:/srv/app/web/profiles.json:ro
       - ${JOBRADAR_STATE:?set JOBRADAR_STATE in .env}:/srv/state:ro
