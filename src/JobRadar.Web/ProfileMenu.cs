@@ -28,12 +28,22 @@ public static class ProfileMenu
             .ToList();
     }
 
+    /// <summary>The market of the profile a page belongs to ("triage/dotnet-br"); null on a page of no profile.</summary>
+    public static JobMarket? MarketOf(IReadOnlyList<ProfileGroup> groups, string relativePath)
+    {
+        const string prefix = "triage/";
+        if (!relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return null;
+        var profile = Uri.UnescapeDataString(relativePath[prefix.Length..].Split('?', '#', '/')[0]);
+        return groups.FirstOrDefault(g => g.Profiles.Contains(profile, StringComparer.OrdinalIgnoreCase))?.Market;
+    }
+
     public static string Label(JobMarket market) => market switch
     {
-        JobMarket.AU => "Australia",
-        JobMarket.BR => "Brazil",
-        JobMarket.LatamRemote => "Remote LATAM",
-        JobMarket.GlobalRemote => "Remote global",
+        JobMarket.AU => "Austrália",
+        JobMarket.BR => "Brasil",
+        JobMarket.LatamRemote => "Remoto LATAM",
+        JobMarket.GlobalRemote => "Remoto global",
         _ => market.ToString(),
     };
 }

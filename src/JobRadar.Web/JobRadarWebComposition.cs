@@ -1,6 +1,7 @@
 using JobRadar.Application;
 using JobRadar.Infrastructure.Persistence;
 using JobRadar.Infrastructure.Telemetry;
+using MudBlazor.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -19,6 +20,7 @@ public static class JobRadarWebComposition
         services.AddJobRadarTelemetry(configuration, "jobradar-web",
             tracing: t => t.AddAspNetCoreInstrumentation(), metrics: m => m.AddAspNetCoreInstrumentation());
         services.AddRazorComponents().AddInteractiveServerComponents();
+        services.AddMudServices();
         services.AddSingleton<Backend>();
         return services;
     }

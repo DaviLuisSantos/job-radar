@@ -1,4 +1,4 @@
-/* JobRadar, triage UI. Colour tokens first; dark mode swaps them. */
+/* JobRadar, triage UI. Colour tokens first; dark mode swaps them. Element rules skip MudBlazor's own ("mud-"). */
 :root {
     --bg: #f6f7f9;
     --surface: #ffffff;
@@ -63,53 +63,45 @@ pre { background: var(--surface-2); padding: .75rem 1rem; border-radius: var(--r
 .muted { color: var(--muted); }
 .small { font-size: .85rem; }
 
-/* Top bar */
-.topbar {
-    position: sticky; top: 0; z-index: 10;
-    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
-    padding: .6rem 1.25rem;
-    background: var(--surface); border-bottom: 1px solid var(--border);
-}
-.brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--text); }
+/* Frame: MudBlazor's app bar and drawer; the brand and the profile bar are ours */
+.appbar { border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--text); margin-left: .25rem; }
 .brand:hover { text-decoration: none; }
-.topbar nav .market { align-self: center; margin: 0 .1rem 0 .6rem; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
-.topbar nav .market:first-child { margin-left: 0; }
 .brand svg { width: 24px; height: 24px; fill: none; stroke: var(--accent); stroke-width: 3; }
 .brand svg .dot { fill: var(--accent); stroke: none; }
-.topbar nav { display: flex; gap: .25rem; flex-wrap: wrap; }
-.topbar nav a { padding: .35rem .7rem; border-radius: 999px; color: var(--muted); font-weight: 500; }
-.topbar nav a:hover { background: var(--surface-2); text-decoration: none; }
-.topbar nav a.active { background: var(--accent-soft); color: var(--accent); }
-.topbar nav a.secondary { margin-left: .5rem; border: 1px solid var(--border); }
+.profile-bar { display: flex; gap: .25rem; flex-wrap: wrap; padding: .5rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+.profile-bar a { padding: .3rem .75rem; border-radius: 999px; color: var(--muted); font-weight: 500; }
+.profile-bar a:hover { background: var(--surface-2); text-decoration: none; }
+.profile-bar a.active { background: var(--accent-soft); color: var(--accent); }
 
 .page { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 .page-head { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .page-head p { margin: 0; }
 
 /* Controls */
-button, .button {
+button:not([class*="mud-"]), .button {
     display: inline-flex; align-items: center; gap: .35rem;
     padding: .4rem .8rem; border-radius: 8px;
     border: 1px solid var(--border); background: var(--surface); color: var(--text);
     font: inherit; font-size: .9rem; font-weight: 500; cursor: pointer;
 }
-button:hover:not(:disabled), .button:hover { border-color: var(--accent); text-decoration: none; }
-button:disabled { opacity: .45; cursor: default; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+button:not([class*="mud-"]):hover:not(:disabled), .button:hover { border-color: var(--accent); text-decoration: none; }
+button:not([class*="mud-"]):disabled { opacity: .45; cursor: default; }
+button:not([class*="mud-"]):focus-visible, a:focus-visible, input:not([class*="mud-"]):focus-visible, select:focus-visible, textarea:not([class*="mud-"]):focus-visible {
     outline: 2px solid var(--accent); outline-offset: 2px;
 }
-button.ghost { background: transparent; }
-button.good { color: var(--good); }
-button.bad { color: var(--bad); }
-button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-button.good.on { background: var(--good-soft); border-color: var(--good); color: var(--good); }
-button.bad.on { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+button:not([class*="mud-"]).ghost { background: transparent; }
+button:not([class*="mud-"]).good { color: var(--good); }
+button:not([class*="mud-"]).bad { color: var(--bad); }
+button:not([class*="mud-"]).on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+button:not([class*="mud-"]).good.on { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+button:not([class*="mud-"]).bad.on { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 
-input, select, textarea {
+input:not([class*="mud-"]), select, textarea:not([class*="mud-"]) {
     font: inherit; color: var(--text); background: var(--surface);
     border: 1px solid var(--border); border-radius: 8px; padding: .4rem .6rem;
 }
-textarea { width: 100%; resize: vertical; }
+textarea:not([class*="mud-"]) { width: 100%; resize: vertical; }
 
 .filters {
     display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
@@ -143,7 +135,7 @@ textarea { width: 100%; resize: vertical; }
 .chips button { min-width: 2.4rem; }
 .chips input { width: 5rem; }
 .segmented button { flex: 1 1 auto; font-size: .9rem; }
-button.link { background: none; border: 0; padding: 0; color: var(--accent); justify-self: start; }
+button:not([class*="mud-"]).link { background: none; border: 0; padding: 0; color: var(--accent); justify-self: start; }
 
 /* Score badge */
 .score {
@@ -274,8 +266,9 @@ pre.ad { white-space: pre-wrap; font: inherit; font-size: .9rem; max-height: 28r
     .state { grid-column: 2; flex-direction: row; align-items: center; flex-wrap: wrap; }
     .actions { grid-column: 1 / -1; justify-content: flex-start; }
     .columns { grid-template-columns: 1fr; }
-    .topbar { gap: .75rem; }
     .grid { display: block; overflow-x: auto; }
+    .profile-bar { flex-wrap: nowrap; overflow-x: auto; padding: .4rem .75rem; }
+    .profile-bar a { white-space: nowrap; }
 }
 
 /* Blazor error bar */

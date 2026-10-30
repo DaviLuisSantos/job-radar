@@ -11,6 +11,20 @@ namespace JobRadar.Web.Text;
 /// </summary>
 public static class Wording
 {
+    // Navigation and the frame around every page.
+    public const string Menu = "Menu";
+    public const string Markets = "Mercados";
+    public const string Settings = "Ajustes";
+    public const string CapturePage = "Captura";
+    public const string AboutYouPage = "Você";
+    public const string RequirementsPage = "Requisitos";
+    public const string CalibrationPage = "Calibragem";
+    public const string StatusPage = "Status";
+    public const string SomethingWentWrong = "Algo deu errado.";
+    public const string Reload = "Recarregar";
+
+    public static string ProfilesOf(string market) => $"Perfis de {market}";
+
     public static string Describe(ScoreItem item) => item.Rule switch
     {
         ScoreRule.CitizenshipRequired => $"Citizenship or PR required: “{item.Detail}”",

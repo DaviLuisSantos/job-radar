@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 
 <head>
     <meta charset="utf-8" />
@@ -8,18 +8,30 @@
     <title>JobRadar</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='none' stroke='%232563eb' stroke-width='3'/><circle cx='16' cy='16' r='4' fill='%232563eb'/></svg>" />
     <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["JobRadar.Web.styles.css"]" />
     <ImportMap />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
-    <Routes />
+    @* The whole site is interactive: MudBlazor's layout (drawer, menus, theme) needs it, and one user has one circuit. *@
+    <Routes @rendermode="PageRenderMode" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
     <script src="@Assets["triage.js"]"></script>
     <script src="@Assets["capture.js"]"></script>
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    // The error page renders without a circuit: it shows what failed, and it may be what failed.
+    private IComponentRenderMode? PageRenderMode =>
+        HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}
