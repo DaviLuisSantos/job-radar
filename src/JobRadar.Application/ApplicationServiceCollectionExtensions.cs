@@ -43,6 +43,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<CalibrationService>();
         services.AddScoped<CandidateRequirementService>();
         services.AddScoped<TriageService>();
+        services.AddScoped<TodayService>();
 
         services.AddOptions<MarketOptions>().Bind(configuration.GetSection(MarketOptions.Section));
         services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<MarketOptions>, MarketDefaults>();

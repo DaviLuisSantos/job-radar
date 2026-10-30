@@ -1,4 +1,5 @@
 using System.Globalization;
+using JobRadar.Application.Tracking;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
 using JobRadar.Domain.Matching;
@@ -25,6 +26,22 @@ public static class Wording
     public const string Reload = "Recarregar";
 
     public static string ProfilesOf(string market) => $"Perfis de {market}";
+
+    // The "Today" page.
+    public const string Today = "Hoje";
+    public const string NothingNew = "Nada novo desde a última visita.";
+    public const string NoChanges = "Nenhuma candidatura mudou.";
+    public const string ApplicationsMoved = "Candidaturas";
+
+    public static string NewListings(int count) => count == 1 ? "1 vaga nova" : $"{count.ToString("N0", Culture)} vagas novas";
+
+    public static string SinceVisit(DateTimeOffset since, bool firstVisit) =>
+        firstVisit ? "Primeira visita: o que chegou nos últimos 7 dias." : $"Desde a sua última visita, em {When(since)}.";
+
+    public static string NewInMarket(string market, int count) => count == 0 ? market : $"{market} ({count.ToString("N0", Culture)})";
+
+    public static string StatusMove(ApplicationStatus? from, ApplicationStatus to) =>
+        from is { } f ? $"{Status(f)} → {Status(to)}" : Status(to);
 
     /// <summary>
     /// pt-BR for everything shown: "1.234", "0,5", "21 out 2026". The abbreviated month and day names lose
@@ -234,6 +251,17 @@ public static class Wording
     public const string ShowExcluded = "Ver as excluídas e o motivo";
     public const string BackToOpen = "Voltar às vagas abertas";
     public const string ExcludedReasonUnknown = "Motivo não registrado";
+
+    /// <summary>
+    /// What went wrong, in Portuguese: the application throws typed exceptions with English messages for logs, and the
+    /// site words them here. An unexpected one shows its type only: its message is English and may be long.
+    /// </summary>
+    public static string Error(Exception ex) => ex switch
+    {
+        ListingNotFoundException nf => $"A vaga {nf.Id} nunca foi coletada.",
+        DescriptionTooShortException => $"O texto é curto demais para ser um anúncio (menos de {ListingDescription.MinLength} caracteres).",
+        _ => $"Erro inesperado ({ex.GetType().Name}).",
+    };
 
     public static string Location(ListingLocation location) => ScoringInput.FormatLocation(location) ?? "Local não informado";
 

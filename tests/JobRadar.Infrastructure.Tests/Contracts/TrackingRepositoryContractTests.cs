@@ -121,6 +121,54 @@ public abstract class TrackingRepositoryContractTests(DatabaseFixture db)
         Assert.Equal(ScoreRule.PositiveSignal, judged[0].Score.Items.Single().Rule);
         Assert.Equal("Backend Developer (.NET)", judged[0].Title);
     }
+
+    [DatabaseFact]
+    public async Task Status_changes_since_a_moment_are_those_of_the_profiles_listings_newest_first()
+    {
+        await db.ResetAsync();
+        await SeedAsync("1", "2", "3");
+        await using (var ctx = db.NewContext())
+        {
+            await new EfListingScoreRepository(ctx).SaveAsync(
+            [
+                new ListingScore(One, "dotnet-br", new FitScore(70, []), "h", Monday),
+                new ListingScore(Two, "dotnet-br", new FitScore(60, []), "h", Monday),
+                new ListingScore(new ListingId("seek", "3"), "fifo", new FitScore(60, []), "h", Monday),
+            ], Ct);
+        }
+        var one = JobApplication.Start(One, ApplicationStatus.Reviewed, Monday);
+        one.ChangeStatus(ApplicationStatus.Applied, Monday.AddDays(2));
+        await Do(r => r.SaveApplicationAsync(one, Ct));
+        await Do(r => r.SaveApplicationAsync(JobApplication.Start(Two, ApplicationStatus.Interview, Monday.AddDays(3)), Ct));
+        await Do(r => r.SaveApplicationAsync(JobApplication.Start(new ListingId("seek", "3"), ApplicationStatus.Applied, Monday.AddDays(3)), Ct));
+
+        var changes = await WithRepo(r => r.ListStatusChangesAsync(["dotnet-br"], Monday.AddDays(1), Ct));
+
+        Assert.Equal(
+            [("2", (ApplicationStatus?)null, ApplicationStatus.Interview), ("1", ApplicationStatus.Reviewed, ApplicationStatus.Applied)],
+            changes.Select(c => (c.Id.SourceId, c.From, c.To)));
+        Assert.Equal(("Backend Developer (.NET)", "Acme"), (changes[0].Title, changes[0].Company));
+    }
+
+    [DatabaseFact]
+    public async Task A_market_visit_is_kept_and_replaced_by_the_next()
+    {
+        await db.ResetAsync();
+        await using (var ctx = db.NewContext())
+        {
+            var visits = new EfMarketVisitRepository(ctx);
+            Assert.Empty(await visits.GetLastVisitsAsync(Ct));
+            await visits.RecordVisitAsync(JobMarket.BR, Monday, Ct);
+            await visits.RecordVisitAsync(JobMarket.LatamRemote, Monday, Ct);
+            await visits.RecordVisitAsync(JobMarket.BR, Monday.AddHours(5), Ct);
+        }
+
+        await using var read = db.NewContext();
+        var last = await new EfMarketVisitRepository(read).GetLastVisitsAsync(Ct);
+        Assert.Equal(2, last.Count);
+        Assert.Equal(Monday.AddHours(5), last[JobMarket.BR]);
+        Assert.Equal(Monday, last[JobMarket.LatamRemote]);
+    }
 }
 
 [Collection(PostgresCollection.Name)]

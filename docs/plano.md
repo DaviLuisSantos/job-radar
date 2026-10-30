@@ -180,6 +180,19 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-30 — Tela "Hoje" (5.4), erros em português e a cópia para o SQL Server
+`hoje/{mercado}` virou a página inicial: o que chegou desde a última visita àquele mercado, as melhores novas de cada
+perfil e as candidaturas que mudaram. A visita fica no banco (`market_visits`) para valer entre o celular e o PC, e o
+seletor de mercado mostra as novas de cada um. Conferido com uma cópia dos dados reais num SQL Server local: 2.255 novas
+na primeira visita (uma semana), zero depois. A cópia achou um defeito do `copy-database`: uma página de 1.000 vagas
+passou dos 30 s de limite de um comando no SQL Server recém-criado; a cópia agora tem 5 min por comando. Os textos de
+exceção que chegavam em inglês aos alertas do site são traduzidos pelo tipo (`Wording.Error`, [#25]); o erro das
+execuções na página Status segue como o worker gravou, sob "Erro técnico". Os problemas do retrato do Raio-X já eram em
+português. E a paridade "a rodar no trabalhopc" das fases 2 e 5.1 já estava rodando: o deploy a executa antes de
+implantar, e todos os deploys desde então passaram.
+
+[#25]: https://github.com/DaviLuisSantos/job-radar/issues/25
+
 ### 2026-10-30 — Triagem e página da vaga em MudBlazor (5.3)
 A linha da triagem virou um componente (`TriageRowView`) com etiquetas de arranjo e regime, lidas das partes inteiras
 do resumo que os tradutores já montam (`ListingConditions`: "Hybrid" do Seek, "Remoto · CLT" da Gupy; um "remote" solto

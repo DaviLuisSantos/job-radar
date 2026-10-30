@@ -33,6 +33,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<IListingTermRepository, EfListingTermRepository>();
         services.AddScoped<ICandidateRequirementRepository, EfCandidateRequirementRepository>();
         services.AddScoped<ITrackingRepository, EfTrackingRepository>();
+        services.AddScoped<IMarketVisitRepository, EfMarketVisitRepository>();
         services.AddScoped<IMarketRepository, EfMarketRepository>();
         services.AddScoped<IStorageHealth, PostgresStorageHealth>();
         return services;

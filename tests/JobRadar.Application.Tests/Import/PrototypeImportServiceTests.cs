@@ -27,6 +27,8 @@ public class PrototypeImportServiceTests
         public Dictionary<ListingId, ListingLabel> Labels { get; } = [];
         public Task<JobApplication?> FindApplicationAsync(ListingId id, CancellationToken ct = default) => Task.FromResult(Applications.GetValueOrDefault(id));
         public Task SaveApplicationAsync(JobApplication application, CancellationToken ct = default) { Applications[application.ListingId] = application; return Task.CompletedTask; }
+        public Task<IReadOnlyList<JobRadar.Domain.Triage.RecentStatusChange>> ListStatusChangesAsync(
+            IReadOnlyCollection<string> profiles, DateTimeOffset since, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default) => Task.FromResult(Labels.GetValueOrDefault(id));
         public Task SetLabelAsync(ListingId id, ListingLabel? label, CancellationToken ct = default) { if (label is null) Labels.Remove(id); else Labels[id] = label; return Task.CompletedTask; }
     }

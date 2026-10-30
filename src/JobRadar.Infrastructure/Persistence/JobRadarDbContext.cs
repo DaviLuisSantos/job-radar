@@ -25,6 +25,7 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<ApplicationEntity> Applications => Set<ApplicationEntity>();
     public DbSet<ApplicationEventEntity> ApplicationEvents => Set<ApplicationEventEntity>();
     public DbSet<ListingLabelEntity> ListingLabels => Set<ListingLabelEntity>();
+    public DbSet<MarketVisitEntity> MarketVisits => Set<MarketVisitEntity>();
     public DbSet<MarketSnapshotEntity> MarketSnapshots => Set<MarketSnapshotEntity>();
     public DbSet<MarketCountEntity> MarketCounts => Set<MarketCountEntity>();
     public DbSet<MarketListingEntity> MarketListings => Set<MarketListingEntity>();

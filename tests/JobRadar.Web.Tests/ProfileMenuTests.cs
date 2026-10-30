@@ -34,11 +34,22 @@ public class ProfileMenuTests
     [InlineData("triage/Dotnet?page=2", JobMarket.AU)]
     [InlineData("triage/dotnet%2Dbr", JobMarket.BR)]
     [InlineData("status", null)]
+    [InlineData("hoje/br", JobMarket.BR)]
+    [InlineData("hoje/latam", JobMarket.LatamRemote)]
+    [InlineData("hoje/marte", null)]
     [InlineData("triage/unknown", null)]
     public void The_market_of_a_page_is_the_market_of_its_profile(string path, JobMarket? expected)
     {
         var groups = ProfileMenu.Groups([Profile("dotnet", JobMarket.AU), Profile("dotnet-br", JobMarket.BR)], scored: []);
 
         Assert.Equal(expected, ProfileMenu.MarketOf(groups, path));
+    }
+
+    [Fact]
+    public void Every_market_has_a_today_page_that_leads_back_to_it()
+    {
+        var groups = ProfileMenu.Groups([], scored: []);
+
+        Assert.All(Enum.GetValues<JobMarket>(), m => Assert.Equal(m, ProfileMenu.MarketOf(groups, ProfileMenu.TodayHref(m))));
     }
 }

@@ -28,15 +28,38 @@ public static class ProfileMenu
             .ToList();
     }
 
-    /// <summary>The market of the profile a page belongs to ("triage/dotnet-br"); null on a page of no profile.</summary>
+    /// <summary>
+    /// The market a page belongs to: a market's "Today" ("hoje/br") or a profile's triage ("triage/dotnet-br"); null
+    /// elsewhere.
+    /// </summary>
     public static JobMarket? MarketOf(IReadOnlyList<ProfileGroup> groups, string relativePath)
     {
+        if (relativePath.StartsWith(TodayPrefix, StringComparison.OrdinalIgnoreCase))
+            return FromSlug(relativePath[TodayPrefix.Length..].Split('?', '#', '/')[0]);
+
         const string prefix = "triage/";
         if (!relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             return null;
         var profile = Uri.UnescapeDataString(relativePath[prefix.Length..].Split('?', '#', '/')[0]);
         return groups.FirstOrDefault(g => g.Profiles.Contains(profile, StringComparer.OrdinalIgnoreCase))?.Market;
     }
+
+    private const string TodayPrefix = "hoje/";
+
+    /// <summary>The "Today" page of a market.</summary>
+    public static string TodayHref(JobMarket market) => TodayPrefix + Slug(market);
+
+    public static string Slug(JobMarket market) => market switch
+    {
+        JobMarket.AU => "au",
+        JobMarket.BR => "br",
+        JobMarket.LatamRemote => "latam",
+        JobMarket.GlobalRemote => "global",
+        _ => market.ToString().ToLowerInvariant(),
+    };
+
+    public static JobMarket? FromSlug(string slug) =>
+        Enum.GetValues<JobMarket>().Cast<JobMarket?>().FirstOrDefault(m => string.Equals(Slug(m!.Value), slug, StringComparison.OrdinalIgnoreCase));
 
     public static string Label(JobMarket market) => market switch
     {

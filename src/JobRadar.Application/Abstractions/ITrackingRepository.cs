@@ -1,5 +1,6 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Tracking;
+using JobRadar.Domain.Triage;
 
 namespace JobRadar.Application.Abstractions;
 
@@ -13,6 +14,13 @@ public interface ITrackingRepository
 
     /// <summary>Inserts or updates the application; history entries are only ever appended.</summary>
     Task SaveApplicationAsync(JobApplication application, CancellationToken ct = default);
+
+    /// <summary>
+    /// Status changes after <paramref name="since"/> of listings any of <paramref name="profiles"/> scored, newest
+    /// first: what moved in the applications of one market.
+    /// </summary>
+    Task<IReadOnlyList<RecentStatusChange>> ListStatusChangesAsync(
+        IReadOnlyCollection<string> profiles, DateTimeOffset since, CancellationToken ct = default);
 
     Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default);
 

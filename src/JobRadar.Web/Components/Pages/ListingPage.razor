@@ -202,7 +202,7 @@ else if (_detail is { } d)
         }
         catch (Exception ex) when (ex is ListingNotFoundException or DescriptionTooShortException)
         {
-            _error = ex.Message;
+            _error = Wording.Error(ex);
         }
     }
 
@@ -216,7 +216,7 @@ else if (_detail is { } d)
         }
         catch (ListingNotFoundException ex)
         {
-            _error = ex.Message;
+            _error = Wording.Error(ex);
         }
     }
 }

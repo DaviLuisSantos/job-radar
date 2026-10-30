@@ -116,6 +116,11 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
             query = query.Where(r => r.Score >= filter.MinScore);
         if (filter.OnlyUntriaged)
             query = query.Where(r => r.Status == null && r.Verdict == null);
+        if (filter.SeenSince is { } seen)
+        {
+            var after = seen.ToUniversalTime();
+            query = query.Where(r => r.l.FirstSeenAt > after);
+        }
         if (filter.Text is { } text)
         {
             // Contains keeps the text literal (EF escapes LIKE wildcards on every provider); lowering both sides

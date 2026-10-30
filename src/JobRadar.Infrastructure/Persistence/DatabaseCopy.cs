@@ -19,6 +19,8 @@ public static class DatabaseCopy
 {
     public const int PageSize = 1000;
 
+    public static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(5);
+
     public static async Task<IReadOnlyList<TableCopy>> CopyAsync(
         JobRadarDbContext from, JobRadarDbContext to, CancellationToken ct = default)
     {
@@ -26,6 +28,10 @@ public static class DatabaseCopy
             if (await any(ct))
                 throw new TargetNotEmptyException(table);
 
+        // A page of 1,000 rows is one command; the 30 s default is for the site's quick reads, and a fresh SQL Server
+        // took longer than that on the real listings (2026-10-30).
+        from.Database.SetCommandTimeout(CommandTimeout);
+        to.Database.SetCommandTimeout(CommandTimeout);
         var copier = new Copier(from, to, ct);
         return
         [
@@ -42,6 +48,7 @@ public static class DatabaseCopy
             await copier.CopyAsync("applications", db => db.Applications.OrderBy(e => e.Source).ThenBy(e => e.SourceId)),
             await copier.CopyAsync("application_events", db => db.ApplicationEvents.OrderBy(e => e.Id), e => e.Id = 0),
             await copier.CopyAsync("listing_labels", db => db.ListingLabels.OrderBy(e => e.Source).ThenBy(e => e.SourceId)),
+            await copier.CopyAsync("market_visits", db => db.MarketVisits.OrderBy(e => e.Market)),
             await copier.CopyAsync("collection_runs", db => db.CollectionRuns.OrderBy(e => e.Id), e => e.Id = 0),
             await copier.CopyAsync("candidate_requirements", db => db.CandidateRequirements.OrderBy(e => e.ItemId)),
             await copier.CopyAsync("candidate_experience", db => db.CandidateExperience.OrderBy(e => e.Profile)),
@@ -59,7 +66,8 @@ public static class DatabaseCopy
         ("listing_search_hits", db.ListingSearchHits.AnyAsync), ("listing_descriptions", db.ListingDescriptions.AnyAsync),
         ("listing_scores", db.ListingScores.AnyAsync), ("listing_terms", db.ListingTerms.AnyAsync),
         ("applications", db.Applications.AnyAsync), ("application_events", db.ApplicationEvents.AnyAsync),
-        ("listing_labels", db.ListingLabels.AnyAsync), ("collection_runs", db.CollectionRuns.AnyAsync),
+        ("listing_labels", db.ListingLabels.AnyAsync), ("market_visits", db.MarketVisits.AnyAsync),
+        ("collection_runs", db.CollectionRuns.AnyAsync),
         ("candidate_requirements", db.CandidateRequirements.AnyAsync), ("candidate_experience", db.CandidateExperience.AnyAsync),
         ("market_snapshots", db.MarketSnapshots.AnyAsync), ("market_counts", db.MarketCounts.AnyAsync),
         ("market_listings", db.MarketListings.AnyAsync),

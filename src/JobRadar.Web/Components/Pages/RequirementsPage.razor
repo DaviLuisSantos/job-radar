@@ -159,7 +159,7 @@ else
             await InvokeAsync(() =>
             {
                 _impact = [];
-                _message = $"Não deu para medir o impacto: {ex.Message}";
+                _message = $"Não deu para medir o impacto: {Wording.Error(ex)}";
                 StateHasChanged();
             });
         }

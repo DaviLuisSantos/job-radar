@@ -658,6 +658,22 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                     b.ToTable("listing_labels", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Tracking.MarketVisitEntity", b =>
+                {
+                    b.Property<string>("Market")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasColumnName("market");
+
+                    b.Property<DateTimeOffset>("VisitedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("visited_at");
+
+                    b.HasKey("Market");
+
+                    b.ToTable("market_visits", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingDescriptionEntity", b =>
                 {
                     b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)

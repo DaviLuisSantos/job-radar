@@ -248,6 +248,16 @@ details summary .score { width: 2rem; height: 2rem; font-size: .85rem; }
 .explanation .total { border-top: 1px solid var(--border); margin-top: .3rem; padding-top: .45rem; font-weight: 700; }
 .explanation .where { color: var(--muted); font-size: .8rem; }
 
+/* Today */
+.today-total { font-size: 1.1rem; margin: 0 0 .75rem; }
+.today-profile h2 { margin: 0; font-size: 1.05rem; }
+.today-best { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.today-best li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .6rem; align-items: start; }
+.today-best .score { width: 2rem; height: 2rem; font-size: .85rem; }
+.today-best .title { font-weight: 600; color: var(--text); }
+.today-changes { margin-top: 1.5rem; }
+.today-changes li { margin-bottom: .3rem; }
+
 /* Full ad and capture */
 .full-ad { margin-top: 1rem; }
 .full-ad .notes, .capture .notes { margin-top: .5rem; }

@@ -1,6 +1,7 @@
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Tracking;
+using JobRadar.Domain.Triage;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Persistence.Tracking;
@@ -60,6 +61,23 @@ internal sealed class EfTrackingRepository(JobRadarDbContext db) : ITrackingRepo
         {
             db.ChangeTracker.Clear();
         }
+    }
+
+    public async Task<IReadOnlyList<RecentStatusChange>> ListStatusChangesAsync(
+        IReadOnlyCollection<string> profiles, DateTimeOffset since, CancellationToken ct = default)
+    {
+        var after = since.ToUniversalTime();
+        var names = profiles.ToList();
+        var rows = await (
+            from e in db.ApplicationEvents
+            where e.At > after
+            join l in db.Listings on new { e.Source, e.SourceId } equals new { l.Source, l.SourceId }
+            where db.ListingScores.Any(s => s.Source == e.Source && s.SourceId == e.SourceId && names.Contains(s.Profile))
+            orderby e.At descending, e.Id descending
+            select new { e.Source, e.SourceId, l.Title, l.Company, e.FromStatus, e.ToStatus, e.At }).ToListAsync(ct);
+        return rows.Select(r => new RecentStatusChange(
+            new ListingId(r.Source, r.SourceId), r.Title, r.Company,
+            r.FromStatus is null ? null : TrackingMapper.ToStatus(r.FromStatus), TrackingMapper.ToStatus(r.ToStatus), r.At)).ToList();
     }
 
     public async Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default)

@@ -74,6 +74,23 @@ public abstract class TriageQueriesContractTests(DatabaseFixture db)
     }
 
     [DatabaseFact]
+    public async Task Seen_since_keeps_only_listings_first_seen_after_the_moment()
+    {
+        await db.ResetAsync();
+        await SeedAsync(("1", "Dev", "A", "tech", 60));   // first seen on Monday
+        await using (var ctx = db.NewContext())
+        {
+            await new EfListingRepository(ctx).RecordObservationsAsync(
+                [new SourcedListing(ListingMapperTests.Sample("2", "Dev 2"), """{"id":"2"}""")], "s @ p", Monday.AddDays(2), Ct);
+            await new EfListingScoreRepository(ctx).SaveAsync(
+                [new ListingScore(new ListingId("seek", "2"), "tech", new FitScore(70, []), "h", Monday)], Ct);
+        }
+
+        Assert.Equal(["2"], Ids(await ListAsync(new TriageFilter("tech", SeenSince: Monday.AddDays(1)))));
+        Assert.Equal(["2", "1"], Ids(await ListAsync(new TriageFilter("tech", SeenSince: Monday.AddDays(-1)))));
+    }
+
+    [DatabaseFact]
     public async Task Equal_scores_show_the_most_recent_first()
     {
         await db.ResetAsync();

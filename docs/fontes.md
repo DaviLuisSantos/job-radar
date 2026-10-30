@@ -89,3 +89,28 @@ integração serviria aos dois países. A chave tem de ser criada pelo autor.
 - Orçamento próprio, abaixo do Seek: 1 requisição por segundo, 2 simultâneas, User-Agent identificado.
 - `description` vai para `listing_descriptions` (uso pessoal, como as do Seek); banco de talentos é descartado.
 - Estado por extenso → sigla (`"São Paulo"` → `SP`); CLT → tempo integral, PJ e associado → contrato.
+
+## Remoto (spike de 2026-10-30, passo 5.5 da [evolução](evolucao.md))
+
+Vagas remotas que aceitem quem mora no Brasil, nos dois mercados da fase 5: **LATAM** (restritas a uma região que inclui o
+Brasil) e **global** (abertas ao mundo). Uma chamada por endpoint; amostras fora do repo.
+
+| Fonte | Acesso | Elegibilidade | Salário | .NET a partir do Brasil | Veredito |
+|---|---|---|---|---|---|
+| **Himalayas** | `himalayas.app/jobs/api/search?q=&country=BR&worldwide=true&page=N` (20 por página), sem chave; com chave grátis, 60/min | `locationRestrictions`: lista de países por extenso; **vazia = mundo** | `minSalary`, `maxSalary`, `currency`, `salaryPeriod` (muitas vezes vazios) | `q=.net&country=BR`: 153; `worldwide`: 17 | **usar, os dois mercados** |
+| **Jobicy** | `jobicy.com/api/v2/remote-jobs?count=100&geo=latam&industry=engineering`, sem chave; só os últimos 7 dias | `jobGeo`: texto com vírgulas ("Anywhere", "LATAM", "Brazil", "LATAM, Canada, USA") | estruturado (`salaryMin/Max/Currency/Period`) | pouco; `tag` só olha o título | **segunda fonte LATAM** |
+| Get on Board | `getonbrd.com/api/v0/search/jobs?query=` (JSON:API) | `remote_modality`, `countries` = "Remote": não diz se o Brasil entra | USD/mês, às vezes | quase tudo Chile, Peru, México | esperar: termos e `remote_local` não conferidos |
+| Remotive | `remotive.com/api/remote-jobs` | `candidate_required_location`, texto livre | texto | o feed público tinha 12 vagas; atraso de 24 h, 4 chamadas/dia | não |
+| RemoteOK | `remoteok.com/api` | `location` vazio em mais da metade | anual em USD | nenhuma | não |
+| We Work Remotely | só RSS | `region` ("Anywhere in the World") | só no texto | nenhuma | talvez, como complemento global |
+
+- **Termos.** Himalayas: usar o `applicationLink` como veio, mostrar o link da fonte, "mostrar as vagas só em sites e
+  apps que você opera", não repassar a outros quadros e tirar as encerradas. Jobicy: creditar a Jobicy como origem e
+  manter o link dela. Uso pessoal e privado, como o do Seek e da Gupy, cabe nos dois.
+- **Cuidados.** A descrição vem em HTML nas duas (precisa virar texto antes de ir para `listing_descriptions`). O Himalayas
+  não tem id numérico: o `guid` é a URL da vaga. Muitas vagas de `country=BR` são de empresas brasileiras só para o
+  Brasil: servem ao "remoto a partir do Brasil", mas não são LATAM no sentido da restrição regional. A mesma vaga aparece
+  em vários quadros: a triagem já junta cópias por título e empresa.
+
+**Decidido (2026-10-30): Himalayas para os dois mercados e Jobicy para o LATAM**, nas mesmas regras (uso pessoal, ritmo
+baixo, nada público). Get on Board fica para quando os termos e a semântica de `remote_local` forem conferidos.

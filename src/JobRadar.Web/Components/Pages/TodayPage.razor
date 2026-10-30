@@ -1,0 +1,117 @@
+@page "/hoje/{Slug}"
+@inject Backend Backend
+@inject ProfileCatalog Catalog
+@inject TimeProvider Time
+
+<PageTitle>@Wording.Today · @_label · JobRadar</PageTitle>
+
+@if (_unknown)
+{
+    <section class="empty">
+        <h1>Mercado desconhecido</h1>
+        <p>“@Slug” não é um dos mercados.</p>
+    </section>
+}
+else if (_today is { } t)
+{
+    <div class="page-head">
+        <h1>@Wording.Today · @_label</h1>
+        <p class="muted">@Wording.SinceVisit(t.Since, t.FirstVisit)</p>
+    </div>
+
+    <p class="today-total"><b>@Wording.NewListings(t.New)</b></p>
+
+    <div class="cards">
+        @foreach (var p in t.Profiles)
+        {
+            <section class="card today-profile">
+                <div class="card-head">
+                    <h2><a href="@TriageHref(p.Profile)">@p.Profile</a></h2>
+                    <span class="muted">@Wording.NewListings(p.New)</span>
+                </div>
+                @if (p.Best.Count == 0)
+                {
+                    <p class="muted small">@Wording.NothingNew</p>
+                }
+                else
+                {
+                    <ol class="today-best">
+                        @foreach (var row in p.Best)
+                        {
+                            <li>
+                                <ScoreBadge Value="row.Score" />
+                                <div>
+                                    <a class="title" href="@Triage.ListingLink(row.Id)">@row.Title</a>
+                                    <div class="meta">
+                                        <span>@(row.Company ?? "Empresa não informada")</span>
+                                        <span>@Wording.Location(row.Location)</span>
+                                    </div>
+                                    <div class="tags"><ListingTags Conditions="row.Conditions" /></div>
+                                </div>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+        }
+    </div>
+
+    <section class="today-changes">
+        <h2>@Wording.ApplicationsMoved</h2>
+        @if (t.Changes.Count == 0)
+        {
+            <p class="muted">@Wording.NoChanges</p>
+        }
+        else
+        {
+            <ol class="history">
+                @foreach (var c in t.Changes)
+                {
+                    <li>
+                        <time>@Wording.When(c.At)</time>
+                        <span class="chip status-@c.To.ToString().ToLowerInvariant()">@Wording.StatusMove(c.From, c.To)</span>
+                        <a href="@Triage.ListingLink(c.Id)">@c.Title</a>
+                        @if (c.Company is { } company)
+                        {
+                            <span class="muted"> · @company</span>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+
+    private MarketToday? _today;
+    private JobMarket _market;
+    private string _label = "";
+    private bool _unknown;
+    private bool _recorded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProfileMenu.FromSlug(Slug) is not { } market)
+        {
+            _unknown = true;
+            return;
+        }
+        (_unknown, _market, _label, _recorded) = (false, market, ProfileMenu.Label(market), false);
+        var profiles = ProfileMenu.Groups(Catalog.Profiles, await Backend.RunAsync<TriageService, IReadOnlyList<string>>(t => t.ProfilesAsync()))
+            .FirstOrDefault(g => g.Market == market)?.Profiles ?? [];
+        _today = await Backend.RunAsync<TodayService, MarketToday>(s => s.TodayAsync(market, profiles, Time.GetUtcNow()));
+    }
+
+    // After the interactive render only: the prerender would record the visit before the page could show what was new.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_today is null || _recorded)
+            return;
+        _recorded = true;
+        await Backend.RunAsync<TodayService>(s => s.RecordVisitAsync(_market, Time.GetUtcNow()));
+    }
+
+    private static string TriageHref(string profile) => $"triage/{Uri.EscapeDataString(profile)}";
+}

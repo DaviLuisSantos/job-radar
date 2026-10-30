@@ -168,6 +168,15 @@ public class WordingTests
         Assert.Equal(expected, Wording.Age(now.AddDays(-days), now));
     }
 
+    [Fact]
+    public void Errors_from_the_application_are_worded_by_type_never_by_their_English_message()
+    {
+        Assert.Equal("A vaga seek:1 nunca foi coletada.", Wording.Error(new JobRadar.Application.Tracking.ListingNotFoundException(new ListingId("seek", "1"))));
+        Assert.StartsWith("O texto é curto demais", Wording.Error(new JobRadar.Application.Tracking.DescriptionTooShortException()), StringComparison.Ordinal);
+        Assert.Equal("Erro inesperado (InvalidOperationException).",
+            Wording.Error(new InvalidOperationException("secret English detail")));
+    }
+
     [Theory]
     [InlineData(null, "")]
     [InlineData("HttpRequestException: 503", "HttpRequestException: 503")]

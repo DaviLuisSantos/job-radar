@@ -32,7 +32,10 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton(EmptyPort<IListingTermRepository>());
         Services.AddSingleton(EmptyPort<ITrackingRepository>());
         Services.AddSingleton(EmptyPort<IListingDescriptionRepository>());
+        Services.AddSingleton(EmptyPort<IMarketVisitRepository>());
+        Services.AddSingleton(TimeProvider.System);
         Services.AddScoped<TriageService>();
+        Services.AddScoped<TodayService>();
         Services.AddSingleton<Backend>();
         return Render<MainLayout>(p => p.Add(l => l.Body, (RenderFragment)(b => b.AddContent(0, "page body"))));
     }
@@ -46,7 +49,7 @@ public class MainLayoutTests : BunitContext
 
         Assert.Contains("page body", cut.Markup);
         Assert.Equal(["Austrália", "Brasil"], cut.FindAll(".mud-toggle-item").Select(i => i.TextContent.Trim()));
-        Assert.Equal(["dotnet", "fifo"], cut.FindAll(".profile-bar a").Select(a => a.TextContent.Trim()));
+        Assert.Equal(["Hoje", "dotnet", "fifo"], cut.FindAll(".profile-bar a").Select(a => a.TextContent.Trim()));
     }
 
     [Fact]
@@ -55,7 +58,7 @@ public class MainLayoutTests : BunitContext
         var cut = RenderWith(("dotnet", In("AU")));
 
         Assert.Empty(cut.FindAll(".mud-toggle-item"));
-        Assert.Equal(["dotnet"], cut.FindAll(".profile-bar a").Select(a => a.TextContent.Trim()));
+        Assert.Equal(["Hoje", "dotnet"], cut.FindAll(".profile-bar a").Select(a => a.TextContent.Trim()));
     }
 
     /// <summary>An implementation of any port whose every call answers empty: no rows, no listing, nothing done.</summary>

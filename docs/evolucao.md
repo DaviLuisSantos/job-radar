@@ -13,9 +13,9 @@
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras ([#28](https://github.com/DaviLuisSantos/job-radar/issues/28)) |
-| 5 | Mercados remotos e interface | ~10 | 🔨 5.1, 5.2 e 5.3 implantadas; o resto nas issues abaixo |
+| 5 | Mercados remotos e interface | ~10 | 🔨 5.1 a 5.4 implantadas; o resto nas issues abaixo |
 
-**O que falta, como issues:** 5.4 [#20](https://github.com/DaviLuisSantos/job-radar/issues/20), 5.5 [#21](https://github.com/DaviLuisSantos/job-radar/issues/21), 5.6 [#22](https://github.com/DaviLuisSantos/job-radar/issues/22), 5.7 [#23](https://github.com/DaviLuisSantos/job-radar/issues/23); prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); textos em inglês vindos do domínio [#25](https://github.com/DaviLuisSantos/job-radar/issues/25); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
+**O que falta, como issues:** 5.6 [#22](https://github.com/DaviLuisSantos/job-radar/issues/22), 5.7 [#23](https://github.com/DaviLuisSantos/job-radar/issues/23); prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
 
 ## O que a auditoria mudou no plano original
 
@@ -313,12 +313,18 @@ vaga com ações numa barra fixa, "por que esta nota" em cima e o anúncio intei
 de elegibilidade e fuso entram com a 5.6 (a primeira fonte que as informa); contractor/EOR, moeda e faixa, com o
 `EngagementDetector` e o `PayParser` da 5.7.
 
-**5.4 Tela "Hoje"** ([#20](https://github.com/DaviLuisSantos/job-radar/issues/20)). Página inicial por mercado: o que chegou desde a última visita, as melhores novas de cada perfil e o
-que mudou nas candidaturas.
+**5.4 Tela "Hoje"** ([#20](https://github.com/DaviLuisSantos/job-radar/issues/20)). ✅ 2026-10-30. `hoje/{au|br|latam|global}` é a página inicial: o que chegou desde a
+última visita ao mercado, as cinco melhores novas de cada perfil e as mudanças de candidatura no período. "Nova" é o que a
+triagem mostraria (sem tratamento, não excluída, cópias juntas) e foi vista pela primeira vez depois da visita; o filtro
+`TriageFilter.SeenSince` vai ao banco. Uma vaga achada por dois perfis conta uma vez no mercado. A visita fica em
+`market_visits` (`IMarketVisitRepository`, migration `AddMarketVisits` nos dois bancos) e é gravada só depois da
+renderização interativa: o prerender a gravaria antes de a página mostrar o que era novo. Na primeira visita, uma semana
+para trás. O seletor de mercado mostra a contagem de novas de cada um, recalculada a cada troca de página.
 
-**5.5 Spike das fontes remotas (sem código no repo)** ([#21](https://github.com/DaviLuisSantos/job-radar/issues/21)). Como na Gupy: endpoint, campos (principalmente elegibilidade e
-salário), paginação, termos de uso. Candidatas: Remotive, Himalayas, RemoteOK, Jobicy e We Work Remotely (global); Get on
-Board (LATAM). Escolher uma ou duas por mercado.
+**5.5 Spike das fontes remotas (sem código no repo)** ([#21](https://github.com/DaviLuisSantos/job-radar/issues/21)). ✅ 2026-10-30, em
+[fontes.md](fontes.md#remoto-spike-de-2026-10-30-passo-55-da-evolução): **Himalayas** para os dois mercados (elegibilidade
+numa lista de países, vazia = mundo; salário estruturado) e **Jobicy** para o LATAM (`jobGeo`). Remotive, RemoteOK e We
+Work Remotely quase não têm .NET para quem está no Brasil; Get on Board espera os termos.
 
 **5.6 Fontes remotas** ([#22](https://github.com/DaviLuisSantos/job-radar/issues/22)). `JobRadar.Integrations.<Site>` para as escolhidas, no molde do Seek e da Gupy, com teste ao vivo.
 

@@ -3,6 +3,7 @@
 @inject Backend Backend
 @inject ProfileCatalog Catalog
 @inject NavigationManager Nav
+@inject TimeProvider Time
 
 <MudThemeProvider @ref="_themeProvider" Theme="JobRadarTheme.Theme" @bind-IsDarkMode="_dark" />
 <MudPopoverProvider />
@@ -23,7 +24,7 @@
                             Class="d-none d-md-flex ml-4" aria-label="@Wording.Markets">
                 @foreach (var group in _groups)
                 {
-                    <MudToggleItem Value="group.Market" Text="@group.Label" />
+                    <MudToggleItem Value="group.Market" Text="@Wording.NewInMarket(group.Label, _newCounts.GetValueOrDefault(group.Market))" />
                 }
             </MudToggleGroup>
         }
@@ -41,7 +42,8 @@
         <MudNavMenu>
             @foreach (var group in _groups)
             {
-                <MudNavGroup Title="@group.Label" Expanded="group.Market == _market">
+                <MudNavGroup Title="@Wording.NewInMarket(group.Label, _newCounts.GetValueOrDefault(group.Market))" Expanded="group.Market == _market">
+                    <MudNavLink Href="@ProfileMenu.TodayHref(group.Market)" Match="NavLinkMatch.All" OnClick="() => _drawer = false">@Wording.Today</MudNavLink>
                     @foreach (var profile in group.Profiles)
                     {
                         <MudNavLink Href="@TriageHref(profile)" Match="NavLinkMatch.All" OnClick="() => _drawer = false">@profile</MudNavLink>
@@ -60,6 +62,7 @@
         @if (CurrentGroup is { Profiles.Count: > 0 } current)
         {
             <nav class="profile-bar" aria-label="@Wording.ProfilesOf(current.Label)">
+                <NavLink href="@ProfileMenu.TodayHref(current.Market)" Match="NavLinkMatch.All">@Wording.Today</NavLink>
                 @foreach (var profile in current.Profiles)
                 {
                     <NavLink href="@TriageHref(profile)" Match="NavLinkMatch.All">@profile</NavLink>
@@ -90,6 +93,7 @@
     private bool _drawer;
     private IReadOnlyList<ProfileGroup> _groups = [];
     private JobMarket _market = JobMarket.AU;
+    private IReadOnlyDictionary<JobMarket, int> _newCounts = new Dictionary<JobMarket, int>();
 
     private ProfileGroup? CurrentGroup => _groups.FirstOrDefault(g => g.Market == _market);
 
@@ -102,6 +106,14 @@
         _market = _groups.FirstOrDefault()?.Market ?? JobMarket.AU;
         FollowLocation(Nav.Uri);
         Nav.LocationChanged += OnLocationChanged;
+        await CountNewAsync();
+    }
+
+    /// <summary>New listings per market since its last "Today": refreshed on every page change, cheap (filtered in the database).</summary>
+    private async Task CountNewAsync()
+    {
+        var byMarket = _groups.ToDictionary(g => g.Market, g => g.Profiles);
+        _newCounts = await Backend.RunAsync<TodayService, IReadOnlyDictionary<JobMarket, int>>(s => s.NewCountsAsync(byMarket, Time.GetUtcNow()));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -127,14 +139,18 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         FollowLocation(e.Location);
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await CountNewAsync();
+            StateHasChanged();
+        });
     }
 
     private void GoToMarket(JobMarket market)
     {
         _market = market;
-        if (CurrentGroup is { Profiles.Count: > 0 } group)
-            Nav.NavigateTo(TriageHref(group.Profiles[0]));
+        Nav.NavigateTo(ProfileMenu.TodayHref(market));
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

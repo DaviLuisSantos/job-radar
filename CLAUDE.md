@@ -207,6 +207,11 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   poderia ser lido como chave=valor.
 - Web: componente interativo chama serviço **só** por `Backend.RunAsync` (um escopo, e um `DbContext`, por
   operação). Injetar `TriageService` direto no componente prende um `DbContext` à aba inteira.
+- Web com prerender: `OnInitialized`/`OnParametersSet` rodam duas vezes (estático e interativo). Gravação que muda o que
+  a própria página lê (a visita do "Hoje") vai em `OnAfterRenderAsync`, que só roda no interativo.
+- Esta máquina (TRABALHOPC) **é** a produção: o Postgres do `docker compose` é o banco de produção, e o auto-deploy
+  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Para olhar o site com dados, rode-o
+  contra uma cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à mão.
 - Web sem login: escuta em `localhost:5380` e, em produção, no IP da Tailscale (`appsettings.Local.json` gerado
   por `deploy/deploy.ps1`; firewall só `100.64.0.0/10`). A 5080 é de outro serviço local do autor.
 - Serviço do Windows inicia antes do Docker Desktop (que sobe no login): o `DailyPipelineJob` espera o banco

@@ -231,7 +231,7 @@ else if (_page is not null)
         }
         catch (ListingNotFoundException ex)
         {
-            _error = ex.Message;
+            _error = Wording.Error(ex);
             return false;
         }
         finally

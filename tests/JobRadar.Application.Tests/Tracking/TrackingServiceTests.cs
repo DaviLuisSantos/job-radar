@@ -28,6 +28,8 @@ public class TrackingServiceTests
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyList<JobRadar.Domain.Triage.RecentStatusChange>> ListStatusChangesAsync(
+            IReadOnlyCollection<string> profiles, DateTimeOffset since, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<ListingLabel?> FindLabelAsync(ListingId id, CancellationToken ct = default) =>
             Task.FromResult(Labels.GetValueOrDefault(id));
 
