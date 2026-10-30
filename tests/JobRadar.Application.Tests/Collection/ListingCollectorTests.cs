@@ -15,13 +15,51 @@ public class ListingCollectorTests
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 21, 22, 0, 0, TimeSpan.Zero));
     private readonly InMemoryListings _listings = new();
     private readonly InMemoryRuns _runs = new();
+    private readonly InMemoryDescriptions _descriptions = new();
 
     // One search at a time unless a test is about parallelism: order is then deterministic.
     private ListingCollector Collector(params FakeSource[] sources) => Collector(1, sources);
 
     private ListingCollector Collector(int parallel, params FakeSource[] sources) =>
-        new(sources, _listings, _runs, Options.Create(new CollectionOptions { MaxParallelSearches = parallel }), _time,
+        new(sources, _listings, _descriptions, _runs, Options.Create(new CollectionOptions { MaxParallelSearches = parallel }), _time,
             NullLogger<ListingCollector>.Instance);
+
+    [Fact]
+    public async Task A_search_runs_only_on_the_sources_of_its_country()
+    {
+        var seek = new FakeSource("seek");
+        var gupy = new FakeSource("gupy", Country.BR);
+        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Country: Country.BR);
+
+        await Collector(seek, gupy).CollectAsync([Dev, rio], Ct);
+
+        Assert.Equal([Dev.Key], seek.Received.Select(s => s.Key));
+        Assert.Equal([rio.Key], gupy.Received.Select(s => s.Key));
+        Assert.Equal("desenvolvedor .net @ rio de janeiro (br)", rio.Key);
+    }
+
+    [Fact]
+    public async Task A_full_ad_the_search_returns_is_stored_once_and_replaced_when_it_changes()
+    {
+        var ad = new string('x', ListingDescription.MinLength) + " C# .NET";
+        var gupy = new FakeSource("gupy", Country.BR);
+        var listing = new Listing(new ListingId("gupy", "1"), "Desenvolvedor .NET", null, ListingLocation.Unknown(Country.BR),
+            WorkType.FullTime, null, null, new Uri("https://example.test/1"), null);
+        gupy.Respond = _ => new SearchResult([new SourcedListing(listing, "{}", ad)], Complete: true);
+        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Country: Country.BR);
+
+        await Collector(gupy).CollectAsync([rio], Ct);
+        var first = _descriptions.Saved[listing.Id];
+        _time.Advance(TimeSpan.FromDays(1));
+        await Collector(gupy).CollectAsync([rio], Ct);
+
+        Assert.Equal(DescriptionOrigin.Source, first.Origin);
+        Assert.Same(first, _descriptions.Saved[listing.Id]);
+
+        gupy.Respond = _ => new SearchResult([new SourcedListing(listing, "{}", ad + " Azure")], Complete: true);
+        await Collector(gupy).CollectAsync([rio], Ct);
+        Assert.EndsWith("Azure", _descriptions.Saved[listing.Id].Text);
+    }
 
     [Fact]
     public async Task Every_search_runs_on_every_source_and_each_run_is_recorded()

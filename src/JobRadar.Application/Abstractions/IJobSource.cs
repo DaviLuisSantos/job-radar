@@ -11,6 +11,9 @@ public interface IJobSource
     /// <summary>Same value as <see cref="ListingId.Source"/> of the listings it returns.</summary>
     string Name { get; }
 
+    /// <summary>The market it lists: it runs only the searches of that country.</summary>
+    Country Country { get; }
+
     /// <summary>
     /// Every listing matching the search, each once, with paging and source quirks handled
     /// inside. Sources cap results (Seek: 500), so the result says whether it is complete.

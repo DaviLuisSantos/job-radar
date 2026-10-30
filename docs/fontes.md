@@ -81,3 +81,11 @@ Só para o Matching de uso próprio: nada do Brasil vai ao Raio-X público ([vis
 pedem crédito à Adzuna ao publicar. Existe `adzuna.com.br`; *verificar* com uma chave se a API responde para `br`
 (sem chave a autenticação falha antes de olhar o país). Já é a primeira fonte nova planejada para a Austrália: uma
 integração serviria aos dois países. A chave tem de ser criada pelo autor.
+
+## Gupy — como a integração funciona (fase 2.5)
+
+- `GET portal.gupy.io/api/job-search/jobs?jobName=&limit=&offset=` com `city=<cidade>` ou `workplaceType=remote`;
+  até 100 por página (mais responde 400). Sem filtro de data: cada passada lê as páginas da busca (`MaxPages` 10).
+- Orçamento próprio, abaixo do Seek: 1 requisição por segundo, 2 simultâneas, User-Agent identificado.
+- `description` vai para `listing_descriptions` (uso pessoal, como as do Seek); banco de talentos é descartado.
+- Estado por extenso → sigla (`"São Paulo"` → `SP`); CLT → tempo integral, PJ e associado → contrato.

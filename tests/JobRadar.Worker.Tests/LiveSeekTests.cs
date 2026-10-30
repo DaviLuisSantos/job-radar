@@ -38,7 +38,7 @@ public class LiveSeekTests
         // Runs ValidateOnStart, like production boot.
         await host.StartAsync(TestContext.Current.CancellationToken);
 
-        var source = host.Services.GetRequiredService<IJobSource>();
+        var source = host.Services.GetServices<IJobSource>().Single(s => s.Name == "seek");
         var listings = (await source.SearchAsync(new ListingSearch("developer", "Perth"), TestContext.Current.CancellationToken)).Listings;
 
         Assert.NotEmpty(listings);

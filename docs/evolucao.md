@@ -178,11 +178,20 @@ Ficou para depois, com motivo:
 - **Banco de talentos** e **CLT/PJ**: não são regra de score; o banco de talentos sai no tradutor da Gupy (não é vaga
   aberta), e o regime vai no resumo da vaga.
 
-**2.5 `JobRadar.Integrations.Gupy` e a contagem de tecnologias.** `AddGupyIntegration()`, `IJobSource`, tradutor para
-`Listing` com `Country = BR` (o `description` da busca vai para `listing_descriptions`: não há busca de detalhe),
-respostas gravadas nos testes, resiliência e ritmo como o Seek (orçamento próprio, baixo). Perfil BR em
-`appsettings.Local.json`. Sem `IFullTextSearch`. Contagem mensal de tecnologias pedidas nas vagas BR (comando e página
-de uso próprio). Filtro por país na triagem.
+**2.5 `JobRadar.Integrations.Gupy`.** ✅ Busca, perfil e fonte agora têm país: a coleta só manda a cada fonte as
+buscas do país dela (`ListingSearch.Country`, `IJobSource.Country`, `Country` no perfil, `AU` por padrão). A chave de
+uma busca de outro país termina com o país (`"desenvolvedor .net @ rio de janeiro (br)"`); as do AU não mudaram.
+A integração segue o molde do Seek: opções na classe, resiliência padrão e um orçamento próprio e mais baixo (1
+requisição por segundo, 2 simultâneas). A busca já traz o anúncio inteiro, que vai em `SourcedListing.Description` e a
+coleta grava em `listing_descriptions` (origem `Source`), reescrevendo só quando muda. Banco de talentos fica de fora.
+Local: uma cidade (`city`), `Remoto` (`workplaceType=remote`) ou `Brasil` (o país todo). Sem filtro de data na API: a
+janela incremental não se aplica e cada passada lê as páginas da busca. Resumo da vaga: arranjo e regime ("Remoto · CLT").
+Testes com uma resposta fictícia no formato real; sem teste ao vivo ainda. Perfil de exemplo `dotnet-br` em
+`appsettings.Local.example.json`.
+
+**2.6 Triagem e contagem do Brasil.** Filtro por país na triagem (hoje um perfil já separa: só pontua as vagas das
+suas buscas). Contagem mensal de tecnologias pedidas nas vagas BR (comando e página de uso próprio), lendo as
+descrições.
 
 **Pronto:** §3.5 do original. O Raio-X público continua só AU (decisão 1).
 

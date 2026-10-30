@@ -15,6 +15,9 @@ public sealed class MatchingOptions
 /// <summary>One line of work: what to search for and how to score what comes back.</summary>
 public sealed class ProfileOptions
 {
+    /// <summary>The market searched and scored: "AU" or "BR". Only the sources of that country run its searches.</summary>
+    public string Country { get; set; } = "AU";
+
     /// <summary>Every keyword is searched in every location.</summary>
     public List<string> Keywords { get; set; } = [];
 

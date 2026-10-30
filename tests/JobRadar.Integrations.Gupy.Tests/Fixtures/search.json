@@ -1,0 +1,56 @@
+{
+  "data": [
+    {
+      "id": 90000001,
+      "name": "Desenvolvedor(a) .NET Pleno",
+      "applicationDeadline": "2026-11-30T00:00:00.000Z",
+      "description": "\nVaga fictícia para testes.\n\nRequisitos:\n- C#, .NET 8 e ASP.NET Core\n- SQL Server\n- 3+ anos de experiência\n- Inglês intermediário\n\nBenefícios: plano de saúde, vale-refeição.",
+      "careerPageName": "Empresa Fictícia",
+      "careerPageLogo": "",
+      "careerPageUrl": "",
+      "type": "vacancy_type_effective",
+      "publishedDate": "2026-10-28T12:00:00.000Z",
+      "workplaceType": "remote",
+      "city": "",
+      "state": "",
+      "jobUrl": "https://ficticia.example/job/90000001",
+      "badges": { "friendlyBadge": false, "isPWD": false },
+      "disabilities": false
+    },
+    {
+      "id": 90000002,
+      "name": "Desenvolvedor Backend C# — PJ",
+      "applicationDeadline": null,
+      "description": "Vaga fictícia, modelo híbrido no Centro do Rio de Janeiro. Contrato PJ. Experiência com Azure e mensageria.",
+      "careerPageName": "Outra Empresa Fictícia",
+      "careerPageLogo": "",
+      "careerPageUrl": "",
+      "type": "vacancy_legal_entity",
+      "publishedDate": "2026-10-27T09:30:00.000Z",
+      "workplaceType": "hybrid",
+      "city": "Rio de Janeiro",
+      "state": "Rio de Janeiro",
+      "jobUrl": "https://outra.example/job/90000002",
+      "badges": { "friendlyBadge": true, "isPWD": false },
+      "disabilities": false
+    },
+    {
+      "id": 90000003,
+      "name": "Banco de Talentos — Tecnologia",
+      "applicationDeadline": null,
+      "description": "Cadastre-se no banco de talentos fictício para futuras oportunidades em tecnologia.",
+      "careerPageName": "Empresa Fictícia",
+      "careerPageLogo": "",
+      "careerPageUrl": "",
+      "type": "vacancy_type_talent_pool",
+      "publishedDate": "2026-10-01T00:00:00.000Z",
+      "workplaceType": "on-site",
+      "city": "São Paulo",
+      "state": "São Paulo",
+      "jobUrl": "https://ficticia.example/job/90000003",
+      "badges": { "friendlyBadge": false, "isPWD": false },
+      "disabilities": false
+    }
+  ],
+  "pagination": { "limit": 3, "offset": 0, "total": 3 }
+}
