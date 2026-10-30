@@ -109,6 +109,10 @@ textarea:not([class*="mud-"]) { width: 100%; resize: vertical; }
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
 }
 .filters input[type=search] { flex: 1 1 220px; min-width: 0; }
+.filters .search { flex: 1 1 220px; min-width: 0; }
+.filters .narrow { flex: 0 0 9rem; }
+.filters .wide { flex: 0 1 16rem; }
+.filters .mud-input-control { margin: 0; }
 .filters label { display: flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .9rem; }
 
 .alert { background: var(--bad-soft); color: var(--bad); padding: .6rem .9rem; border-radius: 8px; }
@@ -181,6 +185,12 @@ kbd {
 .meta { display: flex; flex-wrap: wrap; gap: .25rem .9rem; color: var(--muted); font-size: .88rem; margin: .15rem 0 0; }
 .salary { color: var(--strong); font-weight: 500; }
 .facts { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
+.tags { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin-top: .35rem; }
+.tags:empty { display: none; }
+.tags .facts { display: contents; }
+.tags .mud-chip { margin: 0; height: 22px; font-size: .78rem; }
+.excluded-by { margin: .3rem 0 0; color: var(--bad); font-size: .88rem; }
+.row.excluded { border-style: dashed; }
 .chip.fact { background: var(--surface-2); color: var(--text); font-weight: 500; }
 .chip.fact-pay { background: var(--good-soft); color: var(--good); }
 .chip.fact-travel, .chip.fact-roster { background: var(--accent-soft); color: var(--accent); }
@@ -207,6 +217,12 @@ kbd {
 .listing header { margin-bottom: 1rem; }
 .listing header .meta { font-size: .95rem; }
 .listing .button { margin-top: .5rem; }
+.action-bar {
+    position: sticky; top: 48px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem;
+    padding: .5rem .75rem; margin-bottom: 1rem; background: var(--surface);
+}
+.action-bar .status-select { flex: 0 1 14rem; max-width: 14rem; margin: 0; }
+.why-score { margin-bottom: 1rem; }
 .summary { margin: 0; padding-left: 1.1rem; }
 .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 1rem; margin-top: 1rem; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; box-shadow: var(--shadow); }
@@ -235,7 +251,7 @@ details summary .score { width: 2rem; height: 2rem; font-size: .85rem; }
 /* Full ad and capture */
 .full-ad { margin-top: 1rem; }
 .full-ad .notes, .capture .notes { margin-top: .5rem; }
-pre.ad { white-space: pre-wrap; font: inherit; font-size: .9rem; max-height: 28rem; overflow-y: auto; }
+pre.ad { white-space: pre-wrap; font: inherit; font-size: .95rem; line-height: 1.55; }
 .capture, .setup { margin-bottom: 1rem; }
 .capture h2 { margin-bottom: .25rem; }
 .capture h3 { margin-top: 1rem; }
@@ -265,6 +281,7 @@ pre.ad { white-space: pre-wrap; font: inherit; font-size: .9rem; max-height: 28r
     .row { grid-template-columns: auto minmax(0, 1fr); }
     .state { grid-column: 2; flex-direction: row; align-items: center; flex-wrap: wrap; }
     .actions { grid-column: 1 / -1; justify-content: flex-start; }
+    .keys { display: none; }
     .columns { grid-template-columns: 1fr; }
     .grid { display: block; overflow-x: auto; }
     .profile-bar { flex-wrap: nowrap; overflow-x: auto; padding: .4rem .75rem; }

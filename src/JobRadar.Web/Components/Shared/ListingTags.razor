@@ -1,0 +1,14 @@
+@* What decides an application, as the source gives it: arrangement and contract (ListingConditions). *@
+@if (Wording.Arrangement(Conditions.Arrangement) is { Length: > 0 } arrangement)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+             Class="@($"tag tag-{Conditions.Arrangement.ToString().ToLowerInvariant()}")">@arrangement</MudChip>
+}
+@if (Conditions.Contract is { } contract)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="tag tag-contract">@contract</MudChip>
+}
+
+@code {
+    [Parameter, EditorRequired] public ListingConditions Conditions { get; set; } = ListingConditions.None;
+}

@@ -84,6 +84,22 @@ public class TriageServiceTests
 
         await Service(repo).ListAsync(new TriageFilter("tech", MinScore: 500, Text: "   ", Page: -3, PageSize: 10_000), Ct);
 
-        Assert.Equal((100, (string?)null, 1, 200), (repo.Received!.MinScore, repo.Received.Text, repo.Received.Page, repo.Received.PageSize));
+        Assert.Equal(((string?)null, 1, 200), (repo.Received!.Text, repo.Received.Page, repo.Received.PageSize));
+    }
+
+    [Fact]
+    public async Task Excluded_rows_are_counted_apart_and_listed_on_their_own()
+    {
+        // The minimum score applies here, not in the repository, so the excluded count does not depend on it.
+        var repo = new FixedRows([Row(10, "A"), Row(45, "B"), Row(1, "C") with { Score = 0 }, Row(2, "D") with { Score = 0 }]);
+
+        var open = await Service(repo).ListAsync(new TriageFilter("tech", MinScore: 60), Ct);
+        var excluded = await Service(repo).ListAsync(new TriageFilter("tech", MinScore: 60, Excluded: true), Ct);
+
+        Assert.Equal(["10"], open.Rows.Select(r => r.Id.SourceId));
+        Assert.Equal((1, 2), (open.Total, open.Excluded));
+        Assert.Equal(["1", "2"], excluded.Rows.Select(r => r.Id.SourceId));
+        Assert.Equal((2, 2), (excluded.Total, excluded.Excluded));
+        Assert.Equal((true, 0), (repo.Received!.IncludeExcluded, repo.Received.MinScore));
     }
 }

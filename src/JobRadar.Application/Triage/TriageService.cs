@@ -24,8 +24,11 @@ public sealed class TriageService(
             MinScore = Math.Clamp(filter.MinScore, 0, 100),
             Text = string.IsNullOrWhiteSpace(filter.Text) ? null : filter.Text.Trim(),
         };
-        var rows = Duplicates.Collapse(await scores.ListForTriageAsync(f, ct));
-        if (f.Order == TriageOrder.AcrossScores)
+        // Excluded rows come along to be counted under the same filters; the screen shows them apart, with the reason.
+        var all = Duplicates.Collapse(await scores.ListForTriageAsync(f with { IncludeExcluded = true, MinScore = 0 }, ct));
+        var excluded = all.Where(r => r.Score == 0).ToList();
+        IReadOnlyList<TriageRow> rows = f.Excluded ? excluded : all.Where(r => r.Score > 0 && r.Score >= f.MinScore).ToList();
+        if (f.Order == TriageOrder.AcrossScores && !f.Excluded)
             rows = LabelSample.Spread(rows);
         var page = rows.Skip((f.Page - 1) * f.PageSize).Take(f.PageSize).ToList();
 
@@ -34,7 +37,7 @@ public sealed class TriageService(
         page = page
             .Select(r => texts.TryGetValue(r.Id, out var text) ? r with { Facts = ListingFacts.Read(text, hasPayField: ListingFacts.GivesPay(r.SalaryText)) } : r)
             .ToList();
-        return new TriagePage(page, rows.Count);
+        return new TriagePage(page, rows.Count, excluded.Count);
     }
 
     /// <summary>Null when the listing was never collected.</summary>

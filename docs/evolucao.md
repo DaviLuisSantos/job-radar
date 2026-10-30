@@ -13,9 +13,9 @@
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras ([#28](https://github.com/DaviLuisSantos/job-radar/issues/28)) |
-| 5 | Mercados remotos e interface | ~10 | 🔨 5.1 e 5.2 implantadas; o resto nas issues abaixo |
+| 5 | Mercados remotos e interface | ~10 | 🔨 5.1, 5.2 e 5.3 implantadas; o resto nas issues abaixo |
 
-**O que falta, como issues:** 5.3 [#19](https://github.com/DaviLuisSantos/job-radar/issues/19), 5.4 [#20](https://github.com/DaviLuisSantos/job-radar/issues/20), 5.5 [#21](https://github.com/DaviLuisSantos/job-radar/issues/21), 5.6 [#22](https://github.com/DaviLuisSantos/job-radar/issues/22), 5.7 [#23](https://github.com/DaviLuisSantos/job-radar/issues/23); prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); textos em inglês vindos do domínio [#25](https://github.com/DaviLuisSantos/job-radar/issues/25); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
+**O que falta, como issues:** 5.4 [#20](https://github.com/DaviLuisSantos/job-radar/issues/20), 5.5 [#21](https://github.com/DaviLuisSantos/job-radar/issues/21), 5.6 [#22](https://github.com/DaviLuisSantos/job-radar/issues/22), 5.7 [#23](https://github.com/DaviLuisSantos/job-radar/issues/23); prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); textos em inglês vindos do domínio [#25](https://github.com/DaviLuisSantos/job-radar/issues/25); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
 
 ## O que a auditoria mudou no plano original
 
@@ -306,10 +306,12 @@ regras).
 mercado (contagem de novas em cada um) e os perfis do mercado logo abaixo; Captura, Você, Requisitos, Calibragem e Status
 num menu de ajustes. Layout responsivo, com gaveta no celular. As teclas da triagem (`j` `k` `g` `b` `u` `o`) continuam.
 
-**5.3 Interface: triagem e vaga** ([#19](https://github.com/DaviLuisSantos/job-radar/issues/19)). Na linha, etiquetas com o que decide a candidatura: elegibilidade, regime (CLT, PJ,
-contractor), moeda e faixa, arranjo (remoto, híbrido, presencial), fuso e idioma; excluída aparece com o motivo em uma
-linha. Página da vaga com "por que esta nota" em cima, o anúncio inteiro quando existe (Gupy e as remotas trazem) e ações
-fixas.
+**5.3 Interface: triagem e vaga** ([#19](https://github.com/DaviLuisSantos/job-radar/issues/19)). ✅ 2026-10-30, com o que as fontes de hoje dão: na linha, etiquetas de
+arranjo (remota, híbrida, presencial) e regime (CLT, PJ), lidas do resumo (`ListingConditions`), ao lado dos fatos do
+anúncio; excluídas fora da lista, com uma contagem que abre a lista delas, cada uma com o motivo em uma linha. Página da
+vaga com ações numa barra fixa, "por que esta nota" em cima e o anúncio inteiro aberto. **Fica para depois:** as etiquetas
+de elegibilidade e fuso entram com a 5.6 (a primeira fonte que as informa); contractor/EOR, moeda e faixa, com o
+`EngagementDetector` e o `PayParser` da 5.7.
 
 **5.4 Tela "Hoje"** ([#20](https://github.com/DaviLuisSantos/job-radar/issues/20)). Página inicial por mercado: o que chegou desde a última visita, as melhores novas de cada perfil e o
 que mudou nas candidaturas.

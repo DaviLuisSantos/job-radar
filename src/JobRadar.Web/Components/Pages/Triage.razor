@@ -8,7 +8,14 @@
 
 <div class="page-head">
     <h1>@Profile</h1>
-    <p class="muted">@(_page is null ? "Carregando…" : $"{Wording.Listings(_page.Total)}{(_filter.OnlyUntriaged ? " para triar" : "")}")</p>
+    <p class="muted">@HeadCount</p>
+    @if (_page is { Excluded: > 0 } || _filter.Excluded)
+    {
+        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary" Class="excluded-toggle"
+                   title="@(_filter.Excluded ? null : Wording.ShowExcluded)" OnClick="ToggleExcludedAsync">
+            @(_filter.Excluded ? Wording.BackToOpen : Wording.Excluded(_page?.Excluded ?? 0))
+        </MudButton>
+    }
     @if (_judged is { } judged)
     {
         <p class="progress" title="Suas avaliações, mais Candidatei (conta como boa) e Descartada (conta como ruim)">
@@ -18,38 +25,38 @@
 </div>
 
 <form class="filters" @onsubmit="SearchAsync" @onsubmit:preventDefault>
-    <input type="search" placeholder="Título ou empresa" aria-label="Buscar por título ou empresa" @bind="_text" />
-    <label>
-        Nota mínima
-        <select @bind="_minScore" @bind:after="FiltersChangedAsync">
-            <option value="0">qualquer</option>
-            <option value="50">50+</option>
-            <option value="65">65+</option>
-            <option value="80">80+</option>
-        </select>
-    </label>
-    <label title="Por faixa de nota distribui algumas vagas de cada faixa por página, para as avaliações não virem só do topo">
-        Ordem
-        <select @bind="_order" @bind:after="FiltersChangedAsync">
-            <option value="@TriageOrder.BestFirst">melhores primeiro</option>
-            <option value="@TriageOrder.AcrossScores">por faixa de nota, para avaliar</option>
-        </select>
-    </label>
-    <label class="check"><input type="checkbox" @bind="_showHandled" @bind:after="FiltersChangedAsync" /> Mostrar tratadas</label>
-    <label class="check"><input type="checkbox" @bind="_showExcluded" @bind:after="FiltersChangedAsync" /> Mostrar excluídas</label>
-    <button type="submit" class="ghost">Buscar</button>
+    <MudTextField T="string" @bind-Value="_text" Placeholder="Título ou empresa" aria-label="Buscar por título ou empresa"
+                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Search" OnAdornmentClick="SearchAsync"
+                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="search" />
+    @if (!_filter.Excluded)
+    {
+        <MudSelect T="int" @bind-Value="_minScore" @bind-Value:after="FiltersChangedAsync" Label="Nota mínima"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="narrow">
+            <MudSelectItem Value="0">qualquer</MudSelectItem>
+            <MudSelectItem Value="50">50+</MudSelectItem>
+            <MudSelectItem Value="65">65+</MudSelectItem>
+            <MudSelectItem Value="80">80+</MudSelectItem>
+        </MudSelect>
+        <MudSelect T="TriageOrder" @bind-Value="_order" @bind-Value:after="FiltersChangedAsync" Label="Ordem"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="wide"
+                   title="Por faixa de nota distribui algumas vagas de cada faixa por página, para as avaliações não virem só do topo">
+            <MudSelectItem Value="TriageOrder.BestFirst">melhores primeiro</MudSelectItem>
+            <MudSelectItem Value="TriageOrder.AcrossScores">por faixa de nota, para avaliar</MudSelectItem>
+        </MudSelect>
+    }
+    <MudSwitch T="bool" @bind-Value="_showHandled" @bind-Value:after="FiltersChangedAsync" Label="Mostrar tratadas" Color="Color.Primary" />
 </form>
 
 @if (_error is { } error)
 {
-    <p class="alert" role="alert">@error</p>
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@error</MudAlert>
 }
 
 @if (_undo is { } undo)
 {
     <p class="undo" role="status">
         <span>“@undo.Row.Title” marcada como @Wording.Verdict(undo.Verdict).ToLowerInvariant().</span>
-        <button class="ghost" @onclick="UndoAsync">Desfazer</button>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="UndoAsync">Desfazer</MudButton>
     </p>
 }
 
@@ -57,7 +64,7 @@
 {
     <section class="empty">
         <h2>Nada por aqui</h2>
-        <p>@(_filter.OnlyUntriaged ? "Todas as vagas desta visão já foram tratadas." : "Nenhuma vaga atende a estes filtros.")</p>
+        <p>@(_filter.Excluded ? "Nenhuma vaga excluída com estes filtros." : _filter.OnlyUntriaged ? "Todas as vagas desta visão já foram tratadas." : "Nenhuma vaga atende a estes filtros.")</p>
     </section>
 }
 else if (_page is not null)
@@ -69,54 +76,15 @@ else if (_page is not null)
     <ul class="rows" @onkeydown="KeyAsync">
         @foreach (var (row, index) in _page.Rows.Select((r, i) => (r, i)))
         {
-            <li class="row @(index == _cursor ? "current" : "") @(_busy.Contains(row.Id) ? "busy" : "")" @key="row.Id"
-                tabindex="-1" @onclick="() => _cursor = index">
-                <ScoreBadge Value="row.Score" />
-                <div class="what">
-                    <a class="title" href="@ListingLink(row.Id)">@row.Title</a>
-                    <div class="meta">
-                        <span>@(row.Company ?? "Empresa não informada")</span>
-                        <span>@Wording.Location(row.Location)@(row.OtherLocations.Count > 0 ? $" +{row.OtherLocations.Count} outros" : "")</span>
-                        @if (Wording.WorkType(row.WorkType) is { Length: > 0 } wt)
-                        {
-                            <span>@wt</span>
-                        }
-                        @if (row.SalaryText is { } salary)
-                        {
-                            <span class="salary">@salary</span>
-                        }
-                    </div>
-                    <FactChips Facts="row.Facts" />
-                </div>
-                <div class="state">
-                    <span class="age" title="@(row.PostedAt is { } posted ? Wording.Date(posted) : null)">@Wording.Age(row.PostedAt, Time.GetUtcNow())</span>
-                    @if (row.Copies.Count > 0)
-                    {
-                        <span class="chip" title="@CopiesTitle(row)">publicada @(row.Copies.Count + 1)×</span>
-                    }
-                    @if (row.Status is { } status)
-                    {
-                        <span class="chip status-@status.ToString().ToLowerInvariant()">@Wording.Status(status)</span>
-                    }
-                    @if (row.Verdict is { } verdict)
-                    {
-                        <span class="chip verdict-@verdict.ToString().ToLowerInvariant()">@Wording.Verdict(verdict)</span>
-                    }
-                </div>
-                <div class="actions" role="group" aria-label="Triagem de @row.Title">
-                    <button class="good" title="Boa (g)" @onclick="() => LabelAsync(row, Verdict.Good)">Boa</button>
-                    <button class="bad" title="Ruim (b)" @onclick="() => LabelAsync(row, Verdict.Bad)">Ruim</button>
-                    <button title="Marcar como Candidatei" @onclick="() => StatusAsync(row, ApplicationStatus.Applied)">Candidatei</button>
-                    <button class="ghost" title="Não é para mim (conta como ruim)" @onclick="() => StatusAsync(row, ApplicationStatus.Dismissed)">Descartar</button>
-                </div>
-            </li>
+            <TriageRowView @key="row.Id" Row="row" Href="@ListingLink(row.Id)" Now="Time.GetUtcNow()"
+                           Current="index == _cursor" Busy="_busy.Contains(row.Id)"
+                           OnSelect="() => _cursor = index"
+                           OnLabel="v => LabelAsync(row, v)" OnStatus="s => StatusAsync(row, s)" />
         }
     </ul>
 
     <nav class="pager" aria-label="Páginas">
-        <button class="ghost" disabled="@(_filter.Page <= 1)" @onclick="() => GoToAsync(_filter.Page - 1)">← Anterior</button>
-        <span>Página @_filter.Page de @Pages</span>
-        <button class="ghost" disabled="@(_filter.Page >= Pages)" @onclick="() => GoToAsync(_filter.Page + 1)">Próxima →</button>
+        <MudPagination Count="Pages" Selected="_filter.Page" SelectedChanged="GoToAsync" Size="Size.Small" Color="Color.Primary" />
     </nav>
 }
 
@@ -144,14 +112,17 @@ else if (_page is not null)
     private int _minScore;
     private TriageOrder _order;
     private bool _showHandled;
-    private bool _showExcluded;
+
+    private string HeadCount => _page is null ? "Carregando…"
+        : _filter.Excluded ? $"{Wording.Excluded(_page.Total)}, fora da lista"
+        : $"{Wording.Listings(_page.Total)}{(_filter.OnlyUntriaged ? " para triar" : "")}";
 
     protected override async Task OnParametersSetAsync()
     {
         if (_filter.Profile == Profile)
             return;
         _filter = new TriageFilter(Profile);
-        (_text, _minScore, _order, _showHandled, _showExcluded) = (null, 0, TriageOrder.BestFirst, false, false);
+        (_text, _minScore, _order, _showHandled) = (null, 0, TriageOrder.BestFirst, false);
         (_cursor, _undo) = (0, null);
         await LoadAsync();
     }
@@ -168,13 +139,19 @@ else if (_page is not null)
     {
         _filter = _filter with
         {
-            Text = _text, MinScore = _minScore, Order = _order, OnlyUntriaged = !_showHandled, IncludeExcluded = _showExcluded, Page = 1,
+            Text = _text, MinScore = _minScore, Order = _order, OnlyUntriaged = !_showHandled, Page = 1,
         };
         _cursor = 0;
         return LoadAsync();
     }
 
     private Task SearchAsync() => FiltersChangedAsync();
+
+    private Task ToggleExcludedAsync()
+    {
+        _filter = _filter with { Excluded = !_filter.Excluded };
+        return FiltersChangedAsync();
+    }
 
     private Task GoToAsync(int page)
     {
@@ -239,9 +216,6 @@ else if (_page is not null)
 
     private Task StatusAsync(TriageRow row, ApplicationStatus status) =>
         ActAsync(row.Id, async t => { foreach (var id in row.AllIds) await t.SetStatusAsync(id, status); });
-
-    private static string CopiesTitle(TriageRow row) =>
-        row.OtherLocations.Count > 0 ? $"Também em: {string.Join(", ", row.OtherLocations)}" : "Republicada com o mesmo título e a mesma empresa";
 
     /// <returns>Whether the action went through.</returns>
     private async Task<bool> ActAsync(ListingId id, Func<TrackingService, Task> action)

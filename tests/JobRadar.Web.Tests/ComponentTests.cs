@@ -1,13 +1,22 @@
 using Bunit;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
+using JobRadar.Domain.Tracking;
+using JobRadar.Domain.Triage;
 using JobRadar.Web.Components.Shared;
 using JobRadar.Web.Text;
+using MudBlazor.Services;
 
 namespace JobRadar.Web.Tests;
 
 public class ComponentTests : BunitContext
 {
+    public ComponentTests()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddMudServices();
+    }
+
     [Fact]
     public void Explanation_walks_from_the_base_to_the_final_score()
     {
@@ -51,6 +60,59 @@ public class ComponentTests : BunitContext
         Assert.Contains("fact-pay", cut.Find(".chip.fact").ClassList);
         Assert.Empty(Render<FactChips>(p => p.Add(x => x.Facts, [])).Markup.Trim());
         Assert.All(Enum.GetValues<FactKind>(), k => Assert.EndsWith("(lido do anúncio)", Wording.FactTitle(k), StringComparison.Ordinal));
+    }
+
+    private static TriageRow Row(int score) =>
+        new(new ListingId("gupy", "7"), "Desenvolvedor .NET", "Acme", new ListingLocation(Country.BR, null, "Rio de Janeiro", "RJ", null),
+            WorkType.FullTime, null, null, DateTimeOffset.UnixEpoch, score, null, null);
+
+    private IRenderedComponent<TriageRowView> RenderRow(TriageRow row) =>
+        Render<TriageRowView>(p => p.Add(x => x.Row, row).Add(x => x.Href, "listing/gupy/7"));
+
+    [Fact]
+    public void A_row_shows_the_arrangement_and_contract_next_to_the_facts()
+    {
+        var cut = RenderRow(Row(72) with
+        {
+            Conditions = new ListingConditions(WorkArrangement.Remote, "PJ"),
+            Facts = [new ListingFact(FactKind.Start, "Immediate start")],
+        });
+
+        Assert.Equal(["Remota", "PJ", "Immediate start"], cut.FindAll(".tags .tag, .tags .chip.fact").Select(c => c.TextContent.Trim()));
+        Assert.Single(cut.FindAll(".tag-remote"));
+        Assert.Empty(cut.FindAll(".excluded-by"));
+    }
+
+    [Fact]
+    public void A_row_without_conditions_shows_no_tags()
+    {
+        var cut = RenderRow(Row(72));
+
+        Assert.Empty(cut.FindAll(".tag"));
+    }
+
+    [Fact]
+    public void An_excluded_row_says_in_one_line_why()
+    {
+        var cut = RenderRow(Row(0) with { ExcludedBy = new ScoreItem(ScoreRule.TitleExcluded, "júnior", ScoreWhere.Title, -50) });
+
+        Assert.Contains("excluded", cut.Find("li.row").ClassList);
+        Assert.Equal("Palavra do título que este perfil descarta: júnior", cut.Find(".excluded-by").TextContent);
+        Assert.Equal(Wording.ExcludedReasonUnknown, RenderRow(Row(0)).Find(".excluded-by").TextContent);
+    }
+
+    [Fact]
+    public void Row_buttons_report_the_label_and_the_status()
+    {
+        Verdict? label = null;
+        ApplicationStatus? status = null;
+        var cut = Render<TriageRowView>(p => p.Add(x => x.Row, Row(72)).Add(x => x.Href, "x")
+            .Add(x => x.OnLabel, v => label = v).Add(x => x.OnStatus, s => status = s));
+
+        cut.FindAll(".actions button").Single(b => b.TextContent.Trim() == "Ruim").Click();
+        cut.FindAll(".actions button").Single(b => b.TextContent.Trim() == "Candidatei").Click();
+
+        Assert.Equal((Verdict.Bad, ApplicationStatus.Applied), (label, status));
     }
 
     [Theory]

@@ -180,6 +180,16 @@ baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
 
+### 2026-10-30 — Triagem e página da vaga em MudBlazor (5.3)
+A linha da triagem virou um componente (`TriageRowView`) com etiquetas de arranjo e regime, lidas das partes inteiras
+do resumo que os tradutores já montam (`ListingConditions`: "Hybrid" do Seek, "Remoto · CLT" da Gupy; um "remote" solto
+no teaser não conta). As excluídas saíram do filtro "mostrar excluídas": a página diz quantas são e um clique abre a
+lista delas, cada uma com a regra que a tirou numa linha (o repositório traz a explicação só das linhas com nota 0).
+Para a contagem valer com qualquer nota mínima, o serviço pede ao repositório as excluídas sempre e aplica a nota mínima
+em memória, como já fazia com as duplicatas; pesa na medição da 1.5. Página da vaga: avaliação, candidatura e o link
+numa barra fixa, "por que esta nota" logo abaixo do cabeçalho e o anúncio inteiro aberto. Conferido no navegador com o
+banco local (desktop e celular) e os contratos da triagem nos dois bancos. Elegibilidade, moeda e fuso esperam a 5.6 e a 5.7.
+
 ### 2026-10-29 — Implantação parada desde o PR 3 (bundle sem restore)
 De 22:00 em diante todo deploy automático falhou com `NETSDK1004` no projeto `JobRadar.Infrastructure.Migrations.Postgres`:
 nenhum dos projetos publicados o referencia, então o `dotnet publish` nunca o restaurava, e o `migrations bundle` não

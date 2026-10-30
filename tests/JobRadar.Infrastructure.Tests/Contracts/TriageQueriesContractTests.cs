@@ -51,6 +51,29 @@ public abstract class TriageQueriesContractTests(DatabaseFixture db)
     }
 
     [DatabaseFact]
+    public async Task Excluded_rows_say_why_and_every_row_carries_its_conditions()
+    {
+        await db.ResetAsync();
+        await SeedAsync(("1", "Dev", "A", "tech", 60), ("2", "Lead Dev", "B", "tech", 0));
+        await using (var ctx = db.NewContext())
+        {
+            await new EfListingScoreRepository(ctx).SaveAsync(
+            [
+                new ListingScore(new ListingId("seek", "1"), "tech",
+                    new FitScore(60, [new ScoreItem(ScoreRule.PositiveSignal, "C#", ScoreWhere.Title, 10)]), "h", Monday),
+                new ListingScore(new ListingId("seek", "2"), "tech",
+                    new FitScore(0, [new ScoreItem(ScoreRule.LeadershipTitle, "lead", ScoreWhere.Title, -50)]), "h", Monday),
+            ], Ct);
+        }
+
+        var rows = (await ListAsync(new TriageFilter("tech", IncludeExcluded: true))).ToDictionary(r => r.Id.SourceId);
+
+        Assert.Null(rows["1"].ExcludedBy);   // only an excluded row brings its explanation
+        Assert.Equal(new ScoreItem(ScoreRule.LeadershipTitle, "lead", ScoreWhere.Title, -50), rows["2"].ExcludedBy);
+        Assert.Equal(WorkArrangement.Hybrid, rows["1"].Conditions.Arrangement);   // from the sample's summary
+    }
+
+    [DatabaseFact]
     public async Task Equal_scores_show_the_most_recent_first()
     {
         await db.ResetAsync();

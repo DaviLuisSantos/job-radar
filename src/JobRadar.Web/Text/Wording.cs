@@ -221,6 +221,20 @@ public static class Wording
         _ => label,
     };
 
+    public static string Arrangement(WorkArrangement arrangement) => arrangement switch
+    {
+        WorkArrangement.Remote => "Remota",
+        WorkArrangement.Hybrid => "Híbrida",
+        WorkArrangement.OnSite => "Presencial",
+        _ => "",
+    };
+
+    public static string Excluded(int count) => count == 1 ? "1 excluída" : $"{count.ToString("N0", Culture)} excluídas";
+
+    public const string ShowExcluded = "Ver as excluídas e o motivo";
+    public const string BackToOpen = "Voltar às vagas abertas";
+    public const string ExcludedReasonUnknown = "Motivo não registrado";
+
     public static string Location(ListingLocation location) => ScoringInput.FormatLocation(location) ?? "Local não informado";
 
     /// <summary>A stored instant (UTC) in the local time of the machine running the site.</summary>

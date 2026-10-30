@@ -29,7 +29,10 @@ else if (_detail is { } d)
                     <span class="salary">@salary</span>
                 }
             </p>
-            <FactChips Facts="d.Facts" />
+            <div class="tags">
+                <ListingTags Conditions="ListingConditions.Read(listing.Summary)" />
+                <FactChips Facts="d.Facts" />
+            </div>
             <p class="muted">
                 Publicada em @(listing.PostedAt is { } posted ? Wording.Date(posted) : "—") · vista pela primeira vez em @Wording.Date(d.Record.FirstSeenAt)
                 @if (listing.SourceCategory is { } category)
@@ -37,43 +40,51 @@ else if (_detail is { } d)
                     <text> · @category</text>
                 }
             </p>
-            <a class="button" href="@listing.Url" target="_blank" rel="noopener noreferrer">Abrir no @listing.Id.Source ↗</a>
         </header>
 
-        @if (listing.Summary is { } summary)
+        @* Stays on screen while the page scrolls: deciding is what this page is for. *@
+        <MudPaper Elevation="2" Class="action-bar">
+            <div class="segmented" role="group" aria-label="Avaliação">
+                <MudButton Size="Size.Small" Color="Color.Success" Variant="@(d.Label?.Verdict == Verdict.Good ? Variant.Filled : Variant.Outlined)"
+                           OnClick="() => LabelAsync(Verdict.Good)">Boa</MudButton>
+                <MudButton Size="Size.Small" Color="Color.Error" Variant="@(d.Label?.Verdict == Verdict.Bad ? Variant.Filled : Variant.Outlined)"
+                           OnClick="() => LabelAsync(Verdict.Bad)">Ruim</MudButton>
+                @if (d.Label is not null)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => LabelAsync(null)">Limpar</MudButton>
+                }
+            </div>
+            <MudSelect T="ApplicationStatus?" Value="d.Application?.Status" ValueChanged="StatusAsync" Label="Candidatura"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="status-select"
+                       ToStringFunc="StatusText">
+                @foreach (var status in Enum.GetValues<ApplicationStatus>())
+                {
+                    <MudSelectItem T="ApplicationStatus?" Value="status">@Wording.Status(status)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Href="@listing.Url.ToString()" Target="_blank"
+                       rel="noopener noreferrer" EndIcon="@Icons.Material.Outlined.OpenInNew">Abrir no @listing.Id.Source</MudButton>
+        </MudPaper>
+
+        @if (_error is { } error)
         {
-            <section>
-                <h2>Resumo</h2>
-                <ul class="summary">
-                    @foreach (var part in summary.Split(" | "))
-                    {
-                        <li>@part</li>
-                    }
-                </ul>
-            </section>
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@error</MudAlert>
         }
 
-        <section class="full-ad">
-            <h2>Anúncio inteiro</h2>
-            @if (d.Description is { } desc)
+        <section class="panel why-score">
+            <h2>Por que esta nota</h2>
+            @if (d.Scores.Count == 0)
             {
-                <p class="muted">
-                    Capturado em @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin)
-                </p>
-                <details>
-                    <summary>Mostrar o texto (@Wording.Number(desc.Text.Length) caracteres)</summary>
-                    <pre class="ad">@desc.Text</pre>
+                <p class="muted">Ainda sem nota.</p>
+            }
+            @foreach (var s in d.Scores)
+            {
+                <details open="@(s == d.Scores[0])">
+                    <summary><ScoreBadge Value="s.Score.Final" /> @s.Profile</summary>
+                    <Explanation Score="s.Score" />
+                    <p class="muted small">Nota calculada em @Wording.When(s.ScoredAt)</p>
                 </details>
             }
-            else
-            {
-                <p class="muted">Não capturado. Abra o anúncio e clique em <a href="capture">Enviar ao JobRadar</a>, ou cole o texto aqui.</p>
-            }
-            <label class="notes">
-                @(d.Description is null ? "Cole o texto do anúncio inteiro" : "Trocar por outro texto")
-                <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Texto do anúncio inteiro"></textarea>
-            </label>
-            <button @onclick="SaveDescriptionAsync" disabled="@string.IsNullOrWhiteSpace(_pasted)">Salvar e recalcular a nota</button>
         </section>
 
         @if (d.Terms.Count > 0)
@@ -89,68 +100,62 @@ else if (_detail is { } d)
             </section>
         }
 
-        <div class="columns">
-            <section class="panel">
-                <h2>Sua avaliação</h2>
-                @if (_error is { } error)
+        <section class="full-ad">
+            <h2>Anúncio inteiro</h2>
+            @if (d.Description is { } desc)
+            {
+                <p class="muted small">
+                    Capturado em @Wording.When(desc.CapturedAt) · @Wording.Origin(desc.Origin) · @Wording.Number(desc.Text.Length) caracteres
+                </p>
+                <pre class="ad">@desc.Text</pre>
+            }
+            else
+            {
+                @if (listing.Summary is { } summary)
                 {
-                    <p class="alert" role="alert">@error</p>
-                }
-                <div class="segmented" role="group" aria-label="Avaliação">
-                    <button class="good @(d.Label?.Verdict == Verdict.Good ? "on" : "")" @onclick="() => LabelAsync(Verdict.Good)">Boa</button>
-                    <button class="bad @(d.Label?.Verdict == Verdict.Bad ? "on" : "")" @onclick="() => LabelAsync(Verdict.Bad)">Ruim</button>
-                    @if (d.Label is not null)
-                    {
-                        <button class="ghost" @onclick="() => LabelAsync(null)">Limpar</button>
-                    }
-                </div>
-
-                <h3>Candidatura</h3>
-                <div class="statuses" role="group" aria-label="Situação da candidatura">
-                    @foreach (var status in Enum.GetValues<ApplicationStatus>())
-                    {
-                        <button class="@(d.Application?.Status == status ? "on" : "")" @onclick="() => StatusAsync(status)">@Wording.Status(status)</button>
-                    }
-                </div>
-                @if (d.Application?.AppliedAt is { } applied)
-                {
-                    <p class="muted">Candidatura em @Wording.Date(applied)</p>
-                }
-
-                <label class="notes">
-                    Notas
-                    <textarea rows="4" @bind="_notes" placeholder="Recrutador, contatos, próximo passo…"></textarea>
-                </label>
-                <button @onclick="SaveNotesAsync" disabled="@(_notes == d.Application?.Notes)">Salvar notas</button>
-
-                @if (d.Application is { History.Count: > 0 } app)
-                {
-                    <h3>Histórico</h3>
-                    <ol class="history">
-                        @foreach (var change in app.History.Reverse())
+                    <ul class="summary">
+                        @foreach (var part in summary.Split(" | "))
                         {
-                            <li><time>@Wording.When(change.At)</time> @Wording.Status(change.To)</li>
+                            <li>@part</li>
                         }
-                    </ol>
+                    </ul>
                 }
-            </section>
+                <p class="muted">Não capturado. Abra o anúncio e clique em <a href="capture">Enviar ao JobRadar</a>, ou cole o texto abaixo.</p>
+            }
+            <details open="@(d.Description is null)">
+                <summary>@(d.Description is null ? "Colar o texto do anúncio inteiro" : "Trocar por outro texto")</summary>
+                <label class="notes">
+                    <textarea rows="5" @bind="_pasted" @bind:event="oninput" placeholder="Texto do anúncio inteiro"></textarea>
+                </label>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SaveDescriptionAsync"
+                           Disabled="@string.IsNullOrWhiteSpace(_pasted)">Salvar e recalcular a nota</MudButton>
+            </details>
+        </section>
 
-            <section class="panel">
-                <h2>Por que esta nota</h2>
-                @if (d.Scores.Count == 0)
-                {
-                    <p class="muted">Ainda sem nota.</p>
-                }
-                @foreach (var s in d.Scores)
-                {
-                    <details open="@(s == d.Scores[0])">
-                        <summary><ScoreBadge Value="s.Score.Final" /> @s.Profile</summary>
-                        <Explanation Score="s.Score" />
-                        <p class="muted small">Nota calculada em @Wording.When(s.ScoredAt)</p>
-                    </details>
-                }
-            </section>
-        </div>
+        <section class="panel">
+            <h2>Candidatura</h2>
+            @if (d.Application?.AppliedAt is { } applied)
+            {
+                <p class="muted">Candidatura em @Wording.Date(applied)</p>
+            }
+            <label class="notes">
+                Notas
+                <textarea rows="4" @bind="_notes" placeholder="Recrutador, contatos, próximo passo…"></textarea>
+            </label>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SaveNotesAsync"
+                       Disabled="@(_notes == d.Application?.Notes)">Salvar notas</MudButton>
+
+            @if (d.Application is { History.Count: > 0 } app)
+            {
+                <h3>Histórico</h3>
+                <ol class="history">
+                    @foreach (var change in app.History.Reverse())
+                    {
+                        <li><time>@Wording.When(change.At)</time> @Wording.Status(change.To)</li>
+                    }
+                </ol>
+            }
+        </section>
     </article>
 }
 
@@ -176,7 +181,11 @@ else if (_detail is { } d)
 
     private Task LabelAsync(Verdict? verdict) => ActAsync(t => t.LabelAsync(Id, verdict));
 
-    private Task StatusAsync(ApplicationStatus status) => ActAsync(t => t.SetStatusAsync(Id, status));
+    // The select has no "none": a status is only ever changed to another.
+    private Task StatusAsync(ApplicationStatus? status) =>
+        status is { } s ? ActAsync(t => t.SetStatusAsync(Id, s)) : Task.CompletedTask;
+
+    private static string StatusText(ApplicationStatus? status) => status is { } s ? Wording.Status(s) : "";
 
     private Task SaveNotesAsync() => ActAsync(t => t.SetNotesAsync(Id, _notes));
 

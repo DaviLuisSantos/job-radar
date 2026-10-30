@@ -1,0 +1,67 @@
+@* One line of the triage list. An excluded one says, in one line, the rule that took it out. *@
+<li class="row @(Current ? "current" : "") @(Busy ? "busy" : "") @(Row.Score == 0 ? "excluded" : "")"
+    tabindex="-1" @onclick="OnSelect">
+    <ScoreBadge Value="Row.Score" />
+    <div class="what">
+        <a class="title" href="@Href">@Row.Title</a>
+        <div class="meta">
+            <span>@(Row.Company ?? "Empresa não informada")</span>
+            <span>@Wording.Location(Row.Location)@(Row.OtherLocations.Count > 0 ? $" +{Row.OtherLocations.Count} outros" : "")</span>
+            @if (Wording.WorkType(Row.WorkType) is { Length: > 0 } wt)
+            {
+                <span>@wt</span>
+            }
+            @if (Row.SalaryText is { } salary)
+            {
+                <span class="salary">@salary</span>
+            }
+        </div>
+        @if (Row.Score == 0)
+        {
+            <p class="excluded-by">@(Row.ExcludedBy is { } item ? Wording.Describe(item) : Wording.ExcludedReasonUnknown)</p>
+        }
+        <div class="tags">
+            <ListingTags Conditions="Row.Conditions" />
+            <FactChips Facts="Row.Facts" />
+        </div>
+    </div>
+    <div class="state">
+        <span class="age" title="@(Row.PostedAt is { } posted ? Wording.Date(posted) : null)">@Wording.Age(Row.PostedAt, Now)</span>
+        @if (Row.Copies.Count > 0)
+        {
+            <span class="chip" title="@CopiesTitle">publicada @(Row.Copies.Count + 1)×</span>
+        }
+        @if (Row.Status is { } status)
+        {
+            <span class="chip status-@status.ToString().ToLowerInvariant()">@Wording.Status(status)</span>
+        }
+        @if (Row.Verdict is { } verdict)
+        {
+            <span class="chip verdict-@verdict.ToString().ToLowerInvariant()">@Wording.Verdict(verdict)</span>
+        }
+    </div>
+    <div class="actions" role="group" aria-label="Triagem de @Row.Title">
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" title="Boa (g)"
+                   OnClick="() => OnLabel.InvokeAsync(Verdict.Good)">Boa</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" title="Ruim (b)"
+                   OnClick="() => OnLabel.InvokeAsync(Verdict.Bad)">Ruim</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" title="Marcar como Candidatei"
+                   OnClick="() => OnStatus.InvokeAsync(ApplicationStatus.Applied)">Candidatei</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Text" title="Não é para mim (conta como ruim)"
+                   OnClick="() => OnStatus.InvokeAsync(ApplicationStatus.Dismissed)">Descartar</MudButton>
+    </div>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public TriageRow Row { get; set; } = default!;
+    [Parameter, EditorRequired] public string Href { get; set; } = "";
+    [Parameter] public DateTimeOffset Now { get; set; }
+    [Parameter] public bool Current { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnSelect { get; set; }
+    [Parameter] public EventCallback<Verdict> OnLabel { get; set; }
+    [Parameter] public EventCallback<ApplicationStatus> OnStatus { get; set; }
+
+    private string CopiesTitle =>
+        Row.OtherLocations.Count > 0 ? $"Também em: {string.Join(", ", Row.OtherLocations)}" : "Republicada com o mesmo título e a mesma empresa";
+}

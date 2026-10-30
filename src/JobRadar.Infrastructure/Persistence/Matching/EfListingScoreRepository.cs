@@ -107,7 +107,8 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
             from app in apps.DefaultIfEmpty()
             join lab in db.ListingLabels on new { s.Source, s.SourceId } equals new { lab.Source, lab.SourceId } into labels
             from lab in labels.DefaultIfEmpty()
-            select new { s.Score, l, Status = app.Status, Verdict = lab.Verdict };
+            // The explanation only says why an excluded listing is out; for the others the list shows the score alone.
+            select new { s.Score, l, Status = app.Status, Verdict = lab.Verdict, Explanation = s.Score == 0 ? s.Explanation : null };
 
         if (!filter.IncludeExcluded)
             query = query.Where(r => r.Score > 0);
@@ -135,7 +136,12 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
                 listing.Listing.WorkType, listing.Listing.SalaryText, listing.Listing.PostedAt, listing.FirstSeenAt,
                 r.Score,
                 r.Status is null ? null : TrackingMapper.ToStatus(r.Status),
-                r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict));
+                r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict))
+            {
+                Conditions = ListingConditions.Read(listing.Listing.Summary),
+                // The exclusion is the scorer's last item: it stops at the first rule that excludes.
+                ExcludedBy = r.Explanation is null ? null : JsonSerializer.Deserialize<List<ScoreItem>>(r.Explanation, Json)?.LastOrDefault(),
+            };
         }).ToList();
     }
 

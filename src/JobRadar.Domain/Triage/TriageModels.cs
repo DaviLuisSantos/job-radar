@@ -7,6 +7,8 @@ namespace JobRadar.Domain.Triage;
 /// <summary>What the triage list shows for one profile.</summary>
 /// <param name="OnlyUntriaged">Hide listings the candidate already acted on (any status or label).</param>
 /// <param name="Text">Case-insensitive match on title or company.</param>
+/// <param name="IncludeExcluded">For the repository: also the listings scored 0.</param>
+/// <param name="Excluded">For the screen: the excluded listings instead of the open ones.</param>
 public sealed record TriageFilter(
     string Profile,
     bool IncludeExcluded = false,
@@ -15,7 +17,8 @@ public sealed record TriageFilter(
     string? Text = null,
     int Page = 1,
     int PageSize = 50,
-    TriageOrder Order = TriageOrder.BestFirst);
+    TriageOrder Order = TriageOrder.BestFirst,
+    bool Excluded = false);
 
 public enum TriageOrder
 {
@@ -52,10 +55,17 @@ public sealed record TriageRow(
 
     /// <summary>Pay, roster, accommodation and the like, read from the full ad (<see cref="ListingFacts"/>).</summary>
     public IReadOnlyList<ListingFact> Facts { get; init; } = [];
+
+    /// <summary>Arrangement and contract, as the source gives them (<see cref="ListingConditions"/>).</summary>
+    public ListingConditions Conditions { get; init; } = ListingConditions.None;
+
+    /// <summary>The rule that excluded the listing, when it scored 0.</summary>
+    public ScoreItem? ExcludedBy { get; init; }
 }
 
 /// <param name="Total">Rows after collapsing duplicates, across all pages.</param>
-public sealed record TriagePage(IReadOnlyList<TriageRow> Rows, int Total);
+/// <param name="Excluded">Excluded rows under the same filters, shown apart from the list.</param>
+public sealed record TriagePage(IReadOnlyList<TriageRow> Rows, int Total, int Excluded = 0);
 
 public sealed record ProfileScore(string Profile, FitScore Score, DateTimeOffset ScoredAt);
 
