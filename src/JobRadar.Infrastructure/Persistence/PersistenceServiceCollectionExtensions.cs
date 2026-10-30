@@ -20,9 +20,10 @@ public static class PersistenceServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString(ConnectionStringName)
             ?? throw new InvalidOperationException(
                 $"Missing connection string '{ConnectionStringName}' (ConnectionStrings:{ConnectionStringName}).");
+        var provider = DatabaseProviders.Parse(configuration[DatabaseProviders.ConfigurationKey]);
 
         services.AddDbContext<JobRadarDbContext>(o => o
-            .UseNpgsql(connectionString)
+            .UseJobRadarDatabase(provider, connectionString)
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
         services.AddScoped<IListingRepository, EfListingRepository>();

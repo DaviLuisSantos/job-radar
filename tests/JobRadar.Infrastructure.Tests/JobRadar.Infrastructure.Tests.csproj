@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\JobRadar.Infrastructure\JobRadar.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\JobRadar.Infrastructure.Migrations.Postgres\JobRadar.Infrastructure.Migrations.Postgres.csproj" />
   </ItemGroup>
 
   <ItemGroup>

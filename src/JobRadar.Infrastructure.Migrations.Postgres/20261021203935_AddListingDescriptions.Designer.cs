@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
-    [Migration("20261024140037_AddCandidateRequirements")]
-    partial class AddCandidateRequirements
+    [Migration("20261021203935_AddListingDescriptions")]
+    partial class AddListingDescriptions
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -420,28 +420,6 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.HasKey("Source", "SnapshotDate");
 
                     b.ToTable("market_snapshots", (string)null);
-                });
-
-            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.CandidateRequirementEntity", b =>
-                {
-                    b.Property<string>("ItemId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("item_id");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)")
-                        .HasColumnName("state");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("ItemId");
-
-                    b.ToTable("candidate_requirements", (string)null);
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingScoreEntity", b =>

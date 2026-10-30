@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
-    [Migration("20261021153857_AddSearchHitsAndScores")]
-    partial class AddSearchHitsAndScores
+    [Migration("20261021155311_AddListingTerms")]
+    partial class AddListingTerms
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -276,6 +276,32 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.ToTable("listing_scores", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingTermEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<string>("Term")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("term");
+
+                    b.Property<DateTimeOffset>("FoundAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("found_at");
+
+                    b.HasKey("Source", "SourceId", "Term");
+
+                    b.ToTable("listing_terms", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingPayloadEntity", b =>
                 {
                     b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
@@ -295,6 +321,15 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingScoreEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingTermEntity", b =>
                 {
                     b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
                         .WithMany()

@@ -54,7 +54,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     public JobRadarDbContext NewContext()
     {
         var options = new DbContextOptionsBuilder<JobRadarDbContext>()
-            .UseNpgsql(_container?.GetConnectionString()
+            .UseJobRadarDatabase(DatabaseProvider.Postgres, _container?.GetConnectionString()
                 ?? throw new InvalidOperationException("Container not started."))
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
             .Options;

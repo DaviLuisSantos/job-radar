@@ -128,7 +128,7 @@ foreach ($s in $services) {
 Push-Location $repo
 try {
     dotnet tool restore | Out-Null
-    dotnet ef migrations bundle --project src/JobRadar.Infrastructure --startup-project src/JobRadar.Infrastructure `
+    dotnet ef migrations bundle --project src/JobRadar.Infrastructure.Migrations.Postgres `
         -o (Join-Path $staging 'migrate.exe') --force --configuration Release | Out-Null
     if ($LASTEXITCODE) { throw 'Building the migration bundle failed.' }
 }
