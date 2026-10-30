@@ -22,6 +22,13 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+// For the watchdog (deploy/watchdog.ps1): 200 while the database answers and a pass ran within 26 h, 503 otherwise.
+// No listing data, only the pass time.
+app.MapGet("/health", async (JobRadar.Application.Operations.HealthService health, CancellationToken ct) =>
+{
+    var report = await health.CheckAsync(ct);
+    return Results.Json(report, statusCode: report.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+});
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.Run();

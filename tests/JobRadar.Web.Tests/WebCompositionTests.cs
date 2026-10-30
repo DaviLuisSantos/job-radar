@@ -32,5 +32,6 @@ public class WebCompositionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<TriageService>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<TrackingService>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<CalibrationService>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<JobRadar.Application.Operations.HealthService>());
     }
 }
