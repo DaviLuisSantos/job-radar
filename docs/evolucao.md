@@ -9,13 +9,13 @@
 | # | Fase | PRs | Estado |
 |---|---|---|---|
 | 0 | Rename e decisões de escopo | 1 | ✅ 2026-10-29 (PR 1; passada seguinte não conferida antes de seguir) |
-| 1 | SQL Server ao lado do Postgres | 5 (PRs 2–6) | 🔨 implantado 2026-10-29; falta medir a triagem no SQL Server com os dados reais (1.5) |
+| 1 | SQL Server ao lado do Postgres | 5 (PRs 2–6) | ✅ 2026-10-30 (1.5 medida: [perf-sqlserver.md](perf-sqlserver.md)) |
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras ([#28](https://github.com/DaviLuisSantos/job-radar/issues/28)) |
 | 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7); faltam os prints do README |
 
-**O que falta, como issues:** prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); 1.5 [#26](https://github.com/DaviLuisSantos/job-radar/issues/26); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
+**O que falta, como issues:** prints do README [#24](https://github.com/DaviLuisSantos/job-radar/issues/24); pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); mensageria [#28](https://github.com/DaviLuisSantos/job-radar/issues/28); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
 
 ## O que a auditoria mudou no plano original
 
@@ -123,7 +123,7 @@ só um dos bancos; o CI roda os dois no mesmo job.
 - CI: matriz `provider: [postgres, sqlserver]` com `JOBRADAR_DB_PROVIDER` para o job filtrar.
 - `Every_application_port_is_registered` com um caso por provider.
 
-**1.5 Desempenho, cópia e README.** A medição falta: [#26](https://github.com/DaviLuisSantos/job-radar/issues/26).
+**1.5 Desempenho, cópia e README.** ✅ 2026-10-30 ([#26](https://github.com/DaviLuisSantos/job-radar/issues/26)): triagem 35–45% mais rápida no SQL Server com os dados reais, antes e depois em [perf-sqlserver.md](perf-sqlserver.md).
 - ✅ Comando `copy-database Postgres|SqlServer <conexão>`. **Não** pelos repositórios, como o original propunha: eles
   respondem perguntas de negócio e não leem tabelas inteiras. `DatabaseCopy` (Infrastructure) copia entidade por
   entidade, pais primeiro, em páginas de 1.000; recusa um destino com linhas antes de gravar qualquer coisa; ids
@@ -133,9 +133,9 @@ só um dos bancos; o CI roda os dois no mesmo job.
   duplicatas em memória antes de paginar (armadilha registrada). A história honesta de desempenho é medir
   isso, empurrar ao banco o que dá (filtros, projeção só das colunas usadas) e ajustar o índice
   `ix_listing_scores_profile_score` (com `INCLUDE`). Antes/depois em `docs/perf-sqlserver.md`.
-  **Pendente, no trabalhopc:** precisa dos dados reais (ficam lá) e de um SQL Server rodando; nesta máquina o Docker
-  Desktop não sobe. Passos: `docker compose --profile sqlserver up -d sqlserver`, migrations do SQL Server,
-  `copy-database`, e medir.
+  ✅ Medido no trabalhopc com uma cópia dos dados reais: a explicação no `select` impedia o índice `(profile, score)`;
+  projeção só das colunas usadas e a explicação das excluídas numa segunda consulta. Índice sem mudança. A cópia achou
+  um defeito do `copy-database` (30 s por comando não bastavam no SQL Server recém-criado): agora 5 min.
 - ✅ README: como escolher o banco, criar o SQL Server pelas migrations e copiar os dados.
 
 **Pronto:** os seis itens do §2.7 do original. A produção segue em Postgres.

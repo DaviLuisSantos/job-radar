@@ -107,8 +107,14 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
             from app in apps.DefaultIfEmpty()
             join lab in db.ListingLabels on new { s.Source, s.SourceId } equals new { lab.Source, lab.SourceId } into labels
             from lab in labels.DefaultIfEmpty()
-            // The explanation only says why an excluded listing is out; for the others the list shows the score alone.
-            select new { s.Score, l, Status = app.Status, Verdict = lab.Verdict, Explanation = s.Score == 0 ? s.Explanation : null };
+            // Only the columns a row shows: with the explanation in the select, SQL Server read every score row whole
+            // instead of the (profile, score) index (docs/perf-sqlserver.md).
+            select new
+            {
+                s.Score, s.Source, s.SourceId, l.Title, l.Company, l.Country, l.Suburb, l.Region, l.State, l.Postcode,
+                l.WorkType, l.SalaryText, l.PostedAt, l.FirstSeenAt, l.Summary, l.Eligibility,
+                Status = app.Status, Verdict = lab.Verdict,
+            };
 
         if (!filter.IncludeExcluded)
             query = query.Where(r => r.Score > 0);
@@ -119,35 +125,43 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
         if (filter.SeenSince is { } seen)
         {
             var after = seen.ToUniversalTime();
-            query = query.Where(r => r.l.FirstSeenAt > after);
+            query = query.Where(r => r.FirstSeenAt > after);
         }
         if (filter.Text is { } text)
         {
             // Contains keeps the text literal (EF escapes LIKE wildcards on every provider); lowering both sides
             // ignores case on both databases, whose collations are case-sensitive.
             var needle = text.ToLowerInvariant();
-            query = query.Where(r => r.l.Title.ToLower().Contains(needle) || (r.l.Company ?? "").ToLower().Contains(needle));
+            query = query.Where(r => r.Title.ToLower().Contains(needle) || (r.Company ?? "").ToLower().Contains(needle));
         }
 
         var rows = await query
-            .OrderByDescending(r => r.Score).ThenByDescending(r => r.l.PostedAt).ThenBy(r => r.l.SourceId)
+            .OrderByDescending(r => r.Score).ThenByDescending(r => r.PostedAt).ThenBy(r => r.SourceId)
             .ToListAsync(ct);
 
-        return rows.Select(r =>
+        // Why an excluded listing is out, apart: a few hundred rows, read through the (profile, score) index.
+        var reasons = filter.IncludeExcluded && rows.Any(r => r.Score == 0)
+            ? (await db.ListingScores
+                    .Where(s => s.Profile == filter.Profile && s.Score == 0)
+                    .Select(s => new { s.Source, s.SourceId, s.Explanation })
+                    .ToListAsync(ct))
+                .ToDictionary(s => (s.Source, s.SourceId), s => s.Explanation)
+            : [];
+
+        return rows.Select(r => new TriageRow(
+            new ListingId(r.Source, r.SourceId), r.Title, r.Company,
+            new ListingLocation(ListingMapper.ToCountry(r.Country), r.Suburb, r.Region, r.State, r.Postcode),
+            ListingMapper.ToWorkType(r.WorkType), r.SalaryText, r.PostedAt, r.FirstSeenAt,
+            r.Score,
+            r.Status is null ? null : TrackingMapper.ToStatus(r.Status),
+            r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict))
         {
-            var listing = ListingMapper.ToRecord(r.l);
-            return new TriageRow(
-                listing.Listing.Id, listing.Listing.Title, listing.Listing.Company, listing.Listing.Location,
-                listing.Listing.WorkType, listing.Listing.SalaryText, listing.Listing.PostedAt, listing.FirstSeenAt,
-                r.Score,
-                r.Status is null ? null : TrackingMapper.ToStatus(r.Status),
-                r.Verdict is null ? null : TrackingMapper.ToVerdict(r.Verdict))
-            {
-                Conditions = ListingConditions.Read(listing.Listing.Summary),
-                Eligibility = listing.Listing.Eligibility,
-                // The exclusion is the scorer's last item: it stops at the first rule that excludes.
-                ExcludedBy = r.Explanation is null ? null : JsonSerializer.Deserialize<List<ScoreItem>>(r.Explanation, Json)?.LastOrDefault(),
-            };
+            Conditions = ListingConditions.Read(r.Summary),
+            Eligibility = r.Eligibility,
+            // The exclusion is the scorer's last item: it stops at the first rule that excludes.
+            ExcludedBy = r.Score == 0 && reasons.TryGetValue((r.Source, r.SourceId), out var reason)
+                ? JsonSerializer.Deserialize<List<ScoreItem>>(reason, Json)?.LastOrDefault()
+                : null,
         }).ToList();
     }
 
