@@ -52,3 +52,30 @@
    vaga em dois sites forma um grupo (título, empresa, local, data); nunca se apaga uma das duas.
 6. **Números do Raio-X por fonte.** Cada fonte tem seu retrato e seu status de qualidade.
    Somar fontes só depois de agrupar duplicadas, e a metodologia diz qual número é qual.
+
+## Brasil (spike de 2026-10-29, fase 2 da [evolução](evolucao.md))
+
+Só para o Matching de uso próprio: nada do Brasil vai ao Raio-X público ([visao.md](visao.md)).
+
+**Gupy** (portal de vagas de centenas de empresas brasileiras):
+- O endpoint que coletores antigos usam (`portal.api.gupy.io/api/job`) e o `api/v1/jobs` respondem 404. O que a
+  página de busca do portal chama é `GET https://portal.gupy.io/api/job-search/jobs?jobName=<termo>&limit=<n>&offset=<n>`:
+  JSON, sem cookie nem login, responde também fora do navegador. `pagination.total` dá o total da busca.
+- Campos: `id`, `name` (título), `description` (**o anúncio inteiro**, de 1 a 6 mil caracteres numa amostra de 49
+  vagas de ".net": não precisa de busca de detalhe), `careerPageName` (empresa), `publishedDate`,
+  `applicationDeadline`, `workplaceType` (`remote` | `hybrid` | `on-site`, às vezes ausente), `city`, `state`
+  (nome por extenso), `jobUrl`, `type` e `badges`.
+- `type` é o regime: `vacancy_type_effective` (CLT, 33 de 49), `vacancy_legal_entity` (PJ), `vacancy_type_associate`
+  e `vacancy_type_talent_pool` (banco de talentos, que não é vaga aberta: 10 de 49, a excluir).
+- Salário: não há campo; aparece no texto em cerca de 1 em cada 6 (8 de 49 citam "R$").
+- `robots.txt` de `portal.gupy.io`: `Disallow:` vazio (libera tudo).
+- **Termos de uso** (versão de 01/07/2026, "Diretrizes Gerais do Usuário", vale para usuários em geral): proíbem
+  "agregar, copiar ou duplicar partes" da plataforma e interferir no serviço (sobrecarga). Não falam de robôs nem de
+  coleta pelo nome. A "API pública" que citam é a de integração das empresas clientes, não esta busca.
+  Mesma situação do Seek, cujos termos também proíbem acesso automatizado e que o projeto usa com ritmo baixo e só
+  agregado em público.
+
+**Adzuna** (agregador com API oficial e chave grátis): os termos permitem "personal job search" e pesquisa pessoal;
+pedem crédito à Adzuna ao publicar. Existe `adzuna.com.br`; *verificar* com uma chave se a API responde para `br`
+(sem chave a autenticação falha antes de olhar o país). Já é a primeira fonte nova planejada para a Austrália: uma
+integração serviria aos dois países. A chave tem de ser criada pelo autor.
