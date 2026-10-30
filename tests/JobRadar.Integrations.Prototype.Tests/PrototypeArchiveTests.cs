@@ -61,7 +61,7 @@ public sealed class PrototypeArchiveTests : IDisposable
         var l = job.Listing.Listing;
         Assert.Equal(new ListingId("seek", "81234567"), l.Id);
         Assert.Equal(("Trade Assistant", "Acme", "$35 per hour", "Fictional teaser | Hybrid"), (l.Title, l.Company, l.SalaryText, l.Summary));
-        Assert.Equal(new ListingLocation("Osborne Park", "Perth", AustralianState.WA, null), l.Location);
+        Assert.Equal(new ListingLocation(Country.AU, "Osborne Park", "Perth", "WA", null), l.Location);
         Assert.Equal(WorkType.Contract, l.WorkType);
         Assert.Equal(new DateTimeOffset(2026, 5, 27, 6, 4, 23, TimeSpan.Zero), l.PostedAt);
         // SQLite datetime('now') has no zone and is UTC.

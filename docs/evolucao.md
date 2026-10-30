@@ -146,9 +146,12 @@ duplicar partes" da plataforma, como os do Seek proíbem acesso automatizado. **
 mesmas regras do Seek: uso pessoal, ritmo baixo, nada do Brasil em público, anúncio inteiro só no banco local. O
 Adzuna segue como próxima fonte da Austrália (e, se a API cobrir o Brasil, uma segunda fonte daqui).
 
-**2.2 `Country` e local neutro, sem mudança de comportamento.** `Country` na vaga (padrão `AU` para o
-histórico), `ListingLocation` com subdivisão em texto (decisão 3). Migration nos dois providers.
-Paridade (`[ParityFact]`) e contratos passam iguais.
+**2.2 `Country` e local neutro, sem mudança de comportamento.** ✅ `ListingLocation(Country, Suburb, Region, State,
+Postcode)`: `Country` (`AU` | `BR`, código ISO) é o mercado da vaga, sempre conhecido; o estado virou texto ("WA",
+"SP"). O enum `AustralianState` saiu do domínio: só o tradutor do Seek sabe quais são os estados australianos. Migration
+`AddListingCountry` nos dois bancos (coluna `country`, editada para `AU` no histórico; CEP de até 9 caracteres). Um país
+desconhecido no banco falha em vez de ser adivinhado. A paridade não rodou nesta máquina (o arquivo fica no
+trabalhopc); `FormatLocation` produz o mesmo texto de antes.
 
 **2.3 Regras por país no `FitScorer`.** Extrair `CountryRules` (decisão 2): o AU é exatamente o que existe hoje,
 provado pela paridade das 5.388 vagas sem mudança de resultado e sem mudar `RulesVersion`. Nenhuma regra BR ainda.

@@ -23,7 +23,7 @@ public class ListingScoringServiceTests
     private readonly InMemoryCandidateRequirements _requirements = new();
 
     private static SourcedListing Ad(string id, string title, DateTimeOffset? posted = null) => new(
-        new Listing(new ListingId("seek", id), title, null, ListingLocation.Unknown, WorkType.Unknown, null,
+        new Listing(new ListingId("seek", id), title, null, ListingLocation.Unknown(Country.AU), WorkType.Unknown, null,
             posted, new Uri($"https://example.test/{id}"), null),
         "{}");
 

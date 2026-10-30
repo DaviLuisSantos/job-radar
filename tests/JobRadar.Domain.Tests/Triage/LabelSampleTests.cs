@@ -6,7 +6,7 @@ namespace JobRadar.Domain.Tests.Triage;
 public class LabelSampleTests
 {
     private static TriageRow Row(string id, int score) =>
-        new(new ListingId("seek", id), $"Job {id}", "Acme", ListingLocation.Unknown, WorkType.Unknown,
+        new(new ListingId("seek", id), $"Job {id}", "Acme", ListingLocation.Unknown(Country.AU), WorkType.Unknown,
             null, null, DateTimeOffset.UnixEpoch, score, null, null);
 
     [Fact]

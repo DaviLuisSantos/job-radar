@@ -44,6 +44,6 @@ public class PrototypeMappingTests
     }
 
     private static Listing Listing() =>
-        new(new ListingId("seek", "9"), "Installer", null, new ListingLocation(null, "Perth", AustralianState.WA, null), WorkType.FullTime,
+        new(new ListingId("seek", "9"), "Installer", null, new ListingLocation(Country.AU, null, "Perth", "WA", null), WorkType.FullTime,
             null, null, new Uri("https://example.com/9"), null);
 }

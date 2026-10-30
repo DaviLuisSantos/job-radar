@@ -30,7 +30,7 @@ public class TriageServiceTests
 
     private static TriageRow Row(int i, string company) =>
         new(new ListingId("seek", i.ToString(System.Globalization.CultureInfo.InvariantCulture)), "Same title", company,
-            ListingLocation.Unknown, WorkType.Unknown, null, null, DateTimeOffset.UnixEpoch, 100 - i, null, null);
+            ListingLocation.Unknown(Country.AU), WorkType.Unknown, null, null, DateTimeOffset.UnixEpoch, 100 - i, null, null);
 
     private static TriageService Service(IListingScoreRepository scores, InMemoryDescriptions? descriptions = null) =>
         new(null!, scores, null!, null!, descriptions ?? new InMemoryDescriptions());

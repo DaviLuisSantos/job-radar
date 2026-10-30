@@ -39,8 +39,7 @@ public sealed record ScoringInput(
             ({ } s, null) => s,
             _ => null,
         };
-        var state = l.State == AustralianState.Unknown ? null : l.State.ToString();
-        return (place, state) switch
+        return (place, l.State) switch
         {
             (null, null) => null,
             (null, { } st) => st,
