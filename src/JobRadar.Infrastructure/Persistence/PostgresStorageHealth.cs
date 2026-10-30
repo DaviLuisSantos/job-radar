@@ -1,6 +1,6 @@
 using JobRadar.Application.Abstractions;
 
-namespace JobRadar.Infrastructure.Postgres;
+namespace JobRadar.Infrastructure.Persistence;
 
 internal sealed class PostgresStorageHealth(JobRadarDbContext db) : IStorageHealth
 {

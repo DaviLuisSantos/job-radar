@@ -1,9 +1,9 @@
 using JobRadar.Domain.Tracking;
-using JobRadar.Infrastructure.Postgres.Listings;
+using JobRadar.Infrastructure.Persistence.Listings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Tracking;
+namespace JobRadar.Infrastructure.Persistence.Tracking;
 
 /// <summary>Row of <c>applications</c>: the current state of the candidate's application to a listing.</summary>
 public class ApplicationEntity

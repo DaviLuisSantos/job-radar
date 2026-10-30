@@ -1,5 +1,5 @@
 using JobRadar.Application;
-using JobRadar.Infrastructure.Postgres;
+using JobRadar.Infrastructure.Persistence;
 
 namespace JobRadar.Web;
 
@@ -12,7 +12,7 @@ public static class JobRadarWebComposition
     public static IServiceCollection AddJobRadarWeb(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddApplication(configuration);
-        services.AddPostgresInfrastructure(configuration);
+        services.AddPersistence(configuration);
         services.AddRazorComponents().AddInteractiveServerComponents();
         services.AddSingleton<Backend>();
         return services;

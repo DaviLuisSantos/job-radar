@@ -3,7 +3,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
 /// <summary>
 /// Row of <c>listing_payloads</c>: one per distinct payload of a listing. An unchanged ad seen

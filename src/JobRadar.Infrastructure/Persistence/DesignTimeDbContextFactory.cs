@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace JobRadar.Infrastructure.Postgres;
+namespace JobRadar.Infrastructure.Persistence;
 
 /// <summary>Used only by <c>dotnet ef</c> to build migrations; never at runtime.</summary>
 internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<JobRadarDbContext>

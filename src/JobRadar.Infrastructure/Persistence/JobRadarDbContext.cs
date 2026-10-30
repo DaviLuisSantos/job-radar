@@ -1,11 +1,11 @@
-using JobRadar.Infrastructure.Postgres.Collection;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Market;
-using JobRadar.Infrastructure.Postgres.Matching;
-using JobRadar.Infrastructure.Postgres.Tracking;
+using JobRadar.Infrastructure.Persistence.Collection;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Market;
+using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Persistence.Tracking;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres;
+namespace JobRadar.Infrastructure.Persistence;
 
 /// <summary>
 /// The system's own database and source of truth: durable, schema changed only by migrations.

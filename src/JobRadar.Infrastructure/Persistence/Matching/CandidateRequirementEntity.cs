@@ -2,7 +2,7 @@ using JobRadar.Domain.Matching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Matching;
+namespace JobRadar.Infrastructure.Persistence.Matching;
 
 /// <summary>Row of <c>candidate_requirements</c>: the candidate's state on one catalog item.</summary>
 public class CandidateRequirementEntity

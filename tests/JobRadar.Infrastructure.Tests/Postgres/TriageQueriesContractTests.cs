@@ -2,9 +2,9 @@ using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using JobRadar.Domain.Tracking;
 using JobRadar.Domain.Triage;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Matching;
-using JobRadar.Infrastructure.Postgres.Tracking;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Persistence.Tracking;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
@@ -18,7 +18,7 @@ public class TriageQueriesContractTests(PostgresFixture db)
     {
         await using (var ctx = db.NewContext())
         {
-            await new PostgresListingRepository(ctx).RecordObservationsAsync(
+            await new EfListingRepository(ctx).RecordObservationsAsync(
                 rows.DistinctBy(r => r.Id).Select(r => new SourcedListing(
                     ListingMapperTests.Sample(r.Id, r.Title) with { Company = r.Company, PostedAt = Monday.AddHours(int.Parse(r.Id)) },
                     $$"""{"id":"{{r.Id}}"}""")).ToList(),
@@ -26,7 +26,7 @@ public class TriageQueriesContractTests(PostgresFixture db)
         }
         await using (var ctx = db.NewContext())
         {
-            await new PostgresListingScoreRepository(ctx).SaveAsync(rows.Select(r => new ListingScore(
+            await new EfListingScoreRepository(ctx).SaveAsync(rows.Select(r => new ListingScore(
                 new ListingId("seek", r.Id), r.Profile, new FitScore(r.Score, []), "h", Monday)).ToList(), Ct);
         }
     }
@@ -34,7 +34,7 @@ public class TriageQueriesContractTests(PostgresFixture db)
     private async Task<IReadOnlyList<TriageRow>> ListAsync(TriageFilter filter)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingScoreRepository(ctx).ListForTriageAsync(filter, Ct);
+        return await new EfListingScoreRepository(ctx).ListForTriageAsync(filter, Ct);
     }
 
     private static string[] Ids(IEnumerable<TriageRow> rows) => rows.Select(r => r.Id.SourceId).ToArray();
@@ -65,7 +65,7 @@ public class TriageQueriesContractTests(PostgresFixture db)
         await SeedAsync(("1", "Dev", "A", "tech", 60), ("2", "Dev 2", "B", "tech", 70), ("3", "Dev 3", "C", "tech", 80));
         await using (var ctx = db.NewContext())
         {
-            var repo = new PostgresTrackingRepository(ctx);
+            var repo = new EfTrackingRepository(ctx);
             await repo.SaveApplicationAsync(JobApplication.Start(new ListingId("seek", "3"), ApplicationStatus.Applied, Monday), Ct);
             await repo.SetLabelAsync(new ListingId("seek", "2"), new ListingLabel(new ListingId("seek", "2"), Verdict.Bad, null, Monday), Ct);
         }
@@ -98,7 +98,7 @@ public class TriageQueriesContractTests(PostgresFixture db)
         await SeedAsync(("1", "Dev", "A", "tech", 60), ("1", "Dev", "A", "fifo", 20), ("2", "Chef", "B", "hospo", 70));
 
         await using var ctx = db.NewContext();
-        var repo = new PostgresListingScoreRepository(ctx);
+        var repo = new EfListingScoreRepository(ctx);
         Assert.Equal(["fifo", "hospo", "tech"], await repo.ListProfilesAsync(Ct));
         Assert.Equal([("tech", 60), ("fifo", 20)], (await repo.GetScoresAsync(new ListingId("seek", "1"), Ct)).Select(s => (s.Profile, s.Score.Final)));
     }
@@ -111,7 +111,7 @@ public class TriageQueriesContractTests(PostgresFixture db)
         var id = new ListingId("seek", "1");
 
         await using var ctx = db.NewContext();
-        var repo = new PostgresTrackingRepository(ctx);
+        var repo = new EfTrackingRepository(ctx);
         Assert.Null(await repo.FindLabelAsync(id, Ct));
         await repo.SetLabelAsync(id, new ListingLabel(id, Verdict.Good, "nice", Monday), Ct);
         Assert.Equal((Verdict.Good, "nice"), ((await repo.FindLabelAsync(id, Ct))!.Verdict, (await repo.FindLabelAsync(id, Ct))!.Note));

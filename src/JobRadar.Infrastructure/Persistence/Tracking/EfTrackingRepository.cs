@@ -3,9 +3,9 @@ using JobRadar.Domain.Listings;
 using JobRadar.Domain.Tracking;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Tracking;
+namespace JobRadar.Infrastructure.Persistence.Tracking;
 
-internal sealed class PostgresTrackingRepository(JobRadarDbContext db) : ITrackingRepository
+internal sealed class EfTrackingRepository(JobRadarDbContext db) : ITrackingRepository
 {
     public async Task<JobApplication?> FindApplicationAsync(ListingId id, CancellationToken ct = default)
     {

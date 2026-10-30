@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
 /// <summary>Row of <c>listing_descriptions</c>: the full ad text the candidate captured, one per listing.</summary>
 public class ListingDescriptionEntity

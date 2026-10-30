@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JobRadar.Infrastructure.Postgres.Collection;
+namespace JobRadar.Infrastructure.Persistence.Collection;
 
 /// <summary>Row of <c>collection_runs</c>.</summary>
 public class CollectionRunEntity

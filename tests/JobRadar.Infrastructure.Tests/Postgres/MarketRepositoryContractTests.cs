@@ -1,6 +1,6 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
-using JobRadar.Infrastructure.Postgres.Market;
+using JobRadar.Infrastructure.Persistence.Market;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
 
@@ -19,13 +19,13 @@ public class MarketRepositoryContractTests(PostgresFixture db)
     private async Task SaveAsync(MarketSnapshot s, MarketCount[] counts, params MarketListing[] listings)
     {
         await using var ctx = db.NewContext();
-        await new PostgresMarketRepository(ctx).SaveSnapshotAsync(s, counts, listings, Ct);
+        await new EfMarketRepository(ctx).SaveSnapshotAsync(s, counts, listings, Ct);
     }
 
-    private async Task<T> Read<T>(Func<PostgresMarketRepository, Task<T>> read)
+    private async Task<T> Read<T>(Func<EfMarketRepository, Task<T>> read)
     {
         await using var ctx = db.NewContext();
-        return await read(new PostgresMarketRepository(ctx));
+        return await read(new EfMarketRepository(ctx));
     }
 
     [DatabaseFact]

@@ -1,5 +1,5 @@
 using JobRadar.Domain.Listings;
-using JobRadar.Infrastructure.Postgres.Listings;
+using JobRadar.Infrastructure.Persistence.Listings;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
@@ -24,19 +24,19 @@ public class ListingRepositoryContractTests(PostgresFixture db)
     private async Task<ObservationResult> RecordAsync(DateTimeOffset at, string searchKey, params SourcedListing[] listings)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingRepository(ctx).RecordObservationsAsync(listings, searchKey, at, Ct);
+        return await new EfListingRepository(ctx).RecordObservationsAsync(listings, searchKey, at, Ct);
     }
 
     private async Task<IReadOnlyList<Listing>> FoundByAsync(params string[] searchKeys)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingRepository(ctx).ListFoundByAsync(searchKeys, Ct);
+        return await new EfListingRepository(ctx).ListFoundByAsync(searchKeys, Ct);
     }
 
     private async Task<ListingRecord?> FindAsync(ListingId id)
     {
         await using var ctx = db.NewContext();
-        return await new PostgresListingRepository(ctx).FindAsync(id, Ct);
+        return await new EfListingRepository(ctx).FindAsync(id, Ct);
     }
 
     private async Task<List<ListingPayloadEntity>> PayloadsAsync()
@@ -143,7 +143,7 @@ public class ListingRepositoryContractTests(PostgresFixture db)
     {
         await db.ResetAsync();
         await using var ctx = db.NewContext();
-        var repo = new PostgresListingRepository(ctx);
+        var repo = new EfListingRepository(ctx);
         // Not valid JSON: Postgres rejects it for the jsonb column.
         var broken = Sourced(ListingMapperTests.Sample(), "not json");
 

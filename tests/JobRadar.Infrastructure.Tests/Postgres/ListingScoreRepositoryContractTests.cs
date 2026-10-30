@@ -1,8 +1,8 @@
 using System.Text.Json;
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
-using JobRadar.Infrastructure.Postgres.Listings;
-using JobRadar.Infrastructure.Postgres.Matching;
+using JobRadar.Infrastructure.Persistence.Listings;
+using JobRadar.Infrastructure.Persistence.Matching;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
@@ -16,7 +16,7 @@ public class ListingScoreRepositoryContractTests(PostgresFixture db)
     private async Task SeedListingsAsync(params string[] ids)
     {
         await using var ctx = db.NewContext();
-        await new PostgresListingRepository(ctx).RecordObservationsAsync(
+        await new EfListingRepository(ctx).RecordObservationsAsync(
             ids.Select(id => new SourcedListing(ListingMapperTests.Sample(id), $$"""{"id":"{{id}}"}""")).ToList(),
             "search @ perth", Monday, Ct);
     }
@@ -27,7 +27,7 @@ public class ListingScoreRepositoryContractTests(PostgresFixture db)
     private async Task SaveAsync(params ListingScore[] scores)
     {
         await using var ctx = db.NewContext();
-        await new PostgresListingScoreRepository(ctx).SaveAsync(scores, Ct);
+        await new EfListingScoreRepository(ctx).SaveAsync(scores, Ct);
     }
 
     private async Task<List<ListingScoreEntity>> RowsAsync()
@@ -72,7 +72,7 @@ public class ListingScoreRepositoryContractTests(PostgresFixture db)
         await SaveAsync(Score("2", "tech", 50) with { ScoredAt = pass });
 
         await using var ctx = db.NewContext();
-        var deleted = await new PostgresListingScoreRepository(ctx).DeleteScoredBeforeAsync(pass, Ct);
+        var deleted = await new EfListingScoreRepository(ctx).DeleteScoredBeforeAsync(pass, Ct);
 
         Assert.Equal(2, deleted);
         Assert.Equal([("2", "tech")], (await RowsAsync()).Select(r => (r.SourceId, r.Profile)));

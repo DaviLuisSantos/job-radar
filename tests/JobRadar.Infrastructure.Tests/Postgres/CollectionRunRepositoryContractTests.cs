@@ -1,5 +1,5 @@
 using JobRadar.Domain.Collection;
-using JobRadar.Infrastructure.Postgres.Collection;
+using JobRadar.Infrastructure.Persistence.Collection;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Tests.Postgres;
@@ -16,13 +16,13 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
     private async Task RecordAsync(CollectionRun run)
     {
         await using var ctx = db.NewContext();
-        await new PostgresCollectionRunRepository(ctx).RecordAsync(run, Ct);
+        await new EfCollectionRunRepository(ctx).RecordAsync(run, Ct);
     }
 
     private async Task<DateTimeOffset?> LastSuccessAsync(string key = ".net developer @ perth", string source = "seek")
     {
         await using var ctx = db.NewContext();
-        return await new PostgresCollectionRunRepository(ctx).GetLastCompleteStartAsync(source, key, Ct);
+        return await new EfCollectionRunRepository(ctx).GetLastCompleteStartAsync(source, key, Ct);
     }
 
     [DatabaseFact]
@@ -52,13 +52,13 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
     {
         await db.ResetAsync();
         await using (var empty = db.NewContext())
-            Assert.Null(await new PostgresCollectionRunRepository(empty).GetLastStartAsync(Ct));
+            Assert.Null(await new EfCollectionRunRepository(empty).GetLastStartAsync(Ct));
 
         await RecordAsync(Run(Monday));
         await RecordAsync(Run(Monday.AddDays(1), key: "term: backpackers", error: "boom"));
 
         await using var ctx = db.NewContext();
-        Assert.Equal(Monday.AddDays(1), await new PostgresCollectionRunRepository(ctx).GetLastStartAsync(Ct));
+        Assert.Equal(Monday.AddDays(1), await new EfCollectionRunRepository(ctx).GetLastStartAsync(Ct));
     }
 
     [DatabaseFact]
@@ -74,7 +74,7 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
         await RecordAsync(Run(evening.AddHours(3)) with { Complete = false });
 
         await using var ctx = db.NewContext();
-        var day = Assert.Single(await new PostgresCollectionRunRepository(ctx).SummariseRecentDaysAsync(10, perth, Ct));
+        var day = Assert.Single(await new EfCollectionRunRepository(ctx).SummariseRecentDaysAsync(10, perth, Ct));
 
         Assert.Equal(DateOnly.FromDateTime(evening.AddDays(1).UtcDateTime), day.Day);
         Assert.Equal((3, 1, 1, 20, 6), (day.Runs, day.Failed, day.Incomplete, day.Found, day.New));
@@ -89,7 +89,7 @@ public class CollectionRunRepositoryContractTests(PostgresFixture db)
         await RecordAsync(Run(Monday, error: "HttpRequestException: 503") with { Source = "adzuna" });
 
         await using var ctx = db.NewContext();
-        var runs = await new PostgresCollectionRunRepository(ctx).ListStartedSinceAsync(Monday, Ct);
+        var runs = await new EfCollectionRunRepository(ctx).ListStartedSinceAsync(Monday, Ct);
 
         Assert.Equal(
             [

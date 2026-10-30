@@ -2,9 +2,9 @@ using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Collection;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Postgres.Collection;
+namespace JobRadar.Infrastructure.Persistence.Collection;
 
-internal sealed class PostgresCollectionRunRepository(JobRadarDbContext db) : ICollectionRunRepository
+internal sealed class EfCollectionRunRepository(JobRadarDbContext db) : ICollectionRunRepository
 {
     private const int MaxErrorLength = 2000;
 

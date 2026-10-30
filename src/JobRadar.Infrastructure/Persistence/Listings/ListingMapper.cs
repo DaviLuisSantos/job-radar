@@ -1,6 +1,6 @@
 using JobRadar.Domain.Listings;
 
-namespace JobRadar.Infrastructure.Postgres.Listings;
+namespace JobRadar.Infrastructure.Persistence.Listings;
 
 /// <summary>
 /// Domain ↔ row. Text values of enums are the schema's spelling, so they live here,
