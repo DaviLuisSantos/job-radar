@@ -53,6 +53,8 @@ public sealed class ProfileCatalog
             Requirements = Requirements(name, o.Requirements, policy),
             RewardRemote = o.RewardRemote,
             ExcludedLocations = o.ExcludedLocations,
+            ExcludedTitles = o.ExcludedTitles,
+            OnSiteLocations = o.OnSiteLocations,
         };
         var searches = o.Keywords
             .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l)))

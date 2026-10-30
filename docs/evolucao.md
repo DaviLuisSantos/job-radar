@@ -160,10 +160,23 @@ aponta para os mesmos padrões de `ListingPatterns`; o scorer escolhe pelo `Coun
 (`NotSupportedException`), em vez de lido como australiano. A paridade não rodou nesta máquina: rodar no trabalhopc.
 
 **2.4 Regras BR.** (Era a 2.5: tem de vir **antes** da Gupy, ou as vagas brasileiras chegariam ao score sem regras e
-a etapa falharia.) `CountryRules.Brazil` com padrões em português (júnior/pleno/sênior, remoto/híbrido/presencial,
-CLT/PJ, banco de talentos, salário em R$, inglês obrigatório, stack principal); o que não existe no Brasil (WHV,
-cidadania australiana, carteira de caminhão, FIFO) nunca casa. Pesos novos na `ScoringPolicy`, `RulesVersion` +1.
-Calibrar com rótulos depois, como no AU.
+a etapa falharia.) ✅ `RulesVersion` 14. `CountryRules.Brazil` (padrões em `BrazilPatterns`): sênior penaliza e
+"pleno/sênior" não, liderança (tech lead, coordenador, gerente…) exclui, remoto e híbrido em português, comissão,
+anos de experiência ("5+ anos de experiência", "experiência mínima de 3 anos"), inglês como condição (−10,
+`EnglishRequiredPenalty`: marca o que treinar, não exclui). O que é australiano (WHV, cidadania, carteira de caminhão,
+FIFO, os seis meses por empregador) nunca casa. O que é **do candidato** foi para o perfil, valendo para qualquer país:
+`ExcludedTitles` (júnior, estágio, Java como stack principal) e `OnSiteLocations` (presencial fora de onde ele aceita
+exclui). No AU as regras novas nunca disparam: perfis sem as listas, padrões que não casam.
+
+Ficou para depois, com motivo:
+- **Salário** (R$ 10–15 mil +, abaixo de 8 mil −): só vem no texto (1 em 6 vagas) e o alvo é do candidato; entra com
+  os rótulos, quando der para ver se pesa.
+- **Vaga afirmativa** (exclusiva para PcD, mulheres, pessoas negras): o equivalente da "identified role" do AU, mas a
+  explicação de lá fala de aborígenes; precisa de regra e texto próprios. Conferir o que o `badges`/`disabilities`
+  da Gupy quer dizer antes.
+- **Híbrido no Rio neutro**: hoje híbrido ganha o bônus de híbrido (+5) em qualquer lugar.
+- **Banco de talentos** e **CLT/PJ**: não são regra de score; o banco de talentos sai no tradutor da Gupy (não é vaga
+  aberta), e o regime vai no resumo da vaga.
 
 **2.5 `JobRadar.Integrations.Gupy` e a contagem de tecnologias.** `AddGupyIntegration()`, `IJobSource`, tradutor para
 `Listing` com `Country = BR` (o `description` da busca vai para `listing_descriptions`: não há busca de detalhe),

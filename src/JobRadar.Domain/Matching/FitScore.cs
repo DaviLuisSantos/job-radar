@@ -44,6 +44,8 @@ public enum ScoreRule
     LeadershipTitle,
     SeniorTitle,
     LocationExcluded,
+    TitleExcluded,
+    OnSiteElsewhere,
 
     // Points
     SeniorPenalty,
@@ -74,6 +76,7 @@ public enum ScoreRule
     Apprenticeship,
     LongContract,
     CommissionOnly,
+    EnglishRequired,
     TruckLicence,
     NoSponsorship,
     Aging,

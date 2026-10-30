@@ -31,6 +31,12 @@ public sealed class ProfileOptions
     /// <summary>Locations that rule a listing out ("Perth WA" for regional work that must count for a visa).</summary>
     public List<string> ExcludedLocations { get; set; } = [];
 
+    /// <summary>Title words that rule a listing out: a level ("júnior") or a main stack ("java").</summary>
+    public List<string> ExcludedTitles { get; set; } = [];
+
+    /// <summary>Where on-site work is possible; on-site anywhere else rules the listing out. Empty: anywhere.</summary>
+    public List<string> OnSiteLocations { get; set; } = [];
+
     /// <summary>Remote/hybrid bonus; turn off for site work, where "remote" means the place.</summary>
     public bool RewardRemote { get; set; } = true;
 

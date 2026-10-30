@@ -35,6 +35,18 @@ public sealed record MatchingProfile(
     /// do not count in the city), matched as a whole token in the location label.
     /// </summary>
     public IReadOnlyList<string> ExcludedLocations { get; init; } = [];
+
+    /// <summary>
+    /// Words that rule a listing out by its title, matched as a whole token: a level the candidate is past
+    /// ("júnior", "estágio") or a main stack they do not work in ("java").
+    /// </summary>
+    public IReadOnlyList<string> ExcludedTitles { get; init; } = [];
+
+    /// <summary>
+    /// Where on-site work is possible; an ad that says it is on-site (<see cref="CountryRules.OnSite"/>) anywhere
+    /// else is ruled out. Empty: on-site work anywhere is fine.
+    /// </summary>
+    public IReadOnlyList<string> OnSiteLocations { get; init; } = [];
 }
 
 /// <summary>
@@ -94,6 +106,8 @@ public sealed record ScoringPolicy
     public int AmbiguousRightsPenalty { get; init; } = 10;
     public int TwelveMonthRightsPenalty { get; init; } = 40;
     public int CommissionOnlyPenalty { get; init; } = 30;
+    /// <summary>English as a condition, in a market whose ads are not in English: something to train, not a no.</summary>
+    public int EnglishRequiredPenalty { get; init; } = 10;
 
     // A requirement of the profile found in the full ad, by the candidate's state on it
     // (CandidateRequirements); a requirement the candidate has costs nothing. Moderate below out of reach:
