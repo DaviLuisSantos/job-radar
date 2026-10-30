@@ -21,5 +21,19 @@ services:
       interval: 5s
       retries: 10
 
+  # Only with --profile sqlserver: the second database, for trying the SQL Server provider locally
+  # (Database__Provider=SqlServer). Production does not use it.
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: [sqlserver]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: JobRadar-local-1
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+
 volumes:
   pgdata:
+  mssqldata:

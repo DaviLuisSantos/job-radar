@@ -1,11 +1,12 @@
 using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
 using JobRadar.Infrastructure.Persistence.Market;
+using JobRadar.Infrastructure.Tests.Databases;
+using JobRadar.Infrastructure.Tests.Persistence;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Contracts;
 
-[Collection(PostgresCollection.Name)]
-public class MarketRepositoryContractTests(PostgresFixture db)
+public abstract class MarketRepositoryContractTests(DatabaseFixture db)
 {
     private static readonly DateOnly D1 = new(2026, 10, 1), D2 = new(2026, 10, 2), D3 = new(2026, 10, 3);
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -14,7 +15,7 @@ public class MarketRepositoryContractTests(PostgresFixture db)
         new("seek", day, status, 2, 2, 1, status == SnapshotStatus.Ok ? [] : ["listagem incompleta: HVAC-R / Perth WA"]);
 
     private static MarketListing Ad(string id, string salary = "$40 - $45 per hour") =>
-        new("HVAC-R", "Perth WA", Postgres.ListingMapperTests.Sample(id) with { SalaryText = salary });
+        new("HVAC-R", "Perth WA", Persistence.ListingMapperTests.Sample(id) with { SalaryText = salary });
 
     private async Task SaveAsync(MarketSnapshot s, MarketCount[] counts, params MarketListing[] listings)
     {
@@ -80,3 +81,9 @@ public class MarketRepositoryContractTests(PostgresFixture db)
         Assert.Equal(["zerou: X", "variação brusca: Y"], Assert.Single(await Read(r => r.GetSnapshotsAsync("seek", D1, D3, Ct))).Issues);
     }
 }
+
+[Collection(PostgresCollection.Name)]
+public sealed class PostgresMarketRepositoryContractTests(PostgresFixture db) : MarketRepositoryContractTests(db);
+
+[Collection(SqlServerCollection.Name)]
+public sealed class SqlServerMarketRepositoryContractTests(SqlServerFixture db) : MarketRepositoryContractTests(db);

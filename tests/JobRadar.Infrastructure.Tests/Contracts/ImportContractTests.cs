@@ -2,12 +2,13 @@ using JobRadar.Domain.Listings;
 using JobRadar.Domain.Market;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Market;
+using JobRadar.Infrastructure.Tests.Databases;
+using JobRadar.Infrastructure.Tests.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Contracts;
 
-[Collection(PostgresCollection.Name)]
-public class ImportContractTests(PostgresFixture db)
+public abstract class ImportContractTests(DatabaseFixture db)
 {
     private static readonly DateTimeOffset June = new(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset October = new(2026, 10, 21, 6, 0, 0, TimeSpan.Zero);
@@ -95,3 +96,9 @@ public class ImportContractTests(PostgresFixture db)
         Assert.Equal((new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 20), 100_000), (seen.FirstSeen, seen.LastSeen, seen.AnnualMin!.Value));
     }
 }
+
+[Collection(PostgresCollection.Name)]
+public sealed class PostgresImportContractTests(PostgresFixture db) : ImportContractTests(db);
+
+[Collection(SqlServerCollection.Name)]
+public sealed class SqlServerImportContractTests(SqlServerFixture db) : ImportContractTests(db);

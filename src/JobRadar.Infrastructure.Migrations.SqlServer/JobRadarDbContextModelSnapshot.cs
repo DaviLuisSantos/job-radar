@@ -230,7 +230,10 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
 
                     b.HasKey("Source", "SourceId", "PayloadHash");
 
-                    b.ToTable("listing_payloads", (string)null);
+                    b.ToTable("listing_payloads", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_payloads_payload_json", "ISJSON(payload) = 1");
+                        });
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingSearchHitEntity", b =>
@@ -504,7 +507,10 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                     b.HasIndex("Profile", "Score")
                         .HasDatabaseName("ix_listing_scores_profile_score");
 
-                    b.ToTable("listing_scores", (string)null);
+                    b.ToTable("listing_scores", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_scores_explanation_json", "ISJSON(explanation) = 1");
+                        });
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingTermEntity", b =>

@@ -5,11 +5,12 @@ using JobRadar.Domain.Triage;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Matching;
 using JobRadar.Infrastructure.Persistence.Tracking;
+using JobRadar.Infrastructure.Tests.Databases;
+using JobRadar.Infrastructure.Tests.Persistence;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Contracts;
 
-[Collection(PostgresCollection.Name)]
-public class TriageQueriesContractTests(PostgresFixture db)
+public abstract class TriageQueriesContractTests(DatabaseFixture db)
 {
     private static readonly DateTimeOffset Monday = new(2026, 10, 19, 9, 0, 0, TimeSpan.FromHours(8));
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -117,3 +118,9 @@ public class TriageQueriesContractTests(PostgresFixture db)
         Assert.Equal((Verdict.Good, "nice"), ((await repo.FindLabelAsync(id, Ct))!.Verdict, (await repo.FindLabelAsync(id, Ct))!.Note));
     }
 }
+
+[Collection(PostgresCollection.Name)]
+public sealed class PostgresTriageQueriesContractTests(PostgresFixture db) : TriageQueriesContractTests(db);
+
+[Collection(SqlServerCollection.Name)]
+public sealed class SqlServerTriageQueriesContractTests(SqlServerFixture db) : TriageQueriesContractTests(db);

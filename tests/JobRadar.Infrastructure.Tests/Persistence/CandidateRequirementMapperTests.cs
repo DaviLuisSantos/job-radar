@@ -1,7 +1,7 @@
 using JobRadar.Domain.Matching;
 using JobRadar.Infrastructure.Persistence.Matching;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Persistence;
 
 public class CandidateRequirementMapperTests
 {

@@ -4,11 +4,12 @@ using JobRadar.Domain.Tracking;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Matching;
 using JobRadar.Infrastructure.Persistence.Tracking;
+using JobRadar.Infrastructure.Tests.Databases;
+using JobRadar.Infrastructure.Tests.Persistence;
 
-namespace JobRadar.Infrastructure.Tests.Postgres;
+namespace JobRadar.Infrastructure.Tests.Contracts;
 
-[Collection(PostgresCollection.Name)]
-public class TrackingRepositoryContractTests(PostgresFixture db)
+public abstract class TrackingRepositoryContractTests(DatabaseFixture db)
 {
     private static readonly DateTimeOffset Monday = new(2026, 10, 19, 9, 0, 0, TimeSpan.FromHours(8));
     private static readonly ListingId One = new("seek", "1");
@@ -121,3 +122,9 @@ public class TrackingRepositoryContractTests(PostgresFixture db)
         Assert.Equal("Backend Developer (.NET)", judged[0].Title);
     }
 }
+
+[Collection(PostgresCollection.Name)]
+public sealed class PostgresTrackingRepositoryContractTests(PostgresFixture db) : TrackingRepositoryContractTests(db);
+
+[Collection(SqlServerCollection.Name)]
+public sealed class SqlServerTrackingRepositoryContractTests(SqlServerFixture db) : TrackingRepositoryContractTests(db);
