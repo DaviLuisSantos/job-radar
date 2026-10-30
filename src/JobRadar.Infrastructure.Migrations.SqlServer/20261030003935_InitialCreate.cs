@@ -204,6 +204,7 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_listing_payloads", x => new { x.source, x.source_id, x.payload_hash });
+                    table.CheckConstraint("ck_listing_payloads_payload_json", "ISJSON(payload) = 1");
                     table.ForeignKey(
                         name: "FK_listing_payloads_listings_source_source_id",
                         columns: x => new { x.source, x.source_id },
@@ -227,6 +228,7 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_listing_scores", x => new { x.source, x.source_id, x.profile });
+                    table.CheckConstraint("ck_listing_scores_explanation_json", "ISJSON(explanation) = 1");
                     table.ForeignKey(
                         name: "FK_listing_scores_listings_source_source_id",
                         columns: x => new { x.source, x.source_id },

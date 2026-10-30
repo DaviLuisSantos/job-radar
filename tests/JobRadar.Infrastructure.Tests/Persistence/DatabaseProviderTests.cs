@@ -47,6 +47,27 @@ public sealed class DatabaseProviderTests
         Assert.Contains("20261024153158_AddCandidateExperience", ids);
     }
 
+    [Fact]
+    public void Text_keys_compare_by_case_and_accent_in_memory_too()
+    {
+        // The change tracker has its own comparison, apart from the database collation.
+        foreach (var provider in Enum.GetValues<DatabaseProvider>())
+        {
+            using var db = Context(provider);
+            var keys = db.Model.GetEntityTypes()
+                .SelectMany(t => t.GetKeys().SelectMany(k => k.Properties).Concat(t.GetForeignKeys().SelectMany(f => f.Properties)))
+                .Where(p => p.ClrType == typeof(string))
+                .Distinct();
+
+            foreach (var key in keys)
+            {
+                var comparer = key.GetKeyValueComparer();
+                Assert.False(comparer.Equals("cafe", "Cafe"), $"{provider}: {key.DeclaringType.DisplayName()}.{key.Name} ignores case.");
+                Assert.False(comparer.Equals("cafe", "café"), $"{provider}: {key.DeclaringType.DisplayName()}.{key.Name} ignores accents.");
+            }
+        }
+    }
+
     private static JobRadarDbContext Context(DatabaseProvider provider) =>
         new(new DbContextOptionsBuilder<JobRadarDbContext>()
             .UseJobRadarDatabase(provider, "Server=unused;Database=unused")

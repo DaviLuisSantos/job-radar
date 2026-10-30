@@ -3,6 +3,7 @@ using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Matching;
 using JobRadar.Infrastructure.Persistence.Tracking;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace JobRadar.Infrastructure.Persistence;
@@ -31,8 +32,25 @@ internal static class ProviderModel
         }
         else if (database.IsSqlServer())
         {
-            // JSON text lands in nvarchar(max) and ids in IDENTITY columns by convention.
+            // Ids land in IDENTITY columns by convention; JSON in nvarchar(max), which takes any text: the check
+            // refuses what jsonb refuses.
             modelBuilder.UseCollation(SqlServerCollation);
+            modelBuilder.Entity<ListingPayloadEntity>()
+                .ToTable(t => t.HasCheckConstraint("ck_listing_payloads_payload_json", "ISJSON(payload) = 1"));
+            modelBuilder.Entity<ListingScoreEntity>()
+                .ToTable(t => t.HasCheckConstraint("ck_listing_scores_explanation_json", "ISJSON(explanation) = 1"));
+
+            // The SQL Server provider compares text keys ignoring case in the change tracker, as its default
+            // collation would; with the collation above that would merge "Cafe" and "cafe" before the database
+            // ever sees them. Ordinal, as on Postgres. Runtime only: comparers are not in the migrations.
+            foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(t => t.GetProperties())
+                         .Where(p => p.ClrType == typeof(string)))
+                property.SetValueComparer(OrdinalComparer);
         }
     }
+
+    private static readonly ValueComparer<string> OrdinalComparer = new(
+        (a, b) => string.Equals(a, b, StringComparison.Ordinal),
+        v => v == null ? 0 : StringComparer.Ordinal.GetHashCode(v),
+        v => v);
 }

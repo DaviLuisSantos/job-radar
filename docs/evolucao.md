@@ -107,7 +107,11 @@ a migration **cria** o banco; a fixture da 1.4 precisa de um banco novo, não o 
 sem `ILike` (`ToLower().Contains()`). O SqlClient puxava `System.Security.Cryptography.Pkcs` 9.0.11, vulnerável: fixado
 em 10.0.13.
 
-**1.4 Contratos nos dois bancos.**
+**1.4 Contratos nos dois bancos.** ✅ no PR 5. O primeiro CI contra o SQL Server de verdade achou duas diferenças, as duas
+resolvidas no `ProviderModel`: o change tracker do provider SQL Server compara chaves de texto sem caixa (trocado por
+ordinal, com teste sem banco), e `nvarchar(max)` aceitava JSON inválido que o jsonb recusa (`CHECK ISJSON`; a
+`InitialCreate` do SQL Server foi regerada, porque nunca tinha sido aplicada). Ficou de fora: a variável para rodar
+só um dos bancos; o CI roda os dois no mesmo job.
 - `Testcontainers.MsSql` em `Directory.Packages.props`; `SqlServerFixture` ao lado da `PostgresFixture`.
 - As 10 classes de contrato viram abstratas com uma derivada por banco (sem `[Theory]` por provider: a fixture
   de coleção do xUnit fica limpa assim). `[DatabaseFact]` continua o portão.

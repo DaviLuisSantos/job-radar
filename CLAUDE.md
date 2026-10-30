@@ -210,6 +210,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   busca de texto é `ToLower().Contains()`, que o EF escapa nos dois. O SQL Server usa collation sensível a caixa e
   acento (`Latin1_General_100_CS_AS_SC_UTF8`), como o Postgres; ela só vale se o banco for **criado** pelas migrations
   (`Migrate` num banco que não existe): a migration não altera a collation de um banco já criado.
+  A collation não basta: o provider do SQL Server compara chaves de texto **sem** caixa no change tracker, e o
+  `ProviderModel` troca por ordinal (`Text_keys_compare_by_case_and_accent_in_memory_too`). JSON no SQL Server é
+  `nvarchar(max)` com `CHECK (ISJSON(...) = 1)`, para recusar o que o jsonb recusa.
 - Lista de triagem: agrupar duplicatas (`Duplicates.Collapse`) **antes** de paginar, e aplicar cada ação a
   todas as cópias (`TriageRow.AllIds`).
 - Paralelismo: chamadas ao Seek podem rodar em paralelo à vontade, o `SeekPacingHandler` segura o total
