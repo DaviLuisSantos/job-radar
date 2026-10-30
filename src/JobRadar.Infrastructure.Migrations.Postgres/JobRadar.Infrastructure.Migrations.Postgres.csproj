@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Postgres schema history. Kept out of JobRadar.Infrastructure because EF Core migrations are per
+       provider: the SQL Server ones live in their own assembly, built from the same model. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobRadar.Infrastructure\JobRadar.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

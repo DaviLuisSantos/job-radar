@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
-    [Migration("20261021165805_AddMarketSnapshot")]
-    partial class AddMarketSnapshot
+    [Migration("20261024153158_AddCandidateExperience")]
+    partial class AddCandidateExperience
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -81,6 +81,38 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasDatabaseName("ix_collection_runs_search");
 
                     b.ToTable("collection_runs", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingDescriptionEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<DateTimeOffset>("CapturedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("captured_at");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("origin");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("Source", "SourceId");
+
+                    b.ToTable("listing_descriptions", (string)null);
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", b =>
@@ -390,6 +422,49 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.ToTable("market_snapshots", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.CandidateExperienceEntity", b =>
+                {
+                    b.Property<string>("Profile")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("profile");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<decimal>("Years")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("years");
+
+                    b.HasKey("Profile");
+
+                    b.ToTable("candidate_experience", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.CandidateRequirementEntity", b =>
+                {
+                    b.Property<string>("ItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("item_id");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ItemId");
+
+                    b.ToTable("candidate_requirements", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingScoreEntity", b =>
                 {
                     b.Property<string>("Source")
@@ -571,6 +646,15 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.HasKey("Source", "SourceId");
 
                     b.ToTable("listing_labels", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingDescriptionEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
+                        .WithOne()
+                        .HasForeignKey("JobRadar.Infrastructure.Persistence.Listings.ListingDescriptionEntity", "Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingPayloadEntity", b =>

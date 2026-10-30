@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
     partial class JobRadarDbContextModelSnapshot : ModelSnapshot

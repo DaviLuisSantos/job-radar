@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
-    [Migration("20261021153358_AddListingSummary")]
-    partial class AddListingSummary
+    [Migration("20261021153857_AddSearchHitsAndScores")]
+    partial class AddSearchHitsAndScores
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -203,7 +203,98 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                     b.ToTable("listing_payloads", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingSearchHitEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<string>("SearchKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("search_key");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at");
+
+                    b.HasKey("Source", "SourceId", "SearchKey");
+
+                    b.HasIndex("SearchKey")
+                        .HasDatabaseName("ix_listing_search_hits_search_key");
+
+                    b.ToTable("listing_search_hits", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingScoreEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<string>("Profile")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("profile");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("explanation");
+
+                    b.Property<string>("RulesHash")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("rules_hash");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<DateTimeOffset>("ScoredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scored_at");
+
+                    b.HasKey("Source", "SourceId", "Profile");
+
+                    b.HasIndex("Profile", "Score")
+                        .HasDatabaseName("ix_listing_scores_profile_score");
+
+                    b.ToTable("listing_scores", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingPayloadEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingSearchHitEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Matching.ListingScoreEntity", b =>
                 {
                     b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
                         .WithMany()

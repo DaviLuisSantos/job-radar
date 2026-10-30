@@ -87,16 +87,17 @@ contrato passam iguais. Mantém `PostgresStorageHealth` (o "esperar o banco" é 
 ficam em `Postgres/Migrations` (são do Postgres) até a 1.2 as levar para o assembly próprio.
 
 **1.2 Provider por configuração e migrations em assemblies próprios.**
-- `Database:Provider` = `Postgres` (padrão, na classe de opções, como `SeekOptions`) | `SqlServer`.
-  A connection string continua em `ConnectionStrings:JobRadar`.
-- `JobRadar.Infrastructure.Migrations.Postgres`: as 11 migrations atuais movidas sem regerar. O histórico
-  (`__EFMigrationsHistory`) guarda o id da migration, não o namespace: a produção não reaplica nada. Provar com
-  um teste que aplica sobre um banco já migrado e não acha pendência.
-- `IEntityTypeConfiguration` comuns; o que muda por provider (tipo JSON, identity) num ajuste por provider,
+- ✅ `Database:Provider` (sem valor = `Postgres`; nome desconhecido falha dizendo os válidos), lido em
+  `DatabaseProviders.Parse`; `UseJobRadarDatabase` é o único ponto que liga o contexto a um provider (DI, fábrica de
+  design, fixture). A connection string continua em `ConnectionStrings:JobRadar`.
+- ✅ `JobRadar.Infrastructure.Migrations.Postgres`: as 11 migrations movidas sem regerar, na raiz do projeto
+  (`--output-dir .`). O histórico (`__EFMigrationsHistory`) guarda o id, não o namespace: a produção não reaplica
+  nada. Teste sem banco (`DatabaseProviderTests`) prova os ids e que o modelo bate com o snapshot.
+- Fica para a 1.3, com o SQL Server: `IEntityTypeConfiguration` comuns; o que muda por provider (tipo JSON, identity) num ajuste por provider,
   sem `if` espalhado.
-- `DesignTimeDbContextFactory` lê o provider do argumento (`-- --provider SqlServer`).
-- `deploy.ps1`: bundle a partir do assembly de migrations do Postgres. **Testar o deploy local antes do merge**
-  (é o caminho que implanta sozinho).
+- ✅ Uma `DesignTimeDbContextFactory` em cada assembly de migrations: dispensa o `-- --provider` do original.
+- ✅ `deploy.ps1`: bundle a partir do assembly de migrations do Postgres (o bundle foi gerado localmente com o
+  mesmo comando).
 
 **1.3 Migration inicial do SQL Server + itens da auditoria.** Busca da triagem sem `ILike`, identity neutra,
 collation sensível a maiúsculas na criação do banco. Ler a migration gerada antes de commitar (armadilha conhecida).

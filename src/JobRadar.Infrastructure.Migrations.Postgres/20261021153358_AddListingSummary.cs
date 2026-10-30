@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     /// <inheritdoc />
     public partial class AddListingSummary : Migration

@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
     [Migration("20261021161350_AddApplicationsAndLabels")]

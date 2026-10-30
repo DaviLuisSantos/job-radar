@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
-    [Migration("20261021151420_AddPayloadsAndCollectionRuns")]
-    partial class AddPayloadsAndCollectionRuns
+    [Migration("20261021153358_AddListingSummary")]
+    partial class AddListingSummary
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -141,6 +141,10 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
                         .HasColumnName("suburb");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text")
+                        .HasColumnName("summary");
 
                     b.Property<string>("Title")
                         .IsRequired()

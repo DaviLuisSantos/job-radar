@@ -46,7 +46,7 @@ dotnet run --project src/JobRadar.Web
 ```
 
 ```bash
-dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-dir Postgres/Migrations
+dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations.Postgres --output-dir .
 ```
 
 - Build: 0 erros, **0 warnings** — `TreatWarningsAsErrors` em `Directory.Build.props`.
@@ -73,7 +73,8 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure --output-d
 ```
 src/JobRadar.Domain          modelo puro (Listings/, Collection/, Matching/, Tracking/) — sem EF, HTTP ou integração
 src/JobRadar.Application     serviços (Collection/, Matching/, Tracking/) + portas em Abstractions/
-src/JobRadar.Infrastructure  Persistence/<Agregado>/: Entity → Configuration → Mapper → Ef<Agregado>Repository; migrations em Postgres/Migrations
+src/JobRadar.Infrastructure  Persistence/<Agregado>/: Entity → Configuration → Mapper → Ef<Agregado>Repository
+src/JobRadar.Infrastructure.Migrations.Postgres  migrations do Postgres (EF não compartilha migrations entre bancos)
 src/JobRadar.Integrations.Seek  IJobSource do Seek: cliente (Api/), tradutor, paginação
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
@@ -152,7 +153,7 @@ padrão do tipo, que é o peso de antes; mudar um estado repontua na hora as vag
 `calibrate --rescore` (pontua de novo em memória com as regras do build, sem gravar: o depois). Para medir uma
 branch contra os rótulos reais, rode-a num worktree no trabalhopc com o `appsettings.Local.json` copiado.
 
-Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure`,
+Para rodar uma passada local: `docker compose up -d`, `dotnet ef database update --project src/JobRadar.Infrastructure.Migrations.Postgres`,
 e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma prova leve).
 
 ## Armadilhas
@@ -166,6 +167,9 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Local do Seek: divida no **primeiro** `", "` (`SeekListingTranslator.ParseLocation`), porque há regiões
   com vírgula no nome.
 - Padrões de opções ficam na classe (`SeekOptions`), não no `appsettings.json`.
+- O contexto só encontra o banco por `UseJobRadarDatabase` (`Database:Provider`, padrão Postgres), que aponta o assembly
+  de migrations do provider pelo nome. Quem aplica migrations (o bundle do `deploy.ps1`, a fixture dos testes) referencia
+  esse assembly; o site e o worker não aplicam e não precisam dele.
 - Migration gerada pelo EF pode escolher a renomeação errada. Leia antes de commitar
   (`SplitLocationIntoSuburbAndRegion` foi corrigida à mão: `city` → `region`).
 - Campo novo e volátil no payload do Seek duplica `listing_payloads` a cada coleta. Sintoma: payloads >

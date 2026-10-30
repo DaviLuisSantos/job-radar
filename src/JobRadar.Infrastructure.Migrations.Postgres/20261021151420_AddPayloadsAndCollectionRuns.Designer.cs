@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace JobRadar.Infrastructure.Postgres.Migrations
+namespace JobRadar.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(JobRadarDbContext))]
-    [Migration("20261021150621_SplitLocationIntoSuburbAndRegion")]
-    partial class SplitLocationIntoSuburbAndRegion
+    [Migration("20261021151420_AddPayloadsAndCollectionRuns")]
+    partial class AddPayloadsAndCollectionRuns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,64 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Collection.CollectionRunEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Complete")
+                        .HasColumnType("boolean")
+                        .HasColumnName("complete");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error");
+
+                    b.Property<DateTimeOffset>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<int>("Found")
+                        .HasColumnType("integer")
+                        .HasColumnName("found");
+
+                    b.Property<int>("New")
+                        .HasColumnType("integer")
+                        .HasColumnName("new");
+
+                    b.Property<int?>("PostedWithinDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("posted_within_days");
+
+                    b.Property<string>("SearchKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("search_key");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Source", "SearchKey", "StartedAt")
+                        .HasDatabaseName("ix_collection_runs_search");
+
+                    b.ToTable("collection_runs", (string)null);
+                });
 
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", b =>
                 {
@@ -107,6 +165,47 @@ namespace JobRadar.Infrastructure.Postgres.Migrations
                         .HasDatabaseName("ix_listings_first_seen_at");
 
                     b.ToTable("listings", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingPayloadEntity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_id");
+
+                    b.Property<string>("PayloadHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("payload_hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.HasKey("Source", "SourceId", "PayloadHash");
+
+                    b.ToTable("listing_payloads", (string)null);
+                });
+
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Listings.ListingPayloadEntity", b =>
+                {
+                    b.HasOne("JobRadar.Infrastructure.Persistence.Listings.ListingEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Source", "SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
