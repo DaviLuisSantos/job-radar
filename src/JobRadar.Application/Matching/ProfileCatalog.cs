@@ -13,7 +13,7 @@ public sealed record ProfileDefinition(MatchingProfile Profile, IReadOnlyList<Li
     public string Name => Profile.Name;
 
     /// <summary>The market the profile searches and scores.</summary>
-    public Country Country { get; init; } = Country.AU;
+    public JobMarket Market => Profile.Market;
 
     /// <summary>
     /// Keys whose listings this profile scores: its searches, plus <see cref="ProfileCatalog.DirectKey"/> for
@@ -49,6 +49,10 @@ public sealed class ProfileCatalog
 
     internal static ProfileDefinition Build(string name, ProfileOptions o, ScoringPolicy policy)
     {
+        var written = string.IsNullOrWhiteSpace(o.Market) ? o.Country : o.Market;
+        var market = string.IsNullOrWhiteSpace(written) ? JobMarket.AU
+            : JobMarkets.Parse(written) ?? throw new InvalidOperationException(
+                $"Profile '{name}': unknown market '{written}' (Matching:Profiles:{name}:Market). Use one of: {string.Join(", ", Enum.GetNames<JobMarket>())}.");
         var profile = new MatchingProfile(
             name, o.PositiveSignals, o.NegativeSignals, o.DisqualifySignals, o.QualifiedTitles,
             o.EntryLevelBoost, o.AllowSenior, o.PreferredLocations)
@@ -58,16 +62,13 @@ public sealed class ProfileCatalog
             ExcludedLocations = o.ExcludedLocations,
             ExcludedTitles = o.ExcludedTitles,
             OnSiteLocations = o.OnSiteLocations,
+            Market = market,
         };
-        var country = Enum.GetValues<Country>().Cast<Country?>()
-                .FirstOrDefault(c => c.ToString()!.Equals(o.Country?.Trim(), StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException(
-                $"Profile '{name}': unknown country '{o.Country}' (Matching:Profiles:{name}:Country). Use one of: {string.Join(", ", Enum.GetNames<Country>())}.");
         var searches = o.Keywords
-            .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Country: country)))
+            .SelectMany(k => o.Locations.Select(l => new ListingSearch(k, l, Market: market)))
             .DistinctBy(s => s.Key)
             .ToList();
-        return new ProfileDefinition(profile, searches, RulesHash(profile, policy)) { Country = country };
+        return new ProfileDefinition(profile, searches, RulesHash(profile, policy));
     }
 
     /// <summary>

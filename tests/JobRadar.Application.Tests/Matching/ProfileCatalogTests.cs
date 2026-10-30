@@ -1,4 +1,5 @@
 using JobRadar.Application.Matching;
+using JobRadar.Domain.Listings;
 using JobRadar.Domain.Matching;
 using Microsoft.Extensions.Options;
 
@@ -27,6 +28,34 @@ public class ProfileCatalogTests
         Assert.Equal(
             [".net developer @ perth wa", ".net developer @ all australia", "c# developer @ perth wa", "c# developer @ all australia"],
             profile.Searches.Select(s => s.Key));
+    }
+
+    [Theory]
+    [InlineData(null, null, JobMarket.AU)]
+    [InlineData("GlobalRemote", null, JobMarket.GlobalRemote)]
+    [InlineData("latamremote", null, JobMarket.LatamRemote)]
+    [InlineData(null, "BR", JobMarket.BR)]        // "Country" from before markets still reads
+    [InlineData("BR", "AU", JobMarket.BR)]         // Market wins
+    public void The_market_comes_from_the_profile_and_reaches_its_searches(string? market, string? country, JobMarket expected)
+    {
+        var options = Dotnet();
+        options.Market = market;
+        options.Country = country;
+
+        var profile = Assert.Single(Catalog(("tech", options)).Profiles);
+
+        Assert.Equal(expected, profile.Market);
+        Assert.All(profile.Searches, s => Assert.Equal(expected, s.Market));
+    }
+
+    [Fact]
+    public void An_unknown_market_fails_naming_the_valid_ones()
+    {
+        var options = Dotnet();
+        options.Market = "Mars";
+
+        var error = Assert.Throws<InvalidOperationException>(() => Catalog(("tech", options)));
+        Assert.Contains("LatamRemote", error.Message);
     }
 
     [Fact]

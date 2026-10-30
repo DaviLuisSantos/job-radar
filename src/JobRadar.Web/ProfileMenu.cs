@@ -4,7 +4,7 @@ using JobRadar.Domain.Listings;
 namespace JobRadar.Web;
 
 /// <summary>The profiles of one market, as the top bar shows them.</summary>
-public sealed record ProfileGroup(Country Country, string Label, IReadOnlyList<string> Profiles);
+public sealed record ProfileGroup(JobMarket Market, string Label, IReadOnlyList<string> Profiles);
 
 /// <summary>
 /// The top bar's profiles, by market: every configured profile, scored or not yet (a new profile shows before its
@@ -15,23 +15,25 @@ public static class ProfileMenu
 {
     public static IReadOnlyList<ProfileGroup> Groups(IEnumerable<ProfileDefinition> configured, IEnumerable<string> scored)
     {
-        var countries = new Dictionary<string, Country>(StringComparer.OrdinalIgnoreCase);
+        var markets = new Dictionary<string, JobMarket>(StringComparer.OrdinalIgnoreCase);
         foreach (var p in configured)
-            countries.TryAdd(p.Name, p.Country);
+            markets.TryAdd(p.Name, p.Market);
         foreach (var name in scored)
-            countries.TryAdd(name, Country.AU);
+            markets.TryAdd(name, JobMarket.AU);
 
-        return countries
+        return markets
             .GroupBy(p => p.Value)
             .OrderBy(g => g.Key)
             .Select(g => new ProfileGroup(g.Key, Label(g.Key), g.Select(p => p.Key).Order(StringComparer.OrdinalIgnoreCase).ToList()))
             .ToList();
     }
 
-    public static string Label(Country country) => country switch
+    public static string Label(JobMarket market) => market switch
     {
-        Country.AU => "Australia",
-        Country.BR => "Brazil",
-        _ => country.ToString(),
+        JobMarket.AU => "Australia",
+        JobMarket.BR => "Brazil",
+        JobMarket.LatamRemote => "Remote LATAM",
+        JobMarket.GlobalRemote => "Remote global",
+        _ => market.ToString(),
     };
 }

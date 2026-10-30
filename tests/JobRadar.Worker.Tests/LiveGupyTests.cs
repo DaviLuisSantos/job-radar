@@ -25,7 +25,7 @@ public class LiveGupyTests
 
         var source = host.Services.GetServices<IJobSource>().Single(s => s.Name == "gupy");
         var listings = (await source.SearchAsync(
-            new ListingSearch("desenvolvedor", "Brasil", Country: Country.BR), TestContext.Current.CancellationToken)).Listings;
+            new ListingSearch("desenvolvedor", "Brasil", Market: JobMarket.BR), TestContext.Current.CancellationToken)).Listings;
 
         Assert.NotEmpty(listings);
         Assert.All(listings, l =>

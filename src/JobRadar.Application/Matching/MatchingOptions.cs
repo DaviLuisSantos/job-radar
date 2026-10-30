@@ -15,8 +15,14 @@ public sealed class MatchingOptions
 /// <summary>One line of work: what to search for and how to score what comes back.</summary>
 public sealed class ProfileOptions
 {
-    /// <summary>The market searched and scored: "AU" or "BR". Only the sources of that country run its searches.</summary>
-    public string Country { get; set; } = "AU";
+    /// <summary>
+    /// The market searched and scored: AU, BR, LatamRemote or GlobalRemote. Only the sources serving it run its searches,
+    /// and its rules read the ads. Empty: <see cref="Country"/>, then AU.
+    /// </summary>
+    public string? Market { get; set; }
+
+    /// <summary>Before markets (2026-10-29 to 10-30): AU or BR, read as the market when <see cref="Market"/> is empty.</summary>
+    public string? Country { get; set; }
 
     /// <summary>Every keyword is searched in every location.</summary>
     public List<string> Keywords { get; set; } = [];

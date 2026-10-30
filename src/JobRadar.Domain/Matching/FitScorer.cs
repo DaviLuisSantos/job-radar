@@ -17,7 +17,7 @@ namespace JobRadar.Domain.Matching;
 ///    visible below the ones they can apply to.
 ///
 /// The phases are the same in every country; the phrases each one reads are the listing's market's
-/// (<see cref="CountryRules"/>), and the weights the policy's.
+/// (<see cref="MarketRules"/>, the profile's market), and the weights the policy's.
 /// </summary>
 public static class FitScorer
 {
@@ -32,7 +32,7 @@ public static class FitScorer
         ScoringInput job, MatchingProfile profile, ScoringPolicy policy, DateOnly today, CandidateRequirements? candidate = null)
     {
         candidate ??= CandidateRequirements.None;
-        var rules = CountryRules.For(job.Country);
+        var rules = MarketRules.For(profile.Market);
         var title = job.Title.ToLowerInvariant();
         var body = string.Join(" ", job.Summary ?? "", job.LocationLabel ?? "", job.WorkTypeLabel ?? "").ToLowerInvariant();
         var full = $"{title} {body}";

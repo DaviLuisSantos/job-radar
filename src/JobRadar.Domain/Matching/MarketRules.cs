@@ -8,9 +8,9 @@ namespace JobRadar.Domain.Matching;
 /// its contracts. The scorer is one, with one order of phases for every country; what a phrase means is the
 /// country's. Weights stay in <see cref="ScoringPolicy"/>.
 /// </summary>
-public sealed record CountryRules
+public sealed record MarketRules
 {
-    public required Country Country { get; init; }
+    public required JobMarket Market { get; init; }
 
     // Exclusions.
     public required Regex CitizenshipRequired { get; init; }
@@ -46,9 +46,9 @@ public sealed record CountryRules
     public required Regex OnSite { get; init; }
 
     /// <summary>The rules ported from the prototype: English, a working holiday visa, Australian licences.</summary>
-    public static CountryRules Australia { get; } = new()
+    public static MarketRules Australia { get; } = new()
     {
-        Country = Country.AU,
+        Market = JobMarket.AU,
         CitizenshipRequired = ListingPatterns.CitizenshipRequired,
         WorkRightsIncompatible = ListingPatterns.WorkRightsIncompatible,
         IdentifiedRole = ListingPatterns.IdentifiedRole,
@@ -80,9 +80,9 @@ public sealed record CountryRules
     /// Portuguese, CLT or PJ, no visa: what is Australian (working holiday, citizenship, truck licences, FIFO,
     /// six months per employer) never matches. Written for this project and not yet calibrated.
     /// </summary>
-    public static CountryRules Brazil { get; } = new()
+    public static MarketRules Brazil { get; } = new()
     {
-        Country = Country.BR,
+        Market = JobMarket.BR,
         CitizenshipRequired = BrazilPatterns.Never,
         WorkRightsIncompatible = BrazilPatterns.Never,
         IdentifiedRole = BrazilPatterns.Never,
@@ -110,11 +110,11 @@ public sealed record CountryRules
         OnSite = BrazilPatterns.OnSite,
     };
 
-    /// <summary>The rules of a listing's market. A market without rules is refused, never read as another.</summary>
-    public static CountryRules For(Country country) => country switch
+    /// <summary>The rules of a profile's market. A market without rules is refused, never read as another.</summary>
+    public static MarketRules For(JobMarket market) => market switch
     {
-        Country.AU => Australia,
-        Country.BR => Brazil,
-        _ => throw new NotSupportedException($"No scoring rules for {country}."),
+        JobMarket.AU => Australia,
+        JobMarket.BR => Brazil,
+        _ => throw new NotSupportedException($"No scoring rules for {market} yet."),
     };
 }

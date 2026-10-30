@@ -18,7 +18,7 @@ internal sealed class GupyJobSource(
 {
     public string Name => GupyListingTranslator.SourceName;
 
-    public Country Country => Country.BR;
+    public IReadOnlySet<JobMarket> Markets { get; } = new HashSet<JobMarket> { JobMarket.BR };
 
     public async Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default)
     {

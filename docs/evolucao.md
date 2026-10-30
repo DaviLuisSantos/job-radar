@@ -292,8 +292,13 @@ mesma vaga pode servir ao mercado LATAM e ao global.
 
 ### Passos
 
-**5.1 Mercado como conceito.** `Market` no domínio, no perfil e na busca; `CountryRules` vira `MarketRules` (AU e BR iguais
-a hoje: paridade e os testes atuais provam). Migration da elegibilidade nos dois bancos. Sem fonte nova ainda.
+**5.1 Mercado como conceito.** ✅ 2026-10-30. `JobMarket` (`AU`, `BR`, `LatamRemote`, `GlobalRemote`; não `Market`, que
+colide com o namespace do Raio-X) no perfil (`"Market"`, com o `"Country"` de antes ainda aceito) e na busca; cada fonte
+declara os mercados que serve (`IJobSource.Markets`: um quadro remoto pode servir LATAM e global). `CountryRules` virou
+`MarketRules`, escolhida pelo mercado do **perfil**, não pelo país da vaga; os mercados remotos são recusados até a 5.7.
+A chave de busca do BR segue `(br)`. A elegibilidade (campo e migration) ficou para a 5.6, junto da primeira fonte que a
+informa: sem fonte, seria uma coluna sempre vazia. Paridade a rodar no trabalhopc (o `FitScorer` mudou de onde tira as
+regras).
 
 **5.2 Interface: base.** MudBlazor, tema (claro e escuro) e `Wording` em português. Barra superior com o seletor de
 mercado (contagem de novas em cada um) e os perfis do mercado logo abaixo; Captura, Você, Requisitos, Calibragem e Status

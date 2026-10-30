@@ -4,7 +4,7 @@ using JobRadar.Domain.Matching;
 namespace JobRadar.Domain.Tests.Matching;
 
 /// <summary>Fictional ads. The Brazilian rules are new, not ported: these pin what each one is for.</summary>
-public class CountryRulesTests
+public class MarketRulesTests
 {
     private static readonly DateOnly Today = new(2026, 10, 21);
 
@@ -18,10 +18,11 @@ public class CountryRulesTests
     {
         ExcludedTitles = ["júnior", "estágio", "java"],
         OnSiteLocations = ["Rio de Janeiro"],
+        Market = JobMarket.BR,
     };
 
     private static ScoringInput Br(string title, string? summary = null, string location = "Rio de Janeiro RJ", string? description = null) =>
-        new(title, summary, location, null, null, []) { Country = Country.BR, Description = description };
+        new(title, summary, location, null, null, []) { Description = description };
 
     private static FitScore Score(ScoringInput job, MatchingProfile? profile = null) =>
         FitScorer.Score(job, profile ?? Dotnet, ScoringPolicy.Default, Today);
@@ -29,15 +30,23 @@ public class CountryRulesTests
     private static bool Has(FitScore score, ScoreRule rule) => score.Items.Any(i => i.Rule == rule);
 
     [Fact]
-    public void A_listing_is_read_by_its_own_market()
+    public void The_profile_market_picks_the_rules_whatever_the_text()
     {
-        var listing = new Listing(new ListingId("gupy", "1"), "Desenvolvedor C#", null,
-            new ListingLocation(Country.BR, null, "Rio de Janeiro", "RJ", null), WorkType.FullTime, null, null,
-            new Uri("https://example.test/1"), null);
+        // The same ad, read by an Australian profile and by a Brazilian one.
+        var ad = Br("Desenvolvedor C# Sênior", "Australian citizens only");
 
-        Assert.Equal(Country.BR, ScoringInput.From(listing).Country);
-        Assert.Same(CountryRules.Australia, CountryRules.For(Country.AU));
-        Assert.Same(CountryRules.Brazil, CountryRules.For(Country.BR));
+        Assert.Equal(ScoreRule.CitizenshipRequired, Assert.Single(Score(ad, Tech).Items).Rule);
+        Assert.True(Has(Score(ad), ScoreRule.SeniorPenalty));
+        Assert.Same(MarketRules.Australia, MarketRules.For(JobMarket.AU));
+        Assert.Same(MarketRules.Brazil, MarketRules.For(JobMarket.BR));
+    }
+
+    [Theory]
+    [InlineData(JobMarket.LatamRemote)]
+    [InlineData(JobMarket.GlobalRemote)]
+    public void A_market_without_rules_yet_is_refused_instead_of_read_as_another(JobMarket market)
+    {
+        Assert.Throws<NotSupportedException>(() => Score(Br("Backend Developer"), Tech with { Market = market }));
     }
 
     [Fact]
@@ -124,6 +133,6 @@ public class CountryRulesTests
     [InlineData("Experiência com APIs REST", null)]
     public void Years_asked_are_read_in_Portuguese(string text, int? years)
     {
-        Assert.Equal(years, CountryRules.Brazil.YearsAsked(text.ToLowerInvariant()));
+        Assert.Equal(years, MarketRules.Brazil.YearsAsked(text.ToLowerInvariant()));
     }
 }

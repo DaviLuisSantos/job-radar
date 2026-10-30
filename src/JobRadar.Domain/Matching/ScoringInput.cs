@@ -15,9 +15,6 @@ public sealed record ScoringInput(
     DateTimeOffset? PostedAt,
     IReadOnlyCollection<string> FullTextTerms)
 {
-    /// <summary>The market whose <see cref="CountryRules"/> read the text.</summary>
-    public Country Country { get; init; } = Country.AU;
-
     /// <summary>The full ad text, when the candidate captured it; null for most listings.</summary>
     public string? Description { get; init; }
 
@@ -29,7 +26,6 @@ public sealed record ScoringInput(
         listing.PostedAt,
         fullTextTerms ?? [])
     {
-        Country = listing.Location.Country,
         Description = description,
     };
 

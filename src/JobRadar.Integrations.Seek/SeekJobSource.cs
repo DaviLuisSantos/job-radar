@@ -11,7 +11,7 @@ internal sealed class SeekJobSource(
     IOptions<SeekOptions> options,
     ILogger<SeekJobSource> log) : IJobSource
 {
-    public Country Country => Country.AU;
+    public IReadOnlySet<JobMarket> Markets { get; } = new HashSet<JobMarket> { JobMarket.AU };
 
     public string Name => SeekListingTranslator.SourceName;
 

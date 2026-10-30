@@ -108,7 +108,7 @@ src/JobRadar.Web             triagem em Blazor (JobRadarWebComposition.AddJobRad
 do Raio-X.
 
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
-1. para cada fonte e cada busca **do país da fonte** (`IJobSource.Country`, `Country` do perfil), calcula a janela
+1. para cada fonte e cada busca **de um mercado que a fonte serve** (`IJobSource.Markets`, `Market` do perfil), calcula a janela
    incremental pelo último sucesso;
 2. `IJobSource.SearchAsync`, que devolve as vagas únicas e diz se a busca veio completa;
 3. `IListingRepository.RecordObservationsAsync` grava vagas novas, atualiza as conhecidas, guarda o
@@ -240,7 +240,8 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer
   que uma vaga saiu do ar.
 - Score: `FitScorer` é a **única** implementação, para todo país; a ordem das fases faz parte da regra (ver o comentário
-  da classe). O que uma frase quer dizer é do país da vaga (`CountryRules`, escolhido pelo `Country`); os padrões do AU
+  da classe). O que uma frase quer dizer é do mercado do **perfil** (`MarketRules`, escolhida pelo `JobMarket`: AU, BR, LatamRemote,
+  GlobalRemote), não do país da vaga, que só diz onde ela fica; os padrões do AU
   ficam em `ListingPatterns`; os pesos, todos na `ScoringPolicy` (número solto
   no `FitScorer` é regressão: peso novo entra na política, que está no `rules_hash`). `".NET"` não casa dentro de `"ASP.NET"`
   (fronteira de token), e o "no" de "no experience" nega a frase de entrada seguinte — as duas coisas
@@ -248,7 +249,8 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
   protótipo de propósito (−40, não −20), e desde a 9 "Assistant … Manager" é liderança: o teste de paridade conta
   esses casos à parte. `ExcludedLocations` de um perfil exclui pelo local (o regional exclui Perth: os 88 dias não
   contam lá); `ExcludedTitles`, por uma palavra do título (júnior, Java); `OnSiteLocations`, quando a vaga é presencial
-  fora delas (`CountryRules.OnSite`). Regra que é do candidato vai para o perfil; o que uma frase quer dizer, para o país.
+  fora delas (`MarketRules.OnSite`). Regra que é do candidato vai para o perfil; o que uma frase quer dizer, para o mercado.
+  O enum se chama `JobMarket` porque `Market` colide com o namespace `JobRadar.Domain.Market` (o do Raio-X).
 
 ## Convenções
 

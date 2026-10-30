@@ -5,14 +5,14 @@ namespace JobRadar.Domain.Listings;
 /// <param name="Location">Place as a person would type it, e.g. "Perth" or "All Australia".</param>
 /// <param name="PostedWithinDays">Only listings posted in the last N days; null for no limit.</param>
 /// <param name="SourceCategory">A category code of the source being searched (opaque to the core).</param>
-/// <param name="Country">The market searched: only the sources of that country run it.</param>
+/// <param name="Market">The market searched: only the sources that serve it run it.</param>
 public sealed record ListingSearch(
-    string Keywords, string Location, int? PostedWithinDays = null, string? SourceCategory = null, Country Country = Country.AU)
+    string Keywords, string Location, int? PostedWithinDays = null, string? SourceCategory = null, JobMarket Market = JobMarket.AU)
 {
     /// <summary>
     /// Stable identity of the search, ignoring the date window: "keywords @ location". Another market than
-    /// Australia is named at the end, so the same words searched in two countries stay two searches; the
-    /// Australian keys predate the countries and stay as they were.
+    /// Australia is named at the end, so the same words searched in two markets stay two searches; the
+    /// Australian keys predate the markets and stay as they were, and "(br)" stays as Brazil had it.
     /// </summary>
     public string Key
     {
@@ -21,7 +21,7 @@ public sealed record ListingSearch(
             var key = $"{Keywords.Trim().ToLowerInvariant()} @ {Location.Trim().ToLowerInvariant()}";
             if (SourceCategory is not null)
                 key += $" [{SourceCategory}]";
-            return Country == Country.AU ? key : $"{key} ({Country.ToString().ToLowerInvariant()})";
+            return Market == JobMarket.AU ? key : $"{key} ({Market.ToString().ToLowerInvariant()})";
         }
     }
 }

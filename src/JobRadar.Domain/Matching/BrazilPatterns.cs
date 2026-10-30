@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace JobRadar.Domain.Matching;
 
 /// <summary>
-/// The phrases of Brazilian ads, for <see cref="CountryRules.Brazil"/>. Written for this project, not ported:
+/// The phrases of Brazilian ads, for <see cref="MarketRules.Brazil"/>. Written for this project, not ported:
 /// calibrate them with labels, as the Australian ones were. Texts are matched lower-cased; accents are optional
 /// where ads drop them ("hibrido", "experiencia").
 /// </summary>

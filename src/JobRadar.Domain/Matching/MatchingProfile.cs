@@ -1,3 +1,5 @@
+using JobRadar.Domain.Listings;
+
 namespace JobRadar.Domain.Matching;
 
 /// <summary>
@@ -43,10 +45,13 @@ public sealed record MatchingProfile(
     public IReadOnlyList<string> ExcludedTitles { get; init; } = [];
 
     /// <summary>
-    /// Where on-site work is possible; an ad that says it is on-site (<see cref="CountryRules.OnSite"/>) anywhere
+    /// Where on-site work is possible; an ad that says it is on-site (<see cref="MarketRules.OnSite"/>) anywhere
     /// else is ruled out. Empty: on-site work anywhere is fine.
     /// </summary>
     public IReadOnlyList<string> OnSiteLocations { get; init; } = [];
+
+    /// <summary>What the profile looks for: picks the sources searched and the <see cref="MarketRules"/> that read the ads.</summary>
+    public JobMarket Market { get; init; } = JobMarket.AU;
 }
 
 /// <summary>

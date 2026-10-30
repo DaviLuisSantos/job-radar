@@ -32,7 +32,7 @@ public sealed class ListingCollector(
     public async Task<CollectionSummary> CollectAsync(IReadOnlyList<ListingSearch> searches, bool fullHistory, CancellationToken ct)
     {
         var done = new ConcurrentBag<CollectionRun>();
-        var work = sources.SelectMany(source => searches.Where(s => s.Country == source.Country).Select(search => (source, search)));
+        var work = sources.SelectMany(source => searches.Where(s => source.Markets.Contains(s.Market)).Select(search => (source, search)));
         var parallel = new ParallelOptions { MaxDegreeOfParallelism = options.Value.MaxParallelSearches, CancellationToken = ct };
 
         await Parallel.ForEachAsync(work, parallel, async (item, token) =>
@@ -58,9 +58,9 @@ public sealed class ListingCollector(
     {
         using var activity = JobRadarTelemetry.Source.StartActivity("collect search");
         activity?.SetTag("jobradar.source", source.Name);
-        activity?.SetTag("jobradar.country", source.Country.ToString());
+        activity?.SetTag("jobradar.market", search.Market.ToString());
         activity?.SetTag("jobradar.search", search.Key);
-        var tags = new TagList { { "source", source.Name }, { "country", source.Country.ToString() } };
+        var tags = new TagList { { "source", source.Name }, { "market", search.Market.ToString() } };
         var started = time.GetUtcNow();
         var last = fullHistory ? null : await StoredAsync(() => runs.GetLastCompleteStartAsync(source.Name, search.Key, ct), ct);
         var window = IncrementalWindow(last, started);
@@ -80,7 +80,7 @@ public sealed class ListingCollector(
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            log.LogError(ex, "Search {SearchKey} on {Source} ({Country}) failed", search.Key, source.Name, source.Country);
+            log.LogError(ex, "Search {SearchKey} on {Source} ({Market}) failed", search.Key, source.Name, search.Market);
             tags.Add("error", ex.GetType().Name);
             JobRadarTelemetry.SourceErrors.Add(1, tags);
             activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);

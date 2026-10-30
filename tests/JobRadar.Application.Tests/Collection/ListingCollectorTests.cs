@@ -64,8 +64,8 @@ public class ListingCollectorTests
     public async Task A_search_runs_only_on_the_sources_of_its_country()
     {
         var seek = new FakeSource("seek");
-        var gupy = new FakeSource("gupy", Country.BR);
-        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Country: Country.BR);
+        var gupy = new FakeSource("gupy", JobMarket.BR);
+        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Market: JobMarket.BR);
 
         await Collector(seek, gupy).CollectAsync([Dev, rio], Ct);
 
@@ -78,11 +78,11 @@ public class ListingCollectorTests
     public async Task A_full_ad_the_search_returns_is_stored_once_and_replaced_when_it_changes()
     {
         var ad = new string('x', ListingDescription.MinLength) + " C# .NET";
-        var gupy = new FakeSource("gupy", Country.BR);
+        var gupy = new FakeSource("gupy", JobMarket.BR);
         var listing = new Listing(new ListingId("gupy", "1"), "Desenvolvedor .NET", null, ListingLocation.Unknown(Country.BR),
             WorkType.FullTime, null, null, new Uri("https://example.test/1"), null);
         gupy.Respond = _ => new SearchResult([new SourcedListing(listing, "{}", ad)], Complete: true);
-        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Country: Country.BR);
+        var rio = new ListingSearch("desenvolvedor .net", "Rio de Janeiro", Market: JobMarket.BR);
 
         await Collector(gupy).CollectAsync([rio], Ct);
         var first = _descriptions.Saved[listing.Id];

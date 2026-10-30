@@ -22,7 +22,7 @@ internal static class GupyListingTranslator
 
     /// <summary>
     /// The work arrangement and the contract, in the ad's words ("Remoto · CLT"): the scorer reads arrangements in
-    /// the text (<c>CountryRules.Brazil</c>), and the contract is worth seeing in the list.
+    /// the text (<c>MarketRules.Brazil</c>), and the contract is worth seeing in the list.
     /// </summary>
     internal static string? Summary(GupyJob job)
     {

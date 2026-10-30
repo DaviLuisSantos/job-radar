@@ -46,7 +46,7 @@ internal sealed class FakeGupyApi : HttpMessageHandler
 
 public class GupyTests
 {
-    private static readonly ListingSearch Rio = new("desenvolvedor .net", "Rio de Janeiro", Country: Country.BR);
+    private static readonly ListingSearch Rio = new("desenvolvedor .net", "Rio de Janeiro", Market: JobMarket.BR);
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -91,7 +91,7 @@ public class GupyTests
     {
         var api = new FakeGupyApi();
 
-        await api.Source().SearchAsync(new ListingSearch("c#", location, Country: Country.BR), Ct);
+        await api.Source().SearchAsync(new ListingSearch("c#", location, Market: JobMarket.BR), Ct);
 
         var query = Assert.Single(api.Queries);
         Assert.Equal("c#", query["jobName"]);
