@@ -153,16 +153,22 @@ Postcode)`: `Country` (`AU` | `BR`, código ISO) é o mercado da vaga, sempre co
 desconhecido no banco falha em vez de ser adivinhado. A paridade não rodou nesta máquina (o arquivo fica no
 trabalhopc); `FormatLocation` produz o mesmo texto de antes.
 
-**2.3 Regras por país no `FitScorer`.** Extrair `CountryRules` (decisão 2): o AU é exatamente o que existe hoje,
-provado pela paridade das 5.388 vagas sem mudança de resultado e sem mudar `RulesVersion`. Nenhuma regra BR ainda.
+**2.3 Regras por país no `FitScorer`.** ✅ `CountryRules`: tudo o que o scorer lê e depende de idioma ou país
+(cidadania, WHV, senioridade, contrato, carteira de caminhão, anos pedidos, remoto/híbrido/FIFO). `CountryRules.Australia`
+aponta para os mesmos padrões de `ListingPatterns`; o scorer escolhe pelo `Country` da vaga e as fases não mudaram
+(o diff do `FitScorer` só troca de onde vem cada padrão). Sem `RulesVersion` nova. Um país sem regras é recusado
+(`NotSupportedException`), em vez de lido como australiano. A paridade não rodou nesta máquina: rodar no trabalhopc.
 
-**2.4 `JobRadar.Integrations.Gupy`.** `AddGupyIntegration()`, `IJobSource`, tradutor para `Listing` com
-`Country = BR`, respostas gravadas nos testes, resiliência e ritmo como o Seek (orçamento próprio, baixo).
-Perfil BR em `appsettings.Local.json`. Sem `IFullTextSearch` se a Gupy não tiver.
+**2.4 Regras BR.** (Era a 2.5: tem de vir **antes** da Gupy, ou as vagas brasileiras chegariam ao score sem regras e
+a etapa falharia.) `CountryRules.Brazil` com padrões em português (júnior/pleno/sênior, remoto/híbrido/presencial,
+CLT/PJ, banco de talentos, salário em R$, inglês obrigatório, stack principal); o que não existe no Brasil (WHV,
+cidadania australiana, carteira de caminhão, FIFO) nunca casa. Pesos novos na `ScoringPolicy`, `RulesVersion` +1.
+Calibrar com rótulos depois, como no AU.
 
-**2.5 Regras BR e a contagem de tecnologias.** Padrões em português (júnior/pleno/sênior, remoto/híbrido/presencial,
-CLT/PJ, salário em R$, inglês obrigatório, stack principal), pesos na `ScoringPolicy`, `RulesVersion` +1.
-Calibrar com rótulos depois, como no AU. Contagem mensal de tecnologias pedidas nas vagas BR (comando e página
+**2.5 `JobRadar.Integrations.Gupy` e a contagem de tecnologias.** `AddGupyIntegration()`, `IJobSource`, tradutor para
+`Listing` com `Country = BR` (o `description` da busca vai para `listing_descriptions`: não há busca de detalhe),
+respostas gravadas nos testes, resiliência e ritmo como o Seek (orçamento próprio, baixo). Perfil BR em
+`appsettings.Local.json`. Sem `IFullTextSearch`. Contagem mensal de tecnologias pedidas nas vagas BR (comando e página
 de uso próprio). Filtro por país na triagem.
 
 **Pronto:** §3.5 do original. O Raio-X público continua só AU (decisão 1).
