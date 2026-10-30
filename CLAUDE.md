@@ -212,11 +212,16 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 - Web com prerender: `OnInitialized`/`OnParametersSet` rodam duas vezes (estático e interativo). Gravação que muda o que
   a própria página lê (a visita do "Hoje") vai em `OnAfterRenderAsync`, que só roda no interativo.
 - Esta máquina (TRABALHOPC) **é** a produção: o Postgres do `docker compose` é o banco de produção, e o auto-deploy
-  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Para olhar o site com dados, rode-o
-  contra uma cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à mão.
-- Web sem login: escuta em `localhost:5380` e, em produção, no IP da Tailscale (`appsettings.Local.json` gerado
-  por `deploy/deploy.ps1`; firewall só `100.64.0.0/10`). A 5080 é de outro serviço local do autor.
-- Serviço do Windows inicia antes do Docker Desktop (que sobe no login): o `DailyPipelineJob` espera o banco
+  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Trabalhe num worktree. Para olhar o
+  site com dados, rode-o contra uma cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à
+  mão. Argumento de um **comando** do worker não é configuração (`collect --ConnectionStrings:...` é ignorado): use
+  variável de ambiente. Para testar a pilha de produção ao lado, use outro projeto e outras portas
+  (`docker compose -p jobradar-test --env-file <arquivo>` com `JOBRADAR_DB_PORT` e `JOBRADAR_PORT`).
+- Produção é `docker compose --profile prod` (desde 2026-10-30), igual em qualquer SO; nada de serviço, registro ou
+  firewall do Windows nos scripts, que são PowerShell 7. O que é da máquina fica no `.env` (`deploy/prod.env.example`).
+  O site escuta em `127.0.0.1:5380` e no IP da Tailscale, nunca em todas as interfaces, e só responde aos nomes de
+  `JOBRADAR_ALLOWED_HOSTS`. A 5080 é de outro serviço local do autor.
+- O worker pode subir antes do banco responder (boot, Docker voltando): o `DailyPipelineJob` espera o banco
   (`IStorageHealth`) e recupera a passada perdida. Não remova a espera achando que é lentidão.
 - Dois bancos (`Database:Provider`): o mapeamento que difere por banco mora **só** no `ProviderModel` (jsonb e identity do
   Postgres, collation do SQL Server); a configuração de cada entidade é a mesma para os dois. Sem `ILike` nem SQL cru:

@@ -27,12 +27,11 @@ Pendências conhecidas, com a etapa onde entram:
   Desenvolvimento; Perth + Austrália; 4 termos). Mudar = configurar `Market` (cada lista configurada
   substitui o padrão).
 - **Depois da v1:** migrar a produção do PC para uma VM (opções pesquisadas em `docs/producao.md`).
-- **Voltar sem login (adiado em 2026-10-27, decisão do autor; [#29](https://github.com/DaviLuisSantos/job-radar/issues/29)):** depois de um reboot, nada roda até o login,
-  porque o banco vive no Docker Desktop, que não roda como serviço (o `com.docker.service` é só auxiliar).
-  Opções avaliadas: (A) Postgres 18 nativo como serviço do Windows, porta 5433 na troca, com dependência dos
-  serviços do JobRadar e ajustes em `install.ps1`, `backup.ps1` e na trava do `deploy.ps1`, recomendada;
-  (B) Docker Engine numa distro WSL ligado por tarefa, frágil; (C) login automático + Docker Desktop, risco de
-  acesso físico; (D) resolver na migração para VM. Hoje: o vigia religa os serviços 2 min após o login.
+- **Voltar sem login ([#29](https://github.com/DaviLuisSantos/job-radar/issues/29)), decidido em 2026-10-30:** o autor quis
+  uma solução que não dependa de SO. Tudo virou containers (`docker compose --profile prod`, scripts em PowerShell 7), igual
+  em qualquer host com Docker. No PC do autor o Docker Desktop continua subindo só no login (opção C, aceita); num host
+  Linux a pilha sobe no boot, sem mudar nada no JobRadar. Opções descartadas: Postgres nativo como serviço do Windows
+  (amarra ao Windows), Docker Engine no WSL ligado por tarefa (frágil e ainda do Windows).
 - **Login no site:** decidido não ter (2026-10-21): o site só escuta em `localhost` e no IP da Tailscale, com
   firewall restrito a `100.64.0.0/10`. Se um dia for público, entra autenticação antes. Porta 5380 porque a
   5080 é de outro serviço do autor nesta máquina (Servidor de Câmeras).
@@ -179,6 +178,17 @@ Cuidado com o viés de seleção: só se rotula o que aparece no topo. Rotular d
 baixo, ou o modelo só aprende a separar "boa" de "quase boa".
 
 ## Diário
+
+### 2026-10-30 — Produção em containers (#29, opção C)
+`Dockerfile` com três alvos (worker, site e o bundle de migrations, autocontido para Linux) e o perfil `prod` no
+`docker-compose.yml`: `migrate` roda e sai antes do worker e do site; o banco e o volume são os mesmos de antes. Os
+scripts de `deploy/` viraram PowerShell 7 só com `docker compose`, `git` e `dotnet`, e o que é da máquina foi para o
+`.env` (`deploy/prod.env.example`). O CI ganhou um job que constrói as três imagens. Testado inteiro num segundo
+projeto compose ao lado da produção (`JOBRADAR_COMPOSE_PROJECT`, outras portas): deploy, rollback, vigia e backup. O
+teste achou dois defeitos que a passada da noite teria: a elegibilidade do Himalayas passa de 512 caracteres e um link
+da Gupy não se lê; os dois derrubavam a busca inteira (corrigidos em `ba426d2`, antes da troca). O Postgres passou a
+escutar só em `127.0.0.1` (antes, em todas as interfaces). A primeira compilação das imagens leva ~19 min; as seguintes,
+~6.
 
 ### 2026-10-30 — Prints do README refeitos; mensageria fica de fora
 `docs/img/triage.png`, `listing.png` e a nova `today.png`: o caminho do dia 23, num banco descartável `jobradar_demo` no

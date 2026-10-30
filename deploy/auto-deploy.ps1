@@ -1,54 +1,54 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
-    Deploys main when it has moved and its CI run passed. Meant for a scheduled task (schedule-auto-deploy.ps1).
+    Deploys main when it has moved and its CI run passed. Meant for the host's scheduler, every few minutes.
 
 .DESCRIPTION
-    Production pulls; nothing outside reaches in. Each run:
-    1. fetches origin/main and compares it with the commit in -Target\deployed.txt;
-    2. leaves alone a commit rolled back by deploy.ps1 -Rollback (-Target\rollback-skip.txt);
+    Production pulls; nothing outside reaches in. Any OS with PowerShell 7, git and Docker. Each run:
+    1. fetches origin/main and compares it with the commit in the state folder's deployed.txt;
+    2. leaves alone a commit rolled back by deploy.ps1 -Rollback (rollback-skip.txt);
     3. asks GitHub (public API, no token) for the CI run of that commit on main: waits while it runs,
        gives up on that commit if it failed;
     4. fast-forwards this checkout (refuses local changes to tracked files, another branch, or local commits);
     5. runs deploy.ps1, which itself refuses the daily pass window and a pass still recording runs.
-    Quiet when there is nothing to do; everything else goes to -Target\auto-deploy.log.
+    Quiet when there is nothing to do; everything else goes to auto-deploy.log in the state folder.
     -DryRun says what it would do and changes nothing.
 #>
 param(
-    [string] $Target = 'C:\JobRadar',
     [string] $Repository = 'DaviLuisSantos/job-radar',
     [string] $Workflow = 'CI',
     [switch] $DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path $PSScriptRoot -Parent
-$log = Join-Path $Target 'auto-deploy.log'
-$lastOutput = Join-Path $Target 'auto-deploy-last.txt'   # everything deploy.ps1 printed, last time it ran
+. (Join-Path $PSScriptRoot 'common.ps1')
+$state = Get-StateDir
+$log = Join-Path $state 'auto-deploy.log'
+$lastOutput = Join-Path $state 'auto-deploy-last.txt'   # everything deploy.ps1 printed, last time it ran
 $output = $null
 
 function Write-Log([string] $message) {
     $line = "{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $message
-    if ($DryRun) { Write-Host "(dry run) $line" } else { Add-Content -Path $log -Value $line -Encoding utf8 }
+    if ($DryRun) { Write-Host "(dry run) $line" } else { Add-Content -Path $log -Value $line -Encoding utf8NoBOM }
 }
 
-# Git writes progress to stderr; under 'Stop' in Windows PowerShell 5.1 that throws. Run it through cmd.
-function Invoke-Git([string] $arguments) {
-    $output = cmd /c "git -C `"$repo`" $arguments 2>&1"
-    if ($LASTEXITCODE) { throw "git $arguments failed: $output" }
-    return $output
+function Invoke-Git {
+    $result = & git -C $Repo @args 2>&1
+    if ($LASTEXITCODE) { throw "git $($args -join ' ') failed: $result" }
+    return $result
 }
 
 try {
-    Invoke-Git 'fetch --quiet origin main' | Out-Null
-    $head = (Invoke-Git 'rev-parse origin/main').Trim()
+    Invoke-Git fetch --quiet origin main | Out-Null
+    $head = "$(Invoke-Git rev-parse origin/main)".Trim()
     $short = $head.Substring(0, 7)
 
-    $deployed = (Get-Content (Join-Path $Target 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
+    $deployed = (Get-Content (Join-Path $state 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
     if ($deployed -and $head.StartsWith($deployed)) {
         if ($DryRun) { Write-Log "$short is already deployed: nothing to do." }
         return
     }
-    $skipped = Get-Content (Join-Path $Target 'rollback-skip.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
+    $skipped = Get-Content (Join-Path $state 'rollback-skip.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($skipped -and $head.StartsWith($skipped.Trim())) {
         if ($DryRun) { Write-Log "$short was rolled back: waiting for a newer commit on main." }
         return
@@ -62,25 +62,23 @@ try {
         return
     }
     if ($run.conclusion -ne 'success') {
-        # Logged once: the commit stays skipped until main moves.
         $marker = "CI $($run.conclusion) for $short"
         if (-not (Select-String -Path $log -SimpleMatch $marker -Quiet -ErrorAction SilentlyContinue)) { Write-Log "$marker ($($run.html_url)): not deploying." }
         return
     }
 
-    $branch = (Invoke-Git 'branch --show-current').Trim()
+    $branch = "$(Invoke-Git branch --show-current)".Trim()
     if ($branch -ne 'main') { Write-Log "Checkout is on '$branch', not main: not deploying $short."; return }
-    if (Invoke-Git 'status --porcelain --untracked-files=no') { Write-Log "Checkout has uncommitted changes: not deploying $short."; return }
-    cmd /c "git -C `"$repo`" merge-base --is-ancestor HEAD origin/main"
+    if (Invoke-Git status --porcelain --untracked-files=no) { Write-Log "Checkout has uncommitted changes: not deploying $short."; return }
+    & git -C $Repo merge-base --is-ancestor HEAD origin/main
     if ($LASTEXITCODE) { Write-Log "Checkout has commits that are not on origin/main: not deploying $short."; return }
 
     if ($DryRun) { Write-Log "Would fast-forward to $short and run deploy.ps1 (CI: $($run.html_url))."; return }
 
-    Invoke-Git 'merge --ff-only --quiet origin/main' | Out-Null
+    Invoke-Git merge --ff-only --quiet origin/main | Out-Null
     Write-Log "Deploying $short (CI: $($run.html_url))."
-    $output = & (Join-Path $PSScriptRoot 'deploy.ps1') -Target $Target *>&1 | Out-String
-    # Trust the record, not a quiet exit: deploy.ps1 writes it only after the site answered.
-    $now = (Get-Content (Join-Path $Target 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
+    $output = & (Join-Path $PSScriptRoot 'deploy.ps1') *>&1 | Out-String
+    $now = (Get-Content (Join-Path $state 'deployed.txt') -ErrorAction SilentlyContinue | Select-Object -First 1) -split ' ' | Select-Object -First 1
     if (-not ($now -and $head.StartsWith($now))) { throw "deploy.ps1 ended without recording $short (still $now)." }
     Write-Log "Deployed $short."
 }
@@ -89,5 +87,5 @@ catch {
     exit 1
 }
 finally {
-    if ($output) { Set-Content -Path $lastOutput -Value $output -Encoding utf8 }
+    if ($output) { Set-Content -Path $lastOutput -Value $output -Encoding utf8NoBOM }
 }

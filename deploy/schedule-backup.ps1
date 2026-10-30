@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $script = Join-Path $PSScriptRoot 'backup.ps1'
 
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+$action = New-ScheduledTaskAction -Execute 'pwsh.exe' `
     -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
 $trigger = New-ScheduledTaskTrigger -Daily -At $At
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `

@@ -18,7 +18,7 @@ $ErrorActionPreference = 'Stop'
 $script = Join-Path $PSScriptRoot 'auto-deploy.ps1'
 
 $action = New-ScheduledTaskAction -Execute 'conhost.exe' `
-    -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
+    -Argument "--headless pwsh.exe -NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Minutes $EveryMinutes)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 30)

@@ -1,141 +1,138 @@
 # Produção — manual de operação
 
 > Documento vivo. Onde roda, como instalar, atualizar, acompanhar e recuperar.
-> Decidido em 2026-10-21: roda **no PC do autor (Windows)**; o site é acessível **só localmente e pela
-> Tailscale**, sem login no app.
+> Decidido em 2026-10-21: roda **no PC do autor**; o site é acessível **só localmente e pela Tailscale**, sem
+> login no app. Desde 2026-10-30 tudo roda em containers (`docker compose`, perfil `prod`): o mesmo em qualquer
+> SO com Docker, sem serviço nem registro do Windows.
 
 ## Como está montado
 
+Tudo é `docker compose` com o projeto `job-radar-au` e o perfil `prod` (`docker-compose.yml`, imagens do
+`Dockerfile`). Os scripts de `deploy/` são PowerShell 7 e só chamam `docker compose`, `git` e `dotnet`: rodam em
+Windows, Linux e macOS. O que é da máquina fica no `.env` ao lado do `docker-compose.yml` (fora do git; modelo em
+`deploy/prod.env.example`).
+
 | Peça | O quê | Onde |
 |---|---|---|
-| Banco | Postgres 18 no Docker Desktop (`docker-compose.yml`, `restart: unless-stopped`) | `localhost:5432`, volume `pgdata` |
-| Worker | serviço do Windows `JobRadarWorker` (automático, início atrasado, reinicia em falha) | `C:\JobRadar\worker` |
-| Site | serviço do Windows `JobRadarWeb` | `C:\JobRadar\web` → `http://localhost:5380` e `http://<IP Tailscale>:5380` |
-| Migrations | pacote `migrate.exe`, aplicado a cada implantação | `C:\JobRadar\migrate.exe` |
-| Versão | commit e hora da última implantação; a anterior, para voltar | `C:\JobRadar\deployed.txt`, `C:\JobRadar\previous` |
-| Paridade do score | roda sozinha no começo de cada deploy, com `D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json`; falhou, o deploy para antes de tocar nos serviços | log do auto-deploy |
+| Banco | container `postgres` (Postgres 18, `restart: unless-stopped`) | volume `job-radar-au_pgdata`, só `127.0.0.1:5432` |
+| Migrations | container `migrate` (bundle do EF), roda e sai antes dos outros a cada subida | imagem `jobradar-migrate:<commit>` |
+| Worker | container `worker` | imagem `jobradar-worker:<commit>` |
+| Site | container `web`, publicado em `127.0.0.1:5380` e no IP da Tailscale (`JOBRADAR_TAILSCALE_IP`) | imagem `jobradar-web:<commit>` |
+| Perfis reais | o `appsettings.Local.json` apontado por `JOBRADAR_PROFILES`, montado só para leitura no worker e no site | fora do git |
+| Estado | `deployed.txt`, tag anterior, travas e logs dos scripts | pasta `JOBRADAR_STATE` (no PC: `C:\JobRadar`) |
+| Paridade do score | roda no começo de cada deploy com o arquivo de `JOBRADAR_PARITY_FILE`; falhou, o deploy para antes de tocar na produção | log do auto-deploy |
 | Saúde | `GET http://localhost:5380/health`: 200 com passada nas últimas 26 h e banco de pé; 503 com o motivo | o vigia lê |
-| Implantação automática | tarefa `JobRadar Auto-deploy`, a cada 15 min: main com CI verde | `C:\JobRadar\auto-deploy.log` |
-| Vigia | tarefa `JobRadar Watchdog`, 2 min após o login e a cada 15 min: inicia serviço parado | `C:\JobRadar\watchdog.log` |
+| Implantação automática | `deploy/auto-deploy.ps1` a cada 15 min pelo agendador do host: main com CI verde | `auto-deploy.log` |
+| Vigia | `deploy/watchdog.ps1` a cada 15 min: sobe a pilha se o worker ou o site não estão rodando | `watchdog.log` |
 
-- Conexão com o banco e ambiente (`Production`) ficam nas variáveis do serviço, no registro
-  (`HKLM\SYSTEM\CurrentControlSet\Services\<serviço>\Environment`), não em arquivo.
-- Perfis reais: `C:\JobRadar\worker\appsettings.Local.json`, copiado de `src/JobRadar.Worker/appsettings.Local.json`.
-- O site escuta em `localhost` e no IP da Tailscale (`C:\JobRadar\web\appsettings.Local.json`, gerado pelo
-  script). A regra de firewall `JobRadarWebTailscale` só aceita conexões de `100.64.0.0/10`.
+- Conexão com o banco e ambiente (`Production`) estão no `docker-compose.yml` (a senha é a local de sempre: o banco
+  só escuta na máquina).
+- O site responde só aos nomes de `JOBRADAR_ALLOWED_HOSTS` (localhost, o IP e o nome MagicDNS da Tailscale) e nunca
+  escuta em todas as interfaces.
 
 ## Horário
 
 A passada diária roda às **06:00 de Perth = 19:00 em Brasília** (Perth não tem horário de verão;
-Brasília também não, hoje). Se o PC estiver desligado ou dormindo nessa hora, o Worker roda a passada
-perdida assim que voltar (`DailySchedule.Missed`). O Docker Desktop só sobe no login: o Worker espera o
-banco antes de começar.
+Brasília também não, hoje). Se a máquina estiver desligada ou dormindo nessa hora, o Worker roda a passada
+perdida assim que voltar (`DailySchedule.Missed`). O Worker espera o banco antes de começar.
 
-A **primeira passada completa** (sem histórico, até 5 páginas por busca) faz até ~1.500 requisições ao
-Seek e leva dezenas de minutos. Depois, a janela incremental reduz muito.
+**Sem login:** no PC do autor (Windows), o Docker Desktop só sobe com a sessão dele, e a pilha com ele: antes do
+login nada roda (decisão de 2026-10-30, opção C do [#29]). Num host Linux o Docker é serviço do sistema e a pilha
+sobe no boot.
 
-## Instalar (uma vez, admin)
+## Instalar (uma vez)
 
-Num PowerShell **como administrador**:
-
-```powershell
-cd D:\Desenvolvimento\job-radar-au
-.\deploy\install.ps1
-```
-
-Cria ou atualiza os serviços (início atrasado, reinício em falha, ambiente e conexão no registro), a regra de
-firewall da Tailscale, e dá ao usuário que rodou (`-User` para outro) direito de escrita em `C:\JobRadar` e de
-consultar, iniciar e parar os dois serviços (uma entrada na ACL de cada serviço: `sc.exe sdshow JobRadarWorker`
-mostra). Não publica nem inicia nada. Só precisa rodar de novo se mudar o que ele define: conexão, porta,
-serviço novo, outro usuário.
-
-## Atualizar (sem admin)
-
-Com o Docker Desktop aberto e o banco de pé (`docker compose up -d`), num PowerShell comum (o Claude também roda):
+Precisa de Docker (com Compose v2), PowerShell 7, git e o SDK .NET (só para a paridade). Na raiz do checkout:
 
 ```powershell
-cd D:\Desenvolvimento\job-radar-au
-.\deploy\deploy.ps1
+Copy-Item deploy/prod.env.example .env   # e preencha: perfis, pasta de estado, IP da Tailscale
+pwsh deploy/deploy.ps1
 ```
 
-Publica o repositório (o checkout ou worktree de onde roda; os perfis vêm do `appsettings.Local.json` do checkout
-principal se o worktree não tiver), para os serviços, copia, aplica migrations (conexão lida do registro do
-serviço), inicia e espera a página de status responder. Grava o commit implantado em `C:\JobRadar\deployed.txt`.
-**Recusa rodar entre 05:55 e 06:45 de Perth**, e também se houve execução gravada em `collection_runs` nos últimos
-30 min (passada recuperada fora de hora): cortaria a passada. `-Force` passa por cima.
+No PC do autor o `.env` aponta `JOBRADAR_PROFILES` para `src/JobRadar.Worker/appsettings.Local.json` do checkout
+principal, `JOBRADAR_STATE` para `C:\JobRadar` e `JOBRADAR_PARITY_FILE` para o arquivo da paridade.
+
+Agendar os scripts (o agendador é do host):
+- **Windows:** `pwsh deploy/schedule-auto-deploy.ps1`, `pwsh deploy/schedule-watchdog.ps1`,
+  `pwsh deploy/schedule-backup.ps1` (Agendador de Tarefas, com o usuário logado, sem janela).
+- **Linux:** no `crontab` do usuário que roda o Docker:
+  ```
+  */15 * * * * cd /srv/job-radar && pwsh deploy/auto-deploy.ps1
+  */15 * * * * cd /srv/job-radar && pwsh deploy/watchdog.ps1
+  0 23 * * *   cd /srv/job-radar && pwsh deploy/backup.ps1
+  ```
+
+## Atualizar
+
+```powershell
+pwsh deploy/deploy.ps1
+```
+
+Roda a paridade, constrói as três imagens com a tag do commit (`docker compose build`), grava a tag no `.env` e
+sobe a pilha nela: o `migrate` aplica as migrations e sai, e o worker e o site são recriados. Espera a página de
+status e grava o commit em `deployed.txt` (que o site mostra na `/status`). **Recusa rodar entre 05:55 e 06:45 de
+Perth**, e também se houve execução gravada em `collection_runs` nos últimos 30 min (passada recuperada fora de
+hora): recriar o worker cortaria a passada. `-Force` passa por cima. Guarda as imagens desta implantação e da
+anterior; apaga as mais velhas.
 
 ### Automático (main com CI verde)
 
-Tarefa `JobRadar Auto-deploy` (**a cada 15 min**, com o usuário do autor logado, sem janela): roda
-`deploy\auto-deploy.ps1`, que busca `origin/main` e, se o commit não é o do `deployed.txt` e o CI dele no GitHub
-passou, avança o checkout (`--ff-only`) e chama o `deploy.ps1`. Basta dar push em main, de qualquer máquina. Não
-implanta com o checkout fora da main, com mudança local em arquivo versionado ou com commit local que não está no
-`origin/main`; CI falho fica registrado uma vez e o commit é ignorado até main andar. Log em
-`C:\JobRadar\auto-deploy.log` (só ação e problema); a saída inteira do último deploy fica em
-`C:\JobRadar\auto-deploy-last.txt`, e só vale como implantado se o `deployed.txt` passar a ter o commit. Conferir sem mudar nada: `.\deploy\auto-deploy.ps1 -DryRun`.
-Instalar ou mudar o intervalo: `.\deploy\schedule-auto-deploy.ps1 -EveryMinutes 15`. Pausar:
-`Disable-ScheduledTask -TaskName 'JobRadar Auto-deploy'`.
+`deploy/auto-deploy.ps1`, a cada 15 min: busca `origin/main` e, se o commit não é o do `deployed.txt` e o CI dele
+no GitHub passou, avança o checkout (`--ff-only`) e chama o `deploy.ps1`. Basta dar push em main, de qualquer
+máquina. Não implanta com o checkout fora da main, com mudança local em arquivo versionado ou com commit local que
+não está no `origin/main`; CI falho fica registrado uma vez e o commit é ignorado até main andar. Log em
+`auto-deploy.log` (só ação e problema); a saída inteira do último deploy em `auto-deploy-last.txt`. Conferir sem
+mudar nada: `pwsh deploy/auto-deploy.ps1 -DryRun`.
 
-**Perfis não viajam:** o `appsettings.Local.json` não está no git. Mudança de perfil se faz no trabalhopc, e só
-entra em produção na próxima implantação (`.\deploy\deploy.ps1` à mão, ou o próximo commit em main).
+**Perfis:** o `appsettings.Local.json` não está no git e é montado direto nos containers: uma mudança vale quando o
+worker e o site reiniciam (o próximo deploy, ou `docker compose -p job-radar-au --profile prod restart worker web`).
 
 ### Voltar a versão anterior
 
 ```powershell
-.\deploy\deploy.ps1 -Rollback
+pwsh deploy/deploy.ps1 -Rollback
 ```
 
-Cada implantação guarda a que estava rodando em `C:\JobRadar\previous`. O `-Rollback` troca as duas (rodar de
-novo desfaz), sem publicar nada, e grava em `C:\JobRadar\rollback-skip.txt` o commit desfeito: a implantação
-automática não o reinstala; volta a implantar quando main andar ou numa implantação à mão. **Migrations não são
-desfeitas**: uma versão anterior a uma migration pode não rodar no schema novo (aí, restaurar o backup).
+Sobe a pilha na tag anterior (`previous-tag.txt`), sem construir nada; rodar de novo desfaz. Grava em
+`rollback-skip.txt` o commit desfeito: a implantação automática não o reinstala até main andar. **Migrations não
+são desfeitas**: uma versão anterior a uma migration pode não rodar no schema novo (aí, restaurar o backup).
 
 ## Acompanhar
 
-- **Página de status:** `http://localhost:5380/status` (ou pelo IP da Tailscale, de qualquer máquina). A linha
-  do `deployed.txt` (commit e hora; a hora diz se a mudança de perfil, que não é commit, já foi implantada), a
-  **última passada** com cada busca ou termo que falhou ou parou no teto (com o erro), passadas por dia e os
-  retratos do Raio-X com o status de qualidade. A última passada começa na primeira execução que sai mais de
-  15 min depois do fim de todas as anteriores (`CollectionPass.Gap`).
-- **Logs:** Visualizador de Eventos → Logs do Windows → Aplicativo, fontes `JobRadarWorker` e `JobRadarWeb`.
-  Só **avisos e erros** vão para lá (padrão do log de eventos); um log com apenas "Service started" é normal.
-  O andamento de cada passada está na página de status e em `collection_runs`.
-- **Serviços:** `Get-Service JobRadar*`.
-- **Vigia** (desde 2026-10-27): a tarefa `JobRadar Watchdog` (`deploy\watchdog.ps1`) inicia os serviços quando
-  estão parados, 2 min depois do login e a cada 15 min, com o usuário do autor e sem janela. Motivo: depois de
-  uma queda de energia em 2026-10-25, os dois serviços passaram dos 30 s de partida no boot e ficaram parados
-  dois dias (a recuperação do serviço só cobre queda depois de rodar, não falha na partida). O vigia respeita
-  `C:\JobRadar\deploying.lock`, que o `deploy.ps1` mantém enquanto para os serviços de propósito; um deploy
-  que falha deixa a trava, e o vigia só volta a agir depois de 1 h. Escreve em `watchdog.log` só quando age
-  ou falha. Recriar: `.\deploy\schedule-watchdog.ps1`. A publicação é ReadyToRun (win-x64): metade do tempo
-  de partida (1,3 s contra 2,6 s num comando curto), o que ajuda no boot.
-  Antes do login nada roda: o banco vive no Docker Desktop, na sessão do autor.
+- **Página de status:** `http://localhost:5380/status` (ou pelo IP da Tailscale). A linha do `deployed.txt`, a
+  **última passada** com cada busca ou termo que falhou ou parou no teto, passadas por dia e os retratos do Raio-X.
+- **Logs:** `docker compose -p job-radar-au logs -f worker web` (o andamento de cada passada também está na página
+  de status e em `collection_runs`).
+- **Containers:** `docker compose -p job-radar-au --profile prod ps`.
+- **Vigia:** os containers reiniciam sozinhos quando caem (`restart: unless-stopped`); o `watchdog.ps1` cobre o
+  resto: sobe a pilha quando o worker ou o site não estão rodando (Docker que voltou sem eles, deploy que morreu no
+  meio) e reinicia o worker quando o `/health` diz que o banco responde mas nenhuma passada começou em 26 h (no
+  máximo a cada 6 h). Respeita `deploying.lock`, que o `deploy.ps1` mantém enquanto troca a pilha.
 
 ## Backup
 
 ```powershell
-.\deploy\backup.ps1
+pwsh deploy/backup.ps1
 ```
 
-Gera `%USERPROFILE%\Backups\JobRadar\jobradar_<data_hora>.dump`, mantém os 30 mais recentes e registra
-cada execução (ok ou FAILED, com o erro) em `backup.log` na mesma pasta. O histórico do Raio-X não se
-recoleta.
-
-**Agendado** (2026-10-21): tarefa `JobRadar Backup` no Agendador, **todo dia às 23:00**, com o usuário do autor
-e só com ele logado (o banco vive no Docker Desktop, na sessão dele); se o PC estiver desligado, roda assim
-que puder. Recriar ou mudar o horário: `.\deploy\schedule-backup.ps1 -At 23:00`. Leva ~20 s.
-
-Restaurar: `docker compose exec -T postgres pg_restore -U jobradar -d jobradar --clean < <arquivo>`.
-
-## Parar ou remover
-
-Parar e iniciar não pedem admin depois do `install.ps1`; remover pede:
+Gera `~/Backups/JobRadar/jobradar_<data_hora>.dump` (`pg_dump` dentro do container, copiado para fora), mantém os
+30 mais recentes e registra cada execução em `backup.log` na mesma pasta. O histórico do Raio-X não se recoleta.
+Agendado todo dia às 23:00 (acima). Restaurar:
 
 ```powershell
-Stop-Service JobRadarWorker, JobRadarWeb
-sc.exe delete JobRadarWorker; sc.exe delete JobRadarWeb
-Remove-NetFirewallRule -Name JobRadarWebTailscale
+docker compose -p job-radar-au cp <arquivo> postgres:/tmp/restore.dump
+docker compose -p job-radar-au exec postgres pg_restore -U jobradar -d jobradar --clean /tmp/restore.dump
 ```
+
+## Parar
+
+```powershell
+docker compose -p job-radar-au --profile prod stop worker web   # o banco continua de pé
+```
+
+Os serviços do Windows de antes de 2026-10-30 (`JobRadarWorker`, `JobRadarWeb`, criados pelo `install.ps1`) ficam
+desativados por duas semanas, como volta de emergência; depois, removê-los (admin):
+`sc.exe delete JobRadarWorker; sc.exe delete JobRadarWeb`.
 
 ## Migrar para uma VM (depois)
 
@@ -150,9 +147,11 @@ deixar lacunas na série do Raio-X (dia perdido = buraco na newsletter). Pesquis
 | Postgres gerenciado grátis (Neon, Supabase) | ~0,5 GB: o banco passa disso em meses |
 | VPS paga pequena (Hetzner e similares) | ~€ 4/mês, mais RAM, menos manutenção |
 
-Em VM Linux o empacotamento muda: imagens Docker do Worker e do site + `docker compose` (Postgres, Worker,
-site) + Tailscale, no lugar dos serviços do Windows. Domínio, testes e configuração não mudam. Leve o banco
-com `deploy/backup.ps1` → `pg_restore`.
+Desde 2026-10-30 o empacotamento já é o de uma VM: imagens + `docker compose`. Numa VM Linux basta Docker,
+PowerShell 7, git, o `.env` e o agendador do host (acima); leve o banco com `deploy/backup.ps1` → `pg_restore`.
+Num host Linux o sistema sobe sem login (o Docker é serviço do sistema), o que resolve o [#29] de vez.
+
+[#29]: https://github.com/DaviLuisSantos/job-radar/issues/29
 
 ## Importar o histórico do protótipo (etapa 9)
 

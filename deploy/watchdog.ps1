@@ -1,30 +1,30 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
-    Starts the JobRadar services when they are stopped. Run by the 'JobRadar Watchdog' task.
+    Keeps the production stack up and doing its job. Run every few minutes by the host's scheduler.
 
 .DESCRIPTION
-    The services restart by themselves when they crash (install.ps1 sets that), but not when they fail to
-    start: after an unexpected shutdown on 2026-10-25 both timed out at boot and stayed stopped for two days.
-    This covers that and any other stop. It leaves them alone while a deploy holds -Target\deploying.lock
-    (deploy.ps1 stops them on purpose); a lock older than an hour is from a deploy that died, and is ignored.
-    It also asks the site's /health whether the system is doing its job, and restarts the worker when the
-    database answers but no pass started in 26 h (see below).
-    Writes to -Target\watchdog.log only when it acts or fails. No administrator rights needed: install.ps1
-    lets this user start and stop the services.
+    The containers restart by themselves when they crash (restart: unless-stopped), but not when Docker came up
+    without them or a deploy died half way. This brings the stack up when the worker or the site is not running,
+    except while a deploy holds deploying.lock (a lock older than an hour is from a deploy that died, and is ignored).
+    It also asks the site's /health whether the system is doing its job, and restarts the worker when the database
+    answers but no pass started in 26 h: the worker catches up on a missed pass at start.
+    Writes to watchdog.log in the state folder only when it acts or fails.
 #>
 param(
-    [string] $Target = 'C:\JobRadar',
     [int] $StaleLockMinutes = 60,
-    [int] $WebPort = 5380,
     [int] $HealthEveryHours = 6
 )
 
 $ErrorActionPreference = 'Stop'
-$log = Join-Path $Target 'watchdog.log'
-$lock = Join-Path $Target 'deploying.lock'
+. (Join-Path $PSScriptRoot 'common.ps1')
+
+$state = Get-StateDir
+$log = Join-Path $state 'watchdog.log'
+$lock = Join-Path $state 'deploying.lock'
 
 function Write-Log([string] $Message) {
-    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message" | Add-Content $log -Encoding utf8
+    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message" | Add-Content $log -Encoding utf8NoBOM
 }
 
 if (Test-Path $lock) {
@@ -33,48 +33,42 @@ if (Test-Path $lock) {
     Write-Log "Ignoring a deploy lock from $([int]$age.TotalMinutes) min ago: that deploy did not finish."
 }
 
-foreach ($name in 'JobRadarWorker', 'JobRadarWeb') {
-    $service = Get-Service $name -ErrorAction SilentlyContinue
-    if (-not $service -or $service.StartType -eq 'Disabled' -or $service.Status -ne 'Stopped') { continue }
-    try {
-        Start-Service $name
-        Write-Log "$name was stopped: started."
-    }
-    catch {
-        Write-Log "$name was stopped and did not start: $($_.Exception.Message)"
-    }
-}
-
-# Running is not working. The site's /health says whether the database answers and a pass started within 26 h.
-# A late pass with the database up: restart the worker, which catches up on a missed pass at start. The database
-# down: restarting would not help, so only say so. Either at most once per -HealthEveryHours, or a stuck worker
-# would be restarted, and the log written, every few minutes.
-$healthMarker = Join-Path $Target 'watchdog-health.txt'
 try {
-    $health = Invoke-RestMethod "http://localhost:$WebPort/health" -TimeoutSec 20
+    $running = Invoke-Compose ps --status running --services 2>$null
 }
 catch {
-    # 503 carries the report in the body; anything else (the site not answering) was handled above or will be.
-    # Windows PowerShell 5.1 leaves ErrorDetails empty here and keeps the body in the response stream.
-    $body = if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $_.ErrorDetails.Message }
-    elseif ($_.Exception.Response -and $_.Exception.Response.PSObject.Methods['GetResponseStream']) {
-        (New-Object IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd()
-    }
-    if (-not $body) { return }
-    try { $health = $body | ConvertFrom-Json } catch { return }
+    Write-Log "Docker did not answer: $($_.Exception.Message)"
+    return
 }
+$missing = 'worker', 'web' | Where-Object { $_ -notin $running }
+if ($missing) {
+    try {
+        Invoke-Compose up -d | Out-Null
+        Write-Log "Not running: $($missing -join ', '). Stack brought up."
+    }
+    catch { Write-Log "Not running: $($missing -join ', '). Bringing the stack up failed: $($_.Exception.Message)" }
+    return
+}
+
+# Running is not working. /health says whether the database answers and a pass started within 26 h. A late pass with
+# the database up: restart the worker. The database down: restarting would not help, so only say so. Either at most
+# once per -HealthEveryHours, or a stuck worker would be restarted, and the log written, every few minutes.
+$healthMarker = Join-Path $state 'watchdog-health.txt'
+try {
+    $response = Invoke-WebRequest "http://localhost:$(Get-SitePort)/health" -TimeoutSec 20 -SkipHttpErrorCheck
+    $health = $response.Content | ConvertFrom-Json
+}
+catch { return }   # the site not answering: Docker's restart policy and the check above deal with it
 if ($health.healthy) { return }
 if ((Test-Path $healthMarker) -and ((Get-Date) - (Get-Item $healthMarker).LastWriteTime).TotalHours -lt $HealthEveryHours) { return }
-Set-Content $healthMarker (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') -Encoding utf8
+Set-Content $healthMarker (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') -Encoding utf8NoBOM
 
 if (-not $health.databaseReachable) {
     Write-Log "Unhealthy: $($health.problem). Not restarting the worker: it waits for the database by itself."
     return
 }
 try {
-    Restart-Service JobRadarWorker
+    Invoke-Compose restart worker | Out-Null
     Write-Log "Unhealthy: $($health.problem). Worker restarted to catch up on the missed pass."
 }
-catch {
-    Write-Log "Unhealthy: $($health.problem). Worker did not restart: $($_.Exception.Message)"
-}
+catch { Write-Log "Unhealthy: $($health.problem). Worker did not restart: $($_.Exception.Message)" }

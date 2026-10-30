@@ -123,10 +123,12 @@ dotnet run --project src/JobRadar.Worker -- copy-database SqlServer "Server=loca
 
 ## Production
 
-It runs on the author's Windows PC as two Windows services (worker and site), with Postgres in
-Docker. The worker waits for the database at boot and catches up on a run missed while the
-machine was off; the site is reachable on localhost and over Tailscale only. One script publishes,
-migrates and installs everything: see [docs/producao.md](docs/producao.md) (Portuguese).
+Everything runs in containers with `docker compose --profile prod` (Postgres, a one-shot migration job, the
+worker and the site), the same on Windows, Linux or macOS; the deploy scripts are PowerShell 7 and call only
+`docker compose`, `git` and `dotnet`. Machine settings live in a `.env` (see `deploy/prod.env.example`). A push to
+main with green CI is deployed by `deploy/auto-deploy.ps1`; the scoring parity check runs first. The worker waits
+for the database and catches up on a run missed while the machine was off; the site listens on localhost and the
+Tailscale address only. See [docs/producao.md](docs/producao.md) (Portuguese).
 
 ## Observability
 

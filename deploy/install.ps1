@@ -1,6 +1,8 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
+    LEGACY: production runs in containers since 2026-10-30 (docs/producao.md). Kept for two weeks, until the old
+    Windows services are removed.
     One-time machine setup for JobRadar: the two Windows services, their configuration, the firewall rule
     and the rights that let -User deploy new versions without an elevated prompt.
 

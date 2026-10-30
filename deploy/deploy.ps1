@@ -1,135 +1,97 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
-    Publishes the current repository and puts it in production. No admin needed.
+    Builds the current repository into images and puts them in production with docker compose. Any OS with Docker.
 
 .DESCRIPTION
-    Needs install.ps1 to have run once, as admin: it creates the services and lets this user write to
-    -Target and start and stop them.
-    1. Publishes the worker and the triage site (Release) and an EF Core migration bundle.
-    2. Stops the services, copies the new build to -Target, applies pending migrations (connection string
-       read from the worker service's registry key, where install.ps1 put it), starts them again.
-    3. Waits for the status page and records what was deployed in -Target\deployed.txt.
-    The build it replaces is kept in -Target\previous. -Rollback swaps the two back, without publishing:
-    run it again to undo. A rollback does not undo migrations, and it tells auto-deploy.ps1 to leave the
-    rolled-back commit alone (-Target\rollback-skip.txt) until a newer one reaches main.
-    Refuses to run during the daily pass, or while runs are still being recorded (a pass recovered at another
-    hour), unless -Force: stopping the worker would cut the pass short.
-    While the services are down on purpose it holds -Target\deploying.lock, so watchdog.ps1 leaves them be.
-    A deploy that fails keeps the lock: the watchdog starts the services again only after an hour.
-    Publishes ReadyToRun (win-x64): about half the start-up time, which matters at boot.
-    Before anything else, when -ParityFile exists, runs the scoring parity test against it: a change that moves the
-    scores of the real listings stops the deploy before the services are touched (the file only lives here, so
-    this is the one place it can run on every change).
+    Needs docker-compose.yml's .env filled in once (deploy/prod.env.example).
+    1. Before anything else, when -ParityFile exists, runs the scoring parity test against it: a change that moves
+       the scores of the real listings stops the deploy before production is touched.
+    2. Builds the worker, site and migration images, tagged with the short commit.
+    3. Brings the stack up on that tag: the migrations run first (the "migrate" service), then the worker and the
+       site. Waits for the status page and records what was deployed in the state folder (deployed.txt), which the
+       site shows on /status.
+    The tag it replaces is kept (previous-tag.txt). -Rollback goes back to it, without building: run it again to
+    undo. A rollback does not undo migrations, and it tells auto-deploy.ps1 to leave the rolled-back commit alone
+    (rollback-skip.txt) until a newer one reaches main.
+    Refuses to run during the daily pass, or while runs are still being recorded (a pass recovered at another hour),
+    unless -Force: recreating the worker would cut the pass short.
+    While the stack is replaced on purpose it holds deploying.lock in the state folder, so watchdog.ps1 leaves it be.
     See docs/producao.md.
 #>
 param(
-    [string] $Target = 'C:\JobRadar',
-    [int] $WebPort = 5380,
     # Collection:DailyAt in Australia/Perth; the pass takes ~15 min, so the window below is generous.
     [timespan] $PassAt = '06:00',
     [switch] $Force,
     [switch] $Rollback,
-    # Real listings exported from the prototype; only on this machine, never in the repository.
-    [string] $ParityFile = 'D:\Desenvolvimento\job-tracker\data\parity\scoring-parity.json'
+    # Real listings exported from the prototype; only on the author's machine, never in the repository.
+    [string] $ParityFile = $env:JOBRADAR_PARITY_FILE
 )
 
 $ErrorActionPreference = 'Stop'
-if (-not [IO.Path]::IsPathRooted($Target)) { throw "-Target must be an absolute path, not '$Target'." }
-$repo = Split-Path $PSScriptRoot -Parent
-$staging = Join-Path $env:TEMP "jobradar-publish-$(Get-Date -Format yyyyMMddHHmmss)"
-$services = @(
-    @{ Name = 'JobRadarWorker'; Project = 'src\JobRadar.Worker'; Dir = 'worker' },
-    @{ Name = 'JobRadarWeb'; Project = 'src\JobRadar.Web'; Dir = 'web' }
-)
-$previous = Join-Path $Target 'previous'
-$record = Join-Path $Target 'deployed.txt'
-$skip = Join-Path $Target 'rollback-skip.txt'
-$lock = Join-Path $Target 'deploying.lock'
+. (Join-Path $PSScriptRoot 'common.ps1')
 
-function Copy-Tree([string] $From, [string] $To) {
-    # A stopped service can hold its files for a moment: retry instead of failing.
-    robocopy $From $To /MIR /R:10 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-    if ($LASTEXITCODE -ge 8) { throw "Copying $From to $To failed (robocopy $LASTEXITCODE). The services are stopped." }
-}
+$state = Get-StateDir
+$record = Join-Path $state 'deployed.txt'
+$previousTag = Join-Path $state 'previous-tag.txt'
+$skip = Join-Path $state 'rollback-skip.txt'
+$lock = Join-Path $state 'deploying.lock'
+if (-not $ParityFile) { $ParityFile = (Read-DotEnv).JOBRADAR_PARITY_FILE }
 
-function Start-AndWait {
-    Write-Host '== Starting' -ForegroundColor Cyan
-    foreach ($s in $services) { Start-Service $s.Name }
-    $status = "http://localhost:$WebPort/status"
-    $up = $false
-    foreach ($i in 1..30) {
-        try { $up = (Invoke-WebRequest $status -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200 } catch { }
-        if ($up) { break }
-        Start-Sleep -Seconds 2
-    }
-    Get-Service ($services | ForEach-Object { $_.Name }) | Format-Table Name, Status, StartType -AutoSize
-    if (-not $up) { throw "The status page did not answer at $status. See the Application event log." }
-}
-
-foreach ($s in $services) {
-    if (-not (Get-Service $s.Name -ErrorAction SilentlyContinue)) {
-        throw "Service $($s.Name) does not exist: run .\deploy\install.ps1 once, as admin."
-    }
-}
-$environment = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\JobRadarWorker" -Name Environment -ErrorAction SilentlyContinue).Environment
-$connection = ($environment | Where-Object { $_ -like 'ConnectionStrings__JobRadar=*' }) -replace '^ConnectionStrings__JobRadar=', ''
-if (-not $connection) { throw 'No connection string in the JobRadarWorker service: run .\deploy\install.ps1 once, as admin.' }
-
-$perth = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'W. Australia Standard Time').TimeOfDay
+$perth = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'Australia/Perth').TimeOfDay
 if (-not $Force -and $perth -ge $PassAt.Subtract([timespan]'00:05') -and $perth -le $PassAt.Add([timespan]'00:45')) {
     throw "It is $($perth.ToString('hh\:mm')) in Perth: the daily pass ($PassAt) may be running. Wait, or use -Force."
 }
 if (-not $Force) {
     # A pass recovered after a restart runs at any hour. The steps after the last run (descriptions, scores,
-    # snapshot) take ~15 min, so 30 min of quiet means it is over. Fixed project name: it works from a worktree.
+    # snapshot) take ~15 min, so 30 min of quiet means it is over.
     $recent = $null
     try {
-        $recent = & docker compose -p job-radar-au -f (Join-Path $repo 'docker-compose.yml') exec -T postgres `
-            psql -U jobradar -d jobradar -Atc "select count(*) from collection_runs where started_at > now() - interval '30 minutes'" 2>$null
+        $recent = Invoke-Compose exec -T postgres psql -U jobradar -d jobradar -Atc `
+            "select count(*) from collection_runs where started_at > now() - interval '30 minutes'" 2>$null
     }
     catch { }
     if ($null -eq $recent) { Write-Warning 'Could not ask the database whether a pass is running.' }
     elseif ([int]$recent -gt 0) { throw "$recent runs recorded in the last 30 minutes: a pass may be running. Wait, or use -Force." }
 }
 
-if ($Rollback) {
-    if (-not (Test-Path (Join-Path $previous 'deployed.txt'))) { throw "Nothing to roll back to: $previous is filled by the next deploy." }
-    $current = Get-Content $record -ErrorAction SilentlyContinue | Select-Object -First 1
-    $back = Get-Content (Join-Path $previous 'deployed.txt') | Select-Object -First 1
-    Write-Host "== Rolling back to: $back" -ForegroundColor Cyan
-    Write-Warning 'Migrations are not undone: an older build may not run on a newer schema.'
+function Use-Tag([string] $Tag, [string] $Commit) {
+    Set-DotEnv @{ JOBRADAR_TAG = $Tag; JOBRADAR_COMMIT = $Commit }
     New-Item $lock -ItemType File -Force | Out-Null
-    foreach ($s in $services) { Stop-Service $s.Name -Force }
-    $swap = Join-Path $Target 'rollback-swap'
-    foreach ($s in $services) {
-        Copy-Tree (Join-Path $Target $s.Dir) (Join-Path $swap $s.Dir)
-        Copy-Tree (Join-Path $previous $s.Dir) (Join-Path $Target $s.Dir)
-        Copy-Tree (Join-Path $swap $s.Dir) (Join-Path $previous $s.Dir)
+    try {
+        Write-Host "== Starting $Tag" -ForegroundColor Cyan
+        Invoke-Compose up -d --remove-orphans
+        Wait-Site
     }
-    Copy-Item (Join-Path $Target 'migrate.exe') $swap -Force
-    Copy-Item (Join-Path $previous 'migrate.exe') $Target -Force
-    Copy-Item (Join-Path $swap 'migrate.exe') $previous -Force
-    Start-AndWait
-    Remove-Item $lock -Force -ErrorAction SilentlyContinue
-    $undone = ($current -split ' ')[0]
-    $current | Set-Content (Join-Path $previous 'deployed.txt') -Encoding utf8
-    "$back (rolled back from $undone on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'))" | Set-Content $record -Encoding utf8
-    $undone | Set-Content $skip -Encoding utf8
-    Remove-Item $swap -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "Rolled back. auto-deploy.ps1 skips $undone until main moves past it." -ForegroundColor Green
+    finally { Remove-Item $lock -Force -ErrorAction SilentlyContinue }
+    Invoke-Compose ps
+}
+
+if ($Rollback) {
+    $back = Get-Content $previousTag -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $back) { throw "Nothing to roll back to: $previousTag is filled by the next deploy." }
+    $current = (Read-DotEnv).JOBRADAR_TAG
+    Write-Host "== Rolling back from $current to $back" -ForegroundColor Cyan
+    Write-Warning 'Migrations are not undone: an older build may not run on a newer schema.'
+    Use-Tag $back $back
+    $current | Set-Content $previousTag -Encoding utf8NoBOM
+    "$back (rolled back from $current on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'))" | Set-Content $record -Encoding utf8NoBOM
+    $current | Set-Content $skip -Encoding utf8NoBOM
+    Write-Host "Rolled back. auto-deploy.ps1 skips $current until main moves past it." -ForegroundColor Green
     return
 }
 
-$commit = (& git -C $repo rev-parse --short HEAD)
-$dirty = [bool](& git -C $repo status --porcelain --untracked-files=no)
+$commit = (& git -C $Repo rev-parse HEAD).Trim()
+$tag = $commit.Substring(0, 7)
+$dirty = [bool](& git -C $Repo status --porcelain --untracked-files=no)
 if ($dirty) { Write-Warning 'The working tree has uncommitted changes: they go to production too.' }
 
-if (Test-Path $ParityFile) {
+if ($ParityFile -and (Test-Path $ParityFile)) {
     Write-Host '== Scoring parity' -ForegroundColor Cyan
     $env:JOBRADAR_PARITY_FILE = $ParityFile
     try {
         # No --nologo: the testing platform hands it to the test app, which then runs zero tests and fails.
-        $parity = dotnet test --project (Join-Path $repo 'tests\JobRadar.Domain.Tests') 2>&1
+        $parity = dotnet test --project (Join-Path $Repo 'tests/JobRadar.Domain.Tests') 2>&1
         if ($LASTEXITCODE) {
             $parity | Select-Object -Last 30 | Write-Host
             throw 'Scoring parity failed: the real listings would score differently. Not deploying.'
@@ -137,73 +99,26 @@ if (Test-Path $ParityFile) {
     }
     finally { Remove-Item Env:JOBRADAR_PARITY_FILE -ErrorAction SilentlyContinue }
 }
-else { Write-Warning "No parity file at ${ParityFile}: deploying without the parity check." }
+else { Write-Warning 'No parity file (JOBRADAR_PARITY_FILE): deploying without the parity check.' }
 
-Write-Host '== Publishing' -ForegroundColor Cyan
-foreach ($s in $services) {
-    dotnet publish (Join-Path $repo $s.Project) -c Release -o (Join-Path $staging $s.Dir) --nologo -v quiet `
-        -r win-x64 --self-contained false -p:PublishReadyToRun=true
-    if ($LASTEXITCODE) { throw "Publishing $($s.Project) failed." }
-}
-Push-Location $repo
-try {
-    dotnet tool restore | Out-Null
-    # Neither published project references the migrations, so publishing never restores them, and the bundle
-    # does not restore by itself: a clean checkout fails with NETSDK1004 (2026-10-29, every deploy since #3).
-    dotnet restore src/JobRadar.Infrastructure.Migrations.Postgres | Out-Null
-    if ($LASTEXITCODE) { throw 'Restoring the migrations project failed.' }
-    dotnet ef migrations bundle --project src/JobRadar.Infrastructure.Migrations.Postgres `
-        -o (Join-Path $staging 'migrate.exe') --force --configuration Release | Out-Null
-    if ($LASTEXITCODE) { throw 'Building the migration bundle failed.' }
-}
-finally { Pop-Location }
+Write-Host "== Building $tag" -ForegroundColor Cyan
+$env:JOBRADAR_TAG = $tag
+$env:JOBRADAR_COMMIT = $commit
+try { Invoke-Compose build }
+finally { Remove-Item Env:JOBRADAR_TAG, Env:JOBRADAR_COMMIT -ErrorAction SilentlyContinue }
 
-# Real profiles live next to the binary and are not versioned. In a worktree they are in the main checkout.
-$profiles = Join-Path $repo 'src\JobRadar.Worker\appsettings.Local.json'
-if (-not (Test-Path $profiles)) {
-    $main = Split-Path (& git -C $repo rev-parse --path-format=absolute --git-common-dir) -Parent
-    $profiles = Join-Path $main 'src\JobRadar.Worker\appsettings.Local.json'
-}
-if (Test-Path $profiles) { Copy-Item $profiles (Join-Path $staging 'worker') -Force }
-else { throw "No appsettings.Local.json with the profiles: the worker would collect nothing." }
+$running = (Read-DotEnv).JOBRADAR_TAG
+if ($running -and $running -ne $tag -and $running -ne 'local') { $running | Set-Content $previousTag -Encoding utf8NoBOM }
+Use-Tag $tag $commit
 
-# The site listens on localhost and on the Tailscale address; Host headers are limited to those names.
-# In Windows PowerShell 5.1 a native command writing to stderr under 'Stop' throws: keep it local.
-$tailscaleIp = $null
-$dnsName = $null
-try { $tailscaleIp = (& tailscale ip -4 2>$null | Select-Object -First 1) } catch { Write-Warning 'Tailscale not available: the site will listen on localhost only.' }
-try { $dnsName = ((& tailscale status --json 2>$null | ConvertFrom-Json).Self.DNSName).TrimEnd('.') } catch { }
-$urls = @("http://localhost:$WebPort")
-$hosts = @('localhost')
-if ($tailscaleIp) { $urls += "http://${tailscaleIp}:$WebPort"; $hosts += $tailscaleIp }
-if ($dnsName) { $hosts += $dnsName }
-@{ Urls = ($urls -join ';'); AllowedHosts = ($hosts -join ';') } | ConvertTo-Json |
-    Set-Content (Join-Path $staging 'web\appsettings.Local.json') -Encoding utf8
-Write-Host "Site: $($urls -join ', ')"
-
-Write-Host '== Stopping services' -ForegroundColor Cyan
-New-Item $lock -ItemType File -Force | Out-Null
-foreach ($s in $services) { Stop-Service $s.Name -Force }
-
-if (Test-Path $record) {
-    Write-Host "== Keeping the running build in $previous" -ForegroundColor Cyan
-    foreach ($s in $services) { Copy-Tree (Join-Path $Target $s.Dir) (Join-Path $previous $s.Dir) }
-    Copy-Item (Join-Path $Target 'migrate.exe'), $record $previous -Force
-}
-
-Write-Host "== Copying to $Target" -ForegroundColor Cyan
-foreach ($s in $services) { Copy-Tree (Join-Path $staging $s.Dir) (Join-Path $Target $s.Dir) }
-Copy-Item (Join-Path $staging 'migrate.exe') $Target -Force
-
-Write-Host '== Applying migrations' -ForegroundColor Cyan
-& (Join-Path $Target 'migrate.exe') --connection $connection
-if ($LASTEXITCODE) { throw 'Migrations failed: is the database up (docker compose up -d)? The services are stopped.' }
-
-Start-AndWait
-Remove-Item $lock -Force -ErrorAction SilentlyContinue
-
-"$commit$(if ($dirty) { ' (with uncommitted changes)' }) deployed $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')" |
-    Set-Content $record -Encoding utf8
+"$tag$(if ($dirty) { ' (with uncommitted changes)' }) deployed $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')" |
+    Set-Content $record -Encoding utf8NoBOM
 Remove-Item $skip -Force -ErrorAction SilentlyContinue   # a deploy by hand overrides an earlier rollback
-Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "Done: $commit. Status page: http://localhost:$WebPort/status" -ForegroundColor Green
+
+# Keep the images of this deploy and the previous one; older ones only take disk.
+$keep = @($tag, (Get-Content $previousTag -ErrorAction SilentlyContinue | Select-Object -First 1)) | Where-Object { $_ }
+& docker images --format '{{.Repository}}:{{.Tag}}' |
+    Where-Object { $_ -match '^jobradar-(worker|web|migrate):(.+)$' -and $Matches[2] -notin $keep } |
+    ForEach-Object { & docker rmi $_ | Out-Null }
+
+Write-Host "Done: $tag. Status page: http://localhost:$(Get-SitePort)/status" -ForegroundColor Green

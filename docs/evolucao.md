@@ -15,7 +15,7 @@
 | 4 | Mensageria | 0 | ✅ 2026-10-30: não precisou, pelos números (abaixo); reavaliar se o gatilho disparar |
 | 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7, prints do README refeitos) |
 
-**O que falta, como issues:** pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27); voltar sem login [#29](https://github.com/DaviLuisSantos/job-radar/issues/29).
+**O que falta, como issues:** pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27).
 
 ## O que a auditoria mudou no plano original
 

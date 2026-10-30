@@ -20,7 +20,7 @@ $script = Join-Path $PSScriptRoot 'watchdog.ps1'
 $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 $action = New-ScheduledTaskAction -Execute 'conhost.exe' `
-    -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
+    -Argument "--headless pwsh.exe -NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
 # At logon (after a reboot: services that timed out at boot), then every few minutes (any other stop).
 $atLogon = New-ScheduledTaskTrigger -AtLogOn -User $user
 $atLogon.Delay = "PT$($AfterLogonMinutes)M"

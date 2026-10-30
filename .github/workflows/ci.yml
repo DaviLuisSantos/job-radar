@@ -23,3 +23,15 @@ jobs:
       - run: dotnet test --no-build -c Release
         env:
           JOBRADAR_DB_TESTS: "1"
+
+  # Production runs these images (docker-compose.yml, profile prod): a Dockerfile that stops building fails here,
+  # not in the deploy.
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: |
+          for target in migrate worker web; do
+            docker build --target "$target" --build-arg COMMIT="$GITHUB_SHA" -t "jobradar-$target:ci" .
+          done
