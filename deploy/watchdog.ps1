@@ -55,8 +55,13 @@ try {
 }
 catch {
     # 503 carries the report in the body; anything else (the site not answering) was handled above or will be.
-    if (-not $_.ErrorDetails -or -not $_.ErrorDetails.Message) { return }
-    try { $health = $_.ErrorDetails.Message | ConvertFrom-Json } catch { return }
+    # Windows PowerShell 5.1 leaves ErrorDetails empty here and keeps the body in the response stream.
+    $body = if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $_.ErrorDetails.Message }
+    elseif ($_.Exception.Response -and $_.Exception.Response.PSObject.Methods['GetResponseStream']) {
+        (New-Object IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd()
+    }
+    if (-not $body) { return }
+    try { $health = $body | ConvertFrom-Json } catch { return }
 }
 if ($health.healthy) { return }
 if ((Test-Path $healthMarker) -and ((Get-Date) - (Get-Item $healthMarker).LastWriteTime).TotalHours -lt $HealthEveryHours) { return }

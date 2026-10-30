@@ -225,8 +225,9 @@ começou há menos de 26 h; 503 com o motivo, senão. Só a hora da passada, nad
 passada que não roda. O `watchdog.ps1`, além de religar serviço parado, consulta o `/health`: passada atrasada com o
 banco de pé → reinicia o Worker (que recupera a passada perdida ao subir); banco fora → só registra (o Worker já espera
 o banco). No máximo uma vez a cada 6 h (`-HealthEveryHours`, marca em `C:\JobRadar\watchdog-health.txt`), para não
-reiniciar em laço. **Não testado no Windows PowerShell 5.1 de verdade com um 503**: conferir no trabalhopc
-(`.\deploy\watchdog.ps1` à mão com a passada atrasada ou o banco parado).
+reiniciar em laço. Testado no Windows PowerShell 5.1 contra um servidor de mentira que responde 503 (passada atrasada →
+tenta reiniciar; banco fora → só registra; saudável → nada; segunda vez dentro das 6 h → nada). O teste achou um furo:
+no 5.1 o corpo do 503 não vem em `ErrorDetails`, vem no stream da resposta, e o script agora lê os dois.
 
 **Pronto da fase 3** (§4 do original): trace completo de uma passada no painel ✅ no código (ver no Aspire com
 `--profile telemetry`); métricas ✅; `/health` e o vigia usando ✅; erro de fonte com contexto (fonte, país, `RunId`) ✅.
