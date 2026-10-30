@@ -146,6 +146,12 @@ public static class CliRunner
             await output.WriteLineAsync(ex.Message);
             return 1;
         }
+        catch (Microsoft.Extensions.Options.OptionsValidationException ex)
+        {
+            // The configuration does not build (a market without its eligibility rules, a pattern that does not parse).
+            await output.WriteLineAsync(ex.Message);
+            return 2;
+        }
         catch (InvalidOperationException ex) when (command is CliCommand.ShowEligibility)
         {
             await output.WriteLineAsync(ex.Message);
