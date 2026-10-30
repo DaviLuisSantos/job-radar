@@ -90,7 +90,7 @@ public class LinkedInTests
         Assert.Null(first.Summary);
         Assert.Null(result.Listings[0].Description);
 
-        Assert.Equal(new ListingLocation(Country.AU, null, "Perth", null, null), result.Listings[1].Listing.Location);
+        Assert.Equal(new ListingLocation(Country.AU, null, "Perth", "WA", null), result.Listings[1].Listing.Location);
         Assert.True(result.Complete);
     }
 
@@ -108,19 +108,20 @@ public class LinkedInTests
     }
 
     [Theory]
-    [InlineData("Perth WA", JobMarket.AU, "Perth WA", null)]
-    [InlineData("All Australia", JobMarket.AU, "Australia", null)]
-    [InlineData("Rio de Janeiro", JobMarket.BR, "Rio de Janeiro, Brazil", null)]
-    [InlineData("Brasil", JobMarket.BR, "Brazil", null)]
-    [InlineData("Remoto", JobMarket.BR, "Brazil", "2")]
-    public void The_location_is_one_LinkedIn_resolves(string location, JobMarket market, string sent, string? workplace)
+    [InlineData("Perth WA", JobMarket.AU, "Perth WA")]
+    [InlineData("All Australia", JobMarket.AU, "Australia")]
+    [InlineData("Rio de Janeiro", JobMarket.BR, "Rio de Janeiro, Brazil")]
+    [InlineData("Brasil", JobMarket.BR, "Brazil")]
+    [InlineData("Remoto", JobMarket.BR, "Brazil")]
+    public void The_location_is_one_LinkedIn_resolves(string location, JobMarket market, string sent)
     {
         var query = HttpUtility.ParseQueryString(
             LinkedInGuestClient.BuildUri(new ListingSearch("c#", location, PostedWithinDays: 2, Market: market), 20).Split('?')[1]);
 
         Assert.Equal("c#", query["keywords"]);
         Assert.Equal(sent, query["location"]);
-        Assert.Equal(workplace, query["f_WT"]);
+        // Ignored by the endpoint: sent, it would only look like a filter.
+        Assert.Null(query["f_WT"]);
         Assert.Equal("r172800", query["f_TPR"]);
         Assert.Equal("DD", query["sortBy"]);
         Assert.Equal("20", query["start"]);
@@ -131,7 +132,7 @@ public class LinkedInTests
         Assert.DoesNotContain("f_TPR", LinkedInGuestClient.BuildUri(Perth, 0));
 
     [Fact]
-    public async Task A_remote_search_in_Brazil_says_so_in_the_summary_and_reads_the_state()
+    public async Task A_remote_search_in_Brazil_is_the_whole_country_and_does_not_call_its_listings_remote()
     {
         var api = new FakeLinkedIn { Respond = _ => (HttpStatusCode.OK, FakeLinkedIn.PageOf([7], "Campinas, São Paulo, Brazil"), null) };
 
@@ -139,7 +140,9 @@ public class LinkedInTests
 
         var listing = Assert.Single(result.Listings).Listing;
         Assert.Equal(new ListingLocation(Country.BR, "Campinas", null, "SP", null), listing.Location);
-        Assert.Equal("Remoto", listing.Summary);
+        // The endpoint ignores the remote filter: an on-site job in Campinas comes back too, and would get the remote
+        // bonus and slip past the profile's on-site locations.
+        Assert.Null(listing.Summary);
     }
 
     [Fact]
@@ -243,7 +246,9 @@ public class LinkedInTests
     [InlineData("Osborne Park, Western Australia, Australia", "Osborne Park", null, "WA")]
     [InlineData("Western Australia, Australia", null, null, "WA")]
     [InlineData("Australia", null, null, null)]
-    [InlineData("Greater Sydney Area", null, "Sydney", null)]
+    [InlineData("Greater Sydney Area", null, "Sydney", "NSW")]
+    [InlineData("Greater Perth Area", null, "Perth", "WA")]
+    [InlineData("Greater Wollongong Area", null, "Wollongong", null)]
     public void Australian_places_become_suburb_region_and_state(string text, string? suburb, string? region, string? state) =>
         Assert.Equal(new ListingLocation(Country.AU, suburb, region, state, null), LinkedInLocation.Parse(text, Country.AU));
 
@@ -252,6 +257,12 @@ public class LinkedInTests
     [InlineData("Rio de Janeiro, Rio de Janeiro, Brazil", "Rio de Janeiro", "RJ")]
     public void Brazilian_states_are_written_as_two_letter_codes(string text, string suburb, string state) =>
         Assert.Equal(new ListingLocation(Country.BR, suburb, null, state, null), LinkedInLocation.Parse(text, Country.BR));
+
+    [Theory]
+    [InlineData("Greater Belo Horizonte", "Belo Horizonte", "MG")]
+    [InlineData("Greater Rio de Janeiro", "Rio de Janeiro", "RJ")]
+    public void Brazilian_metropolitan_areas_get_their_state(string text, string region, string state) =>
+        Assert.Equal(new ListingLocation(Country.BR, null, region, state, null), LinkedInLocation.Parse(text, Country.BR));
 
     [Theory]
     [InlineData("Columbus, OH")]

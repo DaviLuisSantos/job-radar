@@ -13,8 +13,7 @@ internal static class LinkedInListingTranslator
     /// resolve with jobs from elsewhere (the United States, mostly), and a card from another country is not a job of
     /// this market.
     /// </summary>
-    /// <param name="remote">The search asked for remote work: the card does not say it, the summary does.</param>
-    public static Listing? ToListing(LinkedInJobCard card, JobMarket market, bool remote)
+    public static Listing? ToListing(LinkedInJobCard card, JobMarket market)
     {
         var country = Country(market);
         if (LinkedInLocation.Parse(card.Location, country) is not { } location)
@@ -29,7 +28,7 @@ internal static class LinkedInListingTranslator
             PostedAt: card.PostedOn is { } day ? new DateTimeOffset(day.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero) : null,
             Url: ListingUrl.Choose(card.Link, $"https://www.linkedin.com/jobs/view/{card.Id}"),
             SourceCategory: null,
-            Summary: remote ? Remote(market) : null);
+            Summary: null);
     }
 
     internal static Country Country(JobMarket market) => market switch
@@ -38,14 +37,12 @@ internal static class LinkedInListingTranslator
         JobMarket.BR => Domain.Listings.Country.BR,
         _ => throw new ArgumentOutOfRangeException(nameof(market), market, "LinkedIn serves jobs in a country, not the remote markets."),
     };
-
-    /// <summary>The word the market's rules read as remote work (Gupy writes the same for Brazil).</summary>
-    private static string Remote(JobMarket market) => market == JobMarket.BR ? "Remoto" : "Remote";
 }
 
 /// <summary>
 /// The card's location, "Osborne Park, Western Australia, Australia" or "Greater Perth Area", into the canonical
-/// one. The country must be named, or the place be a "Greater … Area": anything else is from another country.
+/// one. The country must be named, or the place be a "Greater …" metropolitan area ("Greater Perth Area", "Greater Rio
+/// de Janeiro"), whose state comes from the city when it is a known one: anything else is from another country.
 /// </summary>
 internal static class LinkedInLocation
 {
@@ -71,7 +68,8 @@ internal static class LinkedInLocation
             var region = parts[0]["Greater ".Length..];
             if (region.EndsWith(" Area", StringComparison.OrdinalIgnoreCase))
                 region = region[..^" Area".Length];
-            return new ListingLocation(country, null, region.Trim(), null, null);
+            region = region.Trim();
+            return new ListingLocation(country, null, region, MetroStates(country).GetValueOrDefault(region), null);
         }
         return null;
     }
@@ -84,6 +82,23 @@ internal static class LinkedInLocation
     };
 
     private static Dictionary<string, string> States(Country country) => country == Country.BR ? BrazilStates : AustralianStates;
+
+    private static Dictionary<string, string> MetroStates(Country country) => country == Country.BR ? BrazilMetros : AustralianMetros;
+
+    /// <summary>The cities LinkedIn names a "Greater … Area" after: the capitals.</summary>
+    private static readonly Dictionary<string, string> AustralianMetros = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Sydney"] = "NSW", ["Melbourne"] = "VIC", ["Brisbane"] = "QLD", ["Perth"] = "WA", ["Adelaide"] = "SA",
+        ["Hobart"] = "TAS", ["Canberra"] = "ACT", ["Darwin"] = "NT",
+    };
+
+    /// <summary>The Brazilian metropolitan areas LinkedIn names ("Greater Belo Horizonte", without "Area").</summary>
+    private static readonly Dictionary<string, string> BrazilMetros = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["São Paulo"] = "SP", ["Rio de Janeiro"] = "RJ", ["Belo Horizonte"] = "MG", ["Brasília"] = "DF", ["Curitiba"] = "PR",
+        ["Porto Alegre"] = "RS", ["Recife"] = "PE", ["Salvador"] = "BA", ["Fortaleza"] = "CE", ["Campinas"] = "SP",
+        ["Florianópolis"] = "SC", ["Goiânia"] = "GO", ["Vitória"] = "ES", ["Belém"] = "PA", ["Manaus"] = "AM",
+    };
 
     private static readonly Dictionary<string, string> AustralianStates = new(StringComparer.OrdinalIgnoreCase)
     {

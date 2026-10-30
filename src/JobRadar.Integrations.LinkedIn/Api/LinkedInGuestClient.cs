@@ -72,12 +72,15 @@ internal sealed class LinkedInGuestClient(HttpClient http, LinkedInPacing pacing
     }
 
     /// <summary>
-    /// Keywords and location as free text, newest first, the date window in seconds (<c>f_TPR=r86400</c> is one day)
-    /// and the remote filter (<c>f_WT=2</c>) for a Brazilian "Remoto" search. The offset is <c>start</c>.
+    /// Keywords and location as free text, the date window in seconds (<c>f_TPR=r86400</c> is one day) and the offset
+    /// (<c>start</c>). The window is the only filter this endpoint keeps to (measured 2026-10-30): it answers the same
+    /// cards, in the same order, with or without the work type (<c>f_JT</c>), workplace (<c>f_WT</c>) and seniority
+    /// (<c>f_E</c>) filters, and does not keep to "newest first" (<c>sortBy=DD</c>, asked all the same). So nothing
+    /// here says a listing is remote or a contract: the title and the ad do.
     /// </summary>
     internal static string BuildUri(ListingSearch search, int start)
     {
-        var (location, remote) = Location(search);
+        var location = Location(search);
         var query = new List<KeyValuePair<string, string>>
         {
             new("keywords", search.Keywords),
@@ -87,30 +90,24 @@ internal sealed class LinkedInGuestClient(HttpClient http, LinkedInPacing pacing
         };
         if (search.PostedWithinDays is { } days)
             query.Add(new("f_TPR", $"r{(long)days * 86400}"));
-        if (remote)
-            query.Add(new("f_WT", "2"));
         return $"{SearchPath}?{string.Join("&", query.Select(q => $"{q.Key}={Uri.EscapeDataString(q.Value)}"))}";
     }
 
     /// <summary>
     /// The location LinkedIn resolves, from the one the profile writes. It does not read Portuguese ("Brasil" gave
     /// jobs in the United States), and a bare city name can be anywhere, so Brazilian places get the country
-    /// appended; "Remoto" is the whole country with the remote filter. Australian places resolve as written
-    /// ("Perth WA", "Western Australia"); "All Australia" is Seek's wording for the country.
+    /// appended. "Remoto" is the whole country: the remote filter is ignored, so the search cannot ask for remote work
+    /// only, and its listings are not marked remote. Australian places resolve as written ("Perth WA", "Western
+    /// Australia"); "All Australia" is Seek's wording for the country.
     /// </summary>
-    internal static (string Location, bool Remote) Location(ListingSearch search)
+    internal static string Location(ListingSearch search)
     {
         var location = search.Location.Trim();
         if (search.Market == JobMarket.BR)
-        {
-            if (location.Equals(RemoteBr, StringComparison.OrdinalIgnoreCase) || location.Equals("Remote", StringComparison.OrdinalIgnoreCase))
-                return ("Brazil", true);
-            if (location.Length == 0 || location.Equals("Brasil", StringComparison.OrdinalIgnoreCase) || location.Equals("Brazil", StringComparison.OrdinalIgnoreCase))
-                return ("Brazil", false);
-            return ($"{location}, Brazil", false);
-        }
-        if (location.Length == 0 || location.Equals("All Australia", StringComparison.OrdinalIgnoreCase))
-            return ("Australia", false);
-        return (location, false);
+            return location.Length == 0 || IsAny(location, RemoteBr, "Remote", "Brasil", "Brazil") ? "Brazil" : $"{location}, Brazil";
+        return location.Length == 0 || IsAny(location, "All Australia") ? "Australia" : location;
     }
+
+    private static bool IsAny(string text, params string[] words) =>
+        words.Any(w => text.Equals(w, StringComparison.OrdinalIgnoreCase));
 }

@@ -138,8 +138,11 @@ como o do `jobDetails` do Seek. Nada do LinkedIn vai ao Raio-X.
 **O que o spike mostrou** (chamadas com o User-Agent identificado, a partir do trabalhopc):
 - Busca: `GET www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=&location=&start=N`. Responde 200
   com `<li>` de cards em HTML, 10 por página, sem escolha. `start=850` ainda respondia, `start=1000` dá 400: teto de
-  ~1.000 por busca. `f_TPR=r<segundos>` filtra pela idade (r86400 = um dia), `f_WT=2` só remoto, `sortBy=DD` mais novas
-  primeiro. Uma rajada de 12 pedidos não foi recusada; o limite por IP não foi medido.
+  ~1.000 por busca. `f_TPR=r<segundos>` filtra pela idade (r86400 = um dia) e é o **único** filtro que este endpoint
+  respeita: com ou sem tipo de vaga (`f_JT`), modalidade (`f_WT`) e senioridade (`f_E`), as vagas e a ordem são as mesmas
+  (medido em 2026-10-30, valor único ou lista), e `sortBy=DD` não ordena pela data. Por isso nem a busca nem o card dizem
+  se a vaga é remota, contrato ou sênior: quem diz é o título e, quando buscado, o anúncio ("Employment type", "Seniority
+  level"). Uma rajada de 12 pedidos não foi recusada; o limite por IP não foi medido.
 - Card: id (`urn:li:jobPosting:<id>`), título, empresa, local ("Osborne Park, Western Australia, Australia" ou
   "Greater Perth Area"), data (`<time datetime="AAAA-MM-DD">`), link e, raramente, `job-search-card__salary-info`.
 - Anúncio: `GET .../jobs-guest/jobs/api/jobPosting/<id>`, 404 quando sumiu. O texto fica em
@@ -156,8 +159,15 @@ com orçamento próprio (1/s, 2 simultâneas). A primeira recusa (403, 429, 999 
 `/login`, `/checkpoint`) bloqueia todo pedido ao LinkedIn por 6 horas, sem perguntar de novo, porque a coleta roda todas
 as buscas mesmo quando uma falha; 999 não é repetido pelo resiliente. HTML lido por regex sobre as classes do site
 (sem parser). O payload gravado é o card em JSON, sem os selos que mudam todo dia ("Be an early applicant"). No Brasil,
-o local ganha ", Brazil"; "Remoto" vira "Brazil" + `f_WT=2` e o resumo "Remoto". Card de outro país é descartado; se a
-primeira página inteira é de outro país, a busca falha dizendo que o local não foi reconhecido.
+o local ganha ", Brazil"; "Remoto" vira o país inteiro ("Brazil"), **sem** marcar as vagas como remotas: o filtro é
+ignorado e vem vaga presencial junto (até 2026-10-30 elas ganhavam o bônus de remoto e escapavam do `OnSiteLocations`).
+"Greater … Area" ganha o estado quando a cidade é uma capital conhecida ("Greater Perth Area" → Perth WA, "Greater Belo
+Horizonte" → MG). Card de outro país é descartado; se a primeira página inteira é de outro país, a busca falha dizendo
+que o local não foi reconhecido.
+
+Medido em 2026-10-30, para escolher palavras-chave: no Brasil, "desenvolvedor .net" e ".NET developer" trazem quase as
+mesmas vagas (21 de 30), então uma das duas basta; no AU, só 4 de 52 títulos de ".NET Developer" em Perth citam .NET ou
+C#, porque a busca olha o anúncio inteiro e não respeita aspas. Quem separa é o score.
 
 **Em produção desde 2026-10-30:** fonte opcional (`OptIn`). Só busca nos perfis que pedem, com
 `"ExtraSources": ["linkedin"]` no `appsettings.Local.json`, porque a primeira passada sem janela pode passar de mil pedidos

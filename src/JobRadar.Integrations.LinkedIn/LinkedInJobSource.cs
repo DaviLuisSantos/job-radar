@@ -10,8 +10,8 @@ namespace JobRadar.Integrations.LinkedIn;
 
 /// <summary>
 /// Listings from LinkedIn's public job search, for the two countries: the Australian searches as the profiles write
-/// them, the Brazilian ones with the country appended (see <see cref="LinkedInGuestClient.Location"/>). Pages of 10,
-/// newest first, inside the date window, until a short page or the page cap. The card does not carry the ad: the
+/// them, the Brazilian ones with the country appended (see <see cref="LinkedInGuestClient.Location"/>). Pages of 10
+/// inside the date window, in LinkedIn's order, until a short page or the page cap. The card does not carry the ad: the
 /// description source fetches it later for the listings that matter.
 /// </summary>
 internal sealed class LinkedInJobSource(
@@ -38,7 +38,6 @@ internal sealed class LinkedInJobSource(
     public async Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default)
     {
         var o = options.Value;
-        var (_, remote) = LinkedInGuestClient.Location(search);
         var seen = new HashSet<string>();
         var listings = new List<SourcedListing>();
         var elsewhere = 0;
@@ -48,7 +47,7 @@ internal sealed class LinkedInJobSource(
             var cards = await client.SearchAsync(search, page * LinkedInGuestClient.PageSize, ct);
             foreach (var card in cards)
             {
-                if (LinkedInListingTranslator.ToListing(card, search.Market, remote) is not { } listing)
+                if (LinkedInListingTranslator.ToListing(card, search.Market) is not { } listing)
                 {
                     elsewhere++;
                     continue;
