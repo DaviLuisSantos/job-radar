@@ -117,10 +117,10 @@ internal sealed class EfListingScoreRepository(JobRadarDbContext db) : IListingS
             query = query.Where(r => r.Status == null && r.Verdict == null);
         if (filter.Text is { } text)
         {
-            // The search text is literal: escape LIKE wildcards. The escape character must be passed:
-            // without it Npgsql emits ESCAPE '' and the backslashes would be matched as text.
-            var pattern = "%" + text.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_") + "%";
-            query = query.Where(r => EF.Functions.ILike(r.l.Title, pattern, @"\") || EF.Functions.ILike(r.l.Company ?? "", pattern, @"\"));
+            // Contains keeps the text literal (EF escapes LIKE wildcards on every provider); lowering both sides
+            // ignores case on both databases, whose collations are case-sensitive.
+            var needle = text.ToLowerInvariant();
+            query = query.Where(r => r.l.Title.ToLower().Contains(needle) || (r.l.Company ?? "").ToLower().Contains(needle));
         }
 
         var rows = await query

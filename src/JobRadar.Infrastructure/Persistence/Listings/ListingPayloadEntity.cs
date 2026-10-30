@@ -32,8 +32,9 @@ public class ListingPayloadEntityConfiguration : IEntityTypeConfiguration<Listin
         b.Property(e => e.Source).HasColumnName("source").HasMaxLength(32);
         b.Property(e => e.SourceId).HasColumnName("source_id").HasMaxLength(64);
         b.Property(e => e.PayloadHash).HasColumnName("payload_hash").HasMaxLength(64).IsFixedLength();
-        // jsonb normalises whitespace and key order; the hash is taken before, on the text received.
-        b.Property(e => e.Payload).HasColumnName("payload").HasColumnType("jsonb");
+        // JSON (jsonb on Postgres, see ProviderModel), which normalises whitespace and key order: the hash is taken
+        // before, on the text received.
+        b.Property(e => e.Payload).HasColumnName("payload");
         b.Property(e => e.FirstSeenAt).HasColumnName("first_seen_at");
 
         b.HasOne<ListingEntity>().WithMany()

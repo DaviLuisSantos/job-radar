@@ -6,6 +6,7 @@ namespace JobRadar.Infrastructure.Persistence;
 public enum DatabaseProvider
 {
     Postgres,
+    SqlServer,
 }
 
 public static class DatabaseProviders
@@ -16,6 +17,7 @@ public static class DatabaseProviders
     public static string MigrationsAssembly(DatabaseProvider provider) => provider switch
     {
         DatabaseProvider.Postgres => "JobRadar.Infrastructure.Migrations.Postgres",
+        DatabaseProvider.SqlServer => "JobRadar.Infrastructure.Migrations.SqlServer",
         _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null),
     };
 
@@ -36,6 +38,9 @@ public static class DatabaseProviders
         {
             case DatabaseProvider.Postgres:
                 options.UseNpgsql(connectionString, o => o.MigrationsAssembly(MigrationsAssembly(provider)));
+                break;
+            case DatabaseProvider.SqlServer:
+                options.UseSqlServer(connectionString, o => o.MigrationsAssembly(MigrationsAssembly(provider)));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(provider), provider, null);

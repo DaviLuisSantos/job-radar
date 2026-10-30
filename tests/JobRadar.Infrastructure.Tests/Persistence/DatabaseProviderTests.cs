@@ -49,6 +49,6 @@ public sealed class DatabaseProviderTests
 
     private static JobRadarDbContext Context(DatabaseProvider provider) =>
         new(new DbContextOptionsBuilder<JobRadarDbContext>()
-            .UseJobRadarDatabase(provider, "Host=unused;Database=unused")
+            .UseJobRadarDatabase(provider, "Server=unused;Database=unused")
             .Options);
 }

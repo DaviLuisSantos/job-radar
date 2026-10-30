@@ -25,7 +25,7 @@ public class CollectionRunEntityConfiguration : IEntityTypeConfiguration<Collect
         b.ToTable("collection_runs");
         b.HasKey(e => e.Id);
 
-        b.Property(e => e.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+        b.Property(e => e.Id).HasColumnName("id");
         b.Property(e => e.Source).HasColumnName("source").HasMaxLength(32);
         b.Property(e => e.SearchKey).HasColumnName("search_key").HasMaxLength(300);
         b.Property(e => e.PostedWithinDays).HasColumnName("posted_within_days");

@@ -99,8 +99,13 @@ ficam em `Postgres/Migrations` (são do Postgres) até a 1.2 as levar para o ass
 - ✅ `deploy.ps1`: bundle a partir do assembly de migrations do Postgres (o bundle foi gerado localmente com o
   mesmo comando).
 
-**1.3 Migration inicial do SQL Server + itens da auditoria.** Busca da triagem sem `ILike`, identity neutra,
-collation sensível a maiúsculas na criação do banco. Ler a migration gerada antes de commitar (armadilha conhecida).
+**1.3 Migration inicial do SQL Server + itens da auditoria.** ✅ `JobRadar.Infrastructure.Migrations.SqlServer` com a
+`InitialCreate` gerada do mesmo modelo (lida: 15 tabelas, `datetimeoffset`, `nvarchar(max)` no JSON, `IDENTITY`, cascatas
+de um nível só). O que difere por banco ficou no `ProviderModel`: jsonb e identity do Postgres (o modelo dele não mudou,
+sem migration nova), collation `Latin1_General_100_CS_AS_SC_UTF8` no SQL Server. Descoberta: a collation só entra quando
+a migration **cria** o banco; a fixture da 1.4 precisa de um banco novo, não o `master` do container. Busca da triagem
+sem `ILike` (`ToLower().Contains()`). O SqlClient puxava `System.Security.Cryptography.Pkcs` 9.0.11, vulnerável: fixado
+em 10.0.13.
 
 **1.4 Contratos nos dois bancos.**
 - `Testcontainers.MsSql` em `Directory.Packages.props`; `SqlServerFixture` ao lado da `PostgresFixture`.

@@ -60,7 +60,7 @@ public class ApplicationEventEntityConfiguration : IEntityTypeConfiguration<Appl
     {
         b.ToTable("application_events");
         b.HasKey(e => e.Id);
-        b.Property(e => e.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+        b.Property(e => e.Id).HasColumnName("id");
         b.Property(e => e.Source).HasColumnName("source").HasMaxLength(32);
         b.Property(e => e.SourceId).HasColumnName("source_id").HasMaxLength(64);
         b.Property(e => e.FromStatus).HasColumnName("from_status").HasMaxLength(16);
