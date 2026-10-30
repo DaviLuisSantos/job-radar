@@ -13,6 +13,7 @@
 | 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras |
+| 5 | Mercados remotos e interface | ~10 | ⏳ planejada em 2026-10-30 |
 
 ## O que a auditoria mudou no plano original
 
@@ -249,6 +250,65 @@ fase 3 mostrar que uma fonte lenta não atrasa as outras de forma que importe, a
 4. Métricas de fila no `Meter` da fase 3; teste que reprocessa a fila de mortos sem duplicar.
 
 **Pronto:** §5.3 do original.
+
+## Fase 5 — Mercados remotos e interface (planejada em 2026-10-30)
+
+**Objetivo:** usar a mesma lógica de matching para vagas remotas que aceitem quem mora no Brasil (LATAM e mundo), sem
+mexer no que funciona na Austrália, e investir na interface antes que quatro mercados virem uma bagunça.
+
+### Decisões (autor, 2026-10-30)
+
+- **Quatro mercados, separados:** Australia, Brasil, Remoto LATAM e Remoto global. Cada um com os seus perfis e a sua
+  tela.
+- **Interface em português.** O código segue em inglês; os textos já moram em `Text/Wording.cs`. Os prints do README são
+  refeitos.
+- **Escopo da UI, completo:** navegação por mercado, linha da triagem mais rica, página da vaga, tela "Hoje" e celular.
+- **Biblioteca de componentes: MudBlazor** (9.11.0, MIT, .NET 10), para tema claro e escuro, layout responsivo, chips,
+  toggles, avisos e gaveta no celular. Alternativa, se o MudBlazor atrapalhar: Microsoft Fluent UI Blazor.
+
+### O que muda no modelo
+
+**Mercado não é país.** Hoje o `Country` faz os dois papéis: onde a vaga fica e qual regra lê o anúncio. Para AU e BR
+coincidem; para remoto, não. Uma vaga de uma empresa americana que aceita a América Latina não "é" de país nenhum, e a
+mesma vaga pode servir ao mercado LATAM e ao global.
+
+- **`Market`** (`AU`, `BR`, `LatamRemote`, `GlobalRemote`): o que um perfil procura. Fica no perfil e na busca (no lugar
+  de `Country`, que segue aceito na configuração por compatibilidade) e decide as fontes e as regras do score. As regras
+  passam a ser escolhidas pelo mercado do **perfil**, não pelo país da vaga: a mesma vaga remota é lida pelas regras de
+  cada mercado que a buscou.
+- **`Country` da vaga** continua: onde ela fica, quando fica em algum lugar.
+- **Elegibilidade da vaga** (nova): de onde a empresa aceita gente (`Worldwide`, `LATAM`, `Americas`, `Brazil`, `US only`,
+  `Europe`...), como a fonte informa. É o que decide se a vaga serve, como a cidadania decide na Austrália.
+
+### Passos
+
+**5.1 Mercado como conceito.** `Market` no domínio, no perfil e na busca; `CountryRules` vira `MarketRules` (AU e BR iguais
+a hoje: paridade e os testes atuais provam). Migration da elegibilidade nos dois bancos. Sem fonte nova ainda.
+
+**5.2 Interface: base.** MudBlazor, tema (claro e escuro) e `Wording` em português. Barra superior com o seletor de
+mercado (contagem de novas em cada um) e os perfis do mercado logo abaixo; Captura, Você, Requisitos, Calibragem e Status
+num menu de ajustes. Layout responsivo, com gaveta no celular. As teclas da triagem (`j` `k` `g` `b` `u` `o`) continuam.
+
+**5.3 Interface: triagem e vaga.** Na linha, etiquetas com o que decide a candidatura: elegibilidade, regime (CLT, PJ,
+contractor), moeda e faixa, arranjo (remoto, híbrido, presencial), fuso e idioma; excluída aparece com o motivo em uma
+linha. Página da vaga com "por que esta nota" em cima, o anúncio inteiro quando existe (Gupy e as remotas trazem) e ações
+fixas.
+
+**5.4 Tela "Hoje".** Página inicial por mercado: o que chegou desde a última visita, as melhores novas de cada perfil e o
+que mudou nas candidaturas.
+
+**5.5 Spike das fontes remotas (sem código no repo).** Como na Gupy: endpoint, campos (principalmente elegibilidade e
+salário), paginação, termos de uso. Candidatas: Remotive, Himalayas, RemoteOK, Jobicy e We Work Remotely (global); Get on
+Board (LATAM). Escolher uma ou duas por mercado.
+
+**5.6 Fontes remotas.** `JobRadar.Integrations.<Site>` para as escolhidas, no molde do Seek e da Gupy, com teste ao vivo.
+
+**5.7 Regras remotas.** `MarketRules` dos dois mercados remotos, em inglês: elegibilidade que não inclui o Brasil exclui
+("US only", "must reside in", "EU only"); fuso fora do alcance penaliza; contractor e pagamento em dólar são dados, não
+penalidade; inglês é esperado, não penaliza. LATAM e global diferem no que aceitam como elegível. `RulesVersion` +1.
+
+**Pronto:** os quatro mercados aparecem separados, a Austrália segue igual (paridade), um perfil remoto recebe vagas de
+uma fonte remota e exclui as que não aceitam o Brasil, e a interface funciona no celular.
 
 ## Fora de escopo
 
