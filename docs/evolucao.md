@@ -9,10 +9,10 @@
 | # | Fase | PRs | Estado |
 |---|---|---|---|
 | 0 | Rename e decisões de escopo | 1 | ✅ 2026-10-29 (PR 1; passada seguinte não conferida antes de seguir) |
-| 1 | SQL Server ao lado do Postgres | 5 | 🔨 |
-| 2 | País BR + Gupy | 5 | ⏳ |
-| 3 | Observabilidade | 3 | ⏳ |
-| 4 | Mensageria | 4 | ⏳ (só com 2+ fontes rodando) |
+| 1 | SQL Server ao lado do Postgres | 5 (PRs 2–6) | 🔨 implantado 2026-10-29; falta medir a triagem no SQL Server com os dados reais (1.5) |
+| 2 | País BR + Gupy | 6 (PRs 7–12) | 🔨 implantado 2026-10-29, paridade ok (259 testes); falta a primeira passada com um perfil BR |
+| 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
+| 4 | Mensageria | 4 | ⏳ esperar números: as métricas da fase 3 com Seek e Gupy dizem se uma fonte atrasa as outras |
 
 ## O que a auditoria mudou no plano original
 
