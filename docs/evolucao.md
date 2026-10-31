@@ -15,7 +15,7 @@
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 0 | ✅ 2026-10-30: não precisou, pelos números (abaixo); reavaliar se o gatilho disparar |
 | 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7, prints do README refeitos) |
-| 6 | Fontes sem dívida jurídica (ATS, GitHub vagas, Adzuna) | ~6 | 📋 2026-10-30: pesquisa e plano prontos; nenhuma etapa de código ainda |
+| 6 | Fontes sem dívida jurídica (ATS, GitHub vagas, Adzuna) | ~6 | 🔨 2026-10-31: 6.1 a 6.3 em código (Greenhouse); 6.4 e 6.5 planejadas |
 
 **O que falta, como issues:** pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27).
 
@@ -290,7 +290,7 @@ req/s: 1 a 2 minutos a mais numa passada de ~3, uma vez por dia, sem ninguém es
 RabbitMQ, consumidores) resolveria um atraso que não existe. **Gatilho para reabrir:** uma passada acima de 30 min, ou
 uma fonte bloqueada segurando as outras (aparece na `/status` e em `jobradar.stage.duration`).
 
-**Atenção (2026-10-30):** a [Fase 6](#fase-6--fontes-sem-dívida-jurídica-planejada-em-2026-10-30) acrescenta uma varredura de quadros de ATS que, sem fatiar e podar, passaria de 14 min sozinha. Estes números valem sem ela; meça a etapa "ATS boards" na primeira semana antes de reabrir esta fase.
+**Atenção (2026-10-30):** a [Fase 6](#fase-6--fontes-sem-dívida-jurídica-planejada-em-2026-10-30) acrescenta uma varredura de quadros de ATS que, sem fatiar e podar, passaria de 14 min sozinha. Estes números valem sem ela; meça a etapa "Board sweeps" na primeira semana antes de reabrir esta fase.
 
 ## Fase 5 — Mercados remotos e interface (planejada em 2026-10-30)
 
@@ -429,7 +429,7 @@ Projeto no padrão do Himalayas (`Api/`, tradutor, fonte, opções, `AddAtsInteg
 - **Fontes:** `GreenhouseJobSource` (`Name = "greenhouse"`, `Markets = {AU, BR, LatamRemote, GlobalRemote}`, `OptIn`) e
   `GreenhouseDescriptionSource`. `source_id = "{slug}/{id}"`; slug longo demais para a coluna é recusado, não vira hash.
   `IDescriptionSource.Source` em minúsculas, igual ao `ListingId.Source`, ou a etapa de descrição devolve zero em silêncio.
-- **A varredura é uma etapa do `DailyPipeline`** ("ATS boards", antes de "Collection"), com escopo e `DbContext` próprios
+- **A varredura é uma etapa do `DailyPipeline`** ("Board sweeps", antes de "Collection"), com escopo e `DbContext` próprios
   (`IServiceScopeFactory`: um singleton com o repositório scoped quebra `ValidateOnBuild`). Ela baixa os quadros sem
   `content=true`, manda o `ETag` guardado, guarda em memória (um `AtsSnapshot` simples, referência `volatile`) só as vagas
   dos mercados que importam, e grava o resultado em `ats_boards`. A `SearchAsync` só filtra o snapshot por palavras no
@@ -468,9 +468,9 @@ derivadas no fim, cobrindo: semear duas vezes não duplica; plataformas diferent
 diferem na caixa são dois quadros; nunca varridos primeiro e depois os mais antigos; quadro morto sai depois do limite de
 falhas; falha zera quando responde de novo; o `ETag` sobrevive a um novo contexto.
 
-### 6.3 Comando `ats seed` e passada local
+### 6.3 Comando `ats-seed` e passada local
 
-`ats seed` (no `Cli/`) semeia a tabela com a lista vendorizada (`Data/greenhouse-boards.json`, origem Common Crawl via
+`ats-seed` (no `Cli/`) semeia a tabela com a lista vendorizada (`Data/greenhouse-boards.json`, origem Common Crawl via
 job-board-aggregator, MIT, citada no arquivo). É um comando, não um efeito escondido de uma busca, para o autor decidir
 quando 8.333 linhas entram na produção. Num worktree, `collect` com a fonte ligada num perfil só; conferir na `/status` e
 em `jobradar.stage.duration`. Depois de implantar, ligar um perfil por vez, como o LinkedIn.
@@ -504,9 +504,9 @@ pode alimentar número publicado no Raio-X.
 | # | Etapa | Estado |
 |---|---|---|
 | 6.0 | Pesquisa e documentação | ✅ 2026-10-30 |
-| 6.1 | `Integrations.Ats` com Greenhouse | planejada |
-| 6.2 | Tabela `ats_boards` | planejada (antes ou junto da 6.1) |
-| 6.3 | `ats seed` e primeira passada | planejada |
+| 6.1 | `Integrations.Ats` com Greenhouse | 🔨 2026-10-31: código, 50 testes e o teste ao vivo prontos; falta a primeira passada com um perfil |
+| 6.2 | Tabela `ats_boards` | 🔨 2026-10-31: migrations, repositório e contrato escritos; contrato nos dois bancos **ainda não rodou** (Docker desligado) |
+| 6.3 | `ats-seed` e primeira passada | 🔨 2026-10-31: comando pronto; falta rodar na produção e ligar um perfil |
 | 6.4 | GitHub vagas (Brasil) | planejada |
 | 6.5 | Adzuna | planejada (precisa da chave do autor) |
 

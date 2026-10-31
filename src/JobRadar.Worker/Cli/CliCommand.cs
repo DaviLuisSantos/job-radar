@@ -26,6 +26,7 @@ public abstract record CliCommand
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
           tech-count [AU|BR|Remote] [YYYY-MM]  technologies the month's full ads asked for (default: BR, this month)
           eligibility AU|BR|LatamRemote|GlobalRemote  the market's eligibility rules in use, as configuration JSON
+          ats-seed                        load the shipped list of Greenhouse boards into the database (safe to repeat)
           import-prototype <jobs.db> [--dry-run]  bring the Python prototype history in (safe to repeat)
           copy-database Postgres|SqlServer <connection-string>  every row of this database into another, empty and
                                           migrated (dotnet ef database update)
@@ -50,10 +51,11 @@ public abstract record CliCommand
     public sealed record SetExperience(string Profile, double? Years) : CliCommand;
     public sealed record CopyDatabase(DatabaseProvider Provider, string ConnectionString) : CliCommand;
     public sealed record ShowEligibility(JobMarket Market) : CliCommand;
+    public sealed record SeedAtsBoards : CliCommand;
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
     public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype",
-        "requirements", "requirement", "import-candidate", "experience", "copy-database", "tech-count", "eligibility"];
+        "requirements", "requirement", "import-candidate", "experience", "copy-database", "tech-count", "eligibility", "ats-seed"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -91,6 +93,7 @@ public abstract record CliCommand
                 "tech-count" when args.Length == 3 => new TechCount(TryCountry(args[1]) ?? throw new FormatException($"Unknown country '{args[1]}': AU or BR."), ParseMonth(args[2])),
                 "eligibility" when args.Length == 2 => new ShowEligibility(JobMarkets.Parse(args[1])
                     ?? throw new FormatException($"Unknown market '{args[1]}': {string.Join(", ", Enum.GetNames<JobMarket>())}.")),
+                "ats-seed" when args.Length == 1 => new SeedAtsBoards(),
                 "market-report" when args.Length <= 3 => new MarketReport(
                     args.Length > 1 ? ParseMonth(args[1]) : null, args.Length > 2 ? args[2] : null),
                 _ => Fail($"Wrong arguments for '{name}'.", out error),

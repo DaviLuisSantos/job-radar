@@ -1,6 +1,7 @@
 using JobRadar.Application;
 using JobRadar.Infrastructure.Persistence;
 using JobRadar.Infrastructure.Telemetry;
+using JobRadar.Integrations.Ats;
 using JobRadar.Integrations.Gupy;
 using JobRadar.Integrations.Himalayas;
 using JobRadar.Integrations.Jobicy;
@@ -21,6 +22,7 @@ public static class JobRadarComposition
         services.AddApplication(configuration);
         services.AddPersistence(configuration);
         services.AddJobRadarTelemetry(configuration, "jobradar-worker");
+        services.AddAtsIntegration(configuration);
         services.AddSeekIntegration(configuration);
         services.AddGupyIntegration(configuration);
         services.AddHimalayasIntegration(configuration);

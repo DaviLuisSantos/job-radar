@@ -29,6 +29,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<IListingRepository, EfListingRepository>();
         services.AddScoped<IListingDescriptionRepository, EfListingDescriptionRepository>();
         services.AddScoped<ICollectionRunRepository, EfCollectionRunRepository>();
+        services.AddScoped<IAtsBoardRepository, EfAtsBoardRepository>();
         services.AddScoped<IListingScoreRepository, EfListingScoreRepository>();
         services.AddScoped<IListingTermRepository, EfListingTermRepository>();
         services.AddScoped<ICandidateRequirementRepository, EfCandidateRequirementRepository>();

@@ -15,7 +15,7 @@ Leitura curta para se orientar antes de abrir o código. Regras completas de cad
 
 ## Pipeline diário
 
-coleta (`ListingCollector`) → termos do texto completo (`FullTextTermService`) → descrições completas
+varredura de quadros (`IBoardSweep`, só se um perfil pedir a fonte) → coleta (`ListingCollector`) → termos do texto completo (`FullTextTermService`) → descrições completas
 (`DescriptionFetchService`) → score (`ListingScoringService` + `FitScorer`) → retrato do Raio-X (`MarketSnapshotService`).
 Roda às `Collection:DailyAt` no fuso `Collection:TimeZone`; uma etapa que falha não impede a seguinte.
 
@@ -31,7 +31,7 @@ Roda às `Collection:DailyAt` no fuso `Collection:TimeZone`; uma etapa que falha
 | `JobRadar.Integrations.Gupy` | vagas do Brasil, anúncio inteiro já na busca |
 | `JobRadar.Integrations.LinkedIn` | fonte opcional (AU e BR) por endpoints de convidado |
 | `JobRadar.Integrations.Himalayas` / `.Jobicy` | vagas remotas (LATAM e global) |
-| `JobRadar.Integrations.Ats` | *planejado (Fase 6)*: varredura dos quadros de vagas de ATS (Greenhouse primeiro), opcional |
+| `JobRadar.Integrations.Ats` | quadros de vagas de ATS (Greenhouse): varredura em etapa própria do pipeline, opcional (`OptIn`) |
 | `JobRadar.Integrations.Prototype` | importação do `jobs.db` do protótipo Python |
 | `JobRadar.Worker` | host, job diário e comandos de linha de comando |
 | `JobRadar.Web` | triagem, página da vaga, captura de descrição, requisitos, calibragem (`Components/Pages/`) |
@@ -43,7 +43,7 @@ Roda às `Collection:DailyAt` no fuso `Collection:TimeZone`; uma etapa que falha
 | `JobRadar.Domain.Tests` | score, regras de mercado; paridade com o protótipo (`JOBRADAR_PARITY_FILE`) e casos locais (`JOBRADAR_LOCAL_CASES`) |
 | `JobRadar.Application.Tests` | serviços com portas falsas |
 | `JobRadar.Infrastructure.Tests` | mappers sem banco; contratos dos repositórios em `Contracts/` (`JOBRADAR_DB_TESTS=1`, Docker) |
-| `JobRadar.Integrations.*.Tests` | tradutores e clientes de cada fonte (`Remote` = Himalayas e Jobicy; `Ats` quando existir) |
+| `JobRadar.Integrations.*.Tests` | tradutores e clientes de cada fonte (`Remote` = Himalayas e Jobicy) |
 | `JobRadar.Worker.Tests` | composição, comandos, vocabulário público; testes ao vivo (`JOBRADAR_LIVE_TESTS=1`) |
 | `JobRadar.Web.Tests` | componentes e serviços do site |
 
@@ -57,7 +57,7 @@ Padrão: `dotnet test` (sem banco, sem rede). Comandos completos no `CLAUDE.md`.
   `RulesVersion` nova. Skill `regras-do-score`.
 - Migrations e `Infrastructure/Persistence/ProviderModel.cs`: dois bancos, collation, renomeações erradas do EF.
   Skill `banco-e-migrations`.
-- `Integrations.Seek/Api/SeekPacingHandler.cs` e `Integrations.LinkedIn/Api/LinkedInPacing.cs`: orçamento contra
+- `Integrations.Seek/Api/SeekPacingHandler.cs`, `Integrations.LinkedIn/Api/LinkedInPacing.cs` e `Integrations.Ats/Api/AtsPacing.cs`: orçamento contra
   anti-bot; não afrouxar. Skill `fontes-de-vagas`.
 - Dados privados, fora do git: `src/JobRadar.Worker/appsettings.Local.json` (perfis, elegibilidade),
   `candidate/` (currículo e fatos), `docs/private/`. Nada disso vai para arquivo versionado.

@@ -1,3 +1,4 @@
+using JobRadar.Application.Abstractions;
 using JobRadar.Application.Collection;
 using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace JobRadar.Worker;
 
 /// <summary>
-/// One pass: collect every profile's searches, mark the full-text terms of what was collected, fetch
+/// One pass: sweep the sources read by whole boards, collect every profile's searches, mark the full-text terms of what was collected, fetch
 /// the full text of the listings that matter, score what each profile found, and take the day's
 /// market snapshot (Raio-X). Each stage is isolated: a
 /// failed stage does not stop the next one. The scheduled job and the <c>collect</c> command run this
@@ -31,6 +32,7 @@ internal sealed class DailyPipeline(
         var runId = activity?.TraceId.ToString() ?? Guid.NewGuid().ToString("N");
         using var scope = log.BeginScope(new Dictionary<string, object> { ["RunId"] = runId });
 
+        await StageAsync("Board sweeps", sp => SweepAsync(sp, fullHistory, ct), failed, ct);
         await StageAsync("Collection", sp => sp.GetRequiredService<ListingCollector>().CollectAsync(catalog.Searches, fullHistory, ct), failed, ct);
         await StageAsync("Full-text terms", sp => sp.GetRequiredService<FullTextTermService>().TagAsync(ct), failed, ct);
         await StageAsync("Full descriptions", sp => sp.GetRequiredService<DescriptionFetchService>().FetchAsync(ct), failed, ct);
@@ -44,6 +46,17 @@ internal sealed class DailyPipeline(
         if (failed.Count > 0)
             activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, string.Join(", ", failed));
         return failed;
+    }
+
+    /// <summary>
+    /// The sources read by whole boards (<see cref="IBoardSweep"/>) are swept before the collection, which only
+    /// filters what they left. An opt-in source nobody asked for is not swept.
+    /// </summary>
+    private async Task SweepAsync(IServiceProvider sp, bool fullHistory, CancellationToken ct)
+    {
+        var asked = catalog.Searches.SelectMany(s => s.ExtraSources ?? []).Select(n => n.Trim().ToLowerInvariant()).ToHashSet();
+        foreach (var sweep in sp.GetServices<IBoardSweep>().Where(s => asked.Contains(s.Source)))
+            await sweep.SweepAsync(fullHistory, ct);
     }
 
     private DateOnly Today(TimeZoneInfo zone) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), zone).DateTime);

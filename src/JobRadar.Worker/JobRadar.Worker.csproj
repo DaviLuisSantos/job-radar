@@ -9,6 +9,7 @@
     <ProjectReference Include="..\JobRadar.Infrastructure\JobRadar.Infrastructure.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Seek\JobRadar.Integrations.Seek.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Gupy\JobRadar.Integrations.Gupy.csproj" />
+    <ProjectReference Include="..\JobRadar.Integrations.Ats\JobRadar.Integrations.Ats.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Himalayas\JobRadar.Integrations.Himalayas.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.Jobicy\JobRadar.Integrations.Jobicy.csproj" />
     <ProjectReference Include="..\JobRadar.Integrations.LinkedIn\JobRadar.Integrations.LinkedIn.csproj" />

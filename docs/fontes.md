@@ -239,7 +239,7 @@ só roda nos perfis que a citarem em `ExtraSources`, para não mexer nos dados n
 - Sem `Summary` na varredura (sem `content=true`): a primeira pontuação usa título, departamento e escritório; a etapa de
   descrição busca o texto da vaga individual para as que passam do `Descriptions:MinScore`.
 - A lista de slugs é vendorizada no repositório (origem e licença citadas) e entra na tabela por um comando
-  (`ats seed`), não como efeito escondido de uma busca.
+  (`ats-seed`), não como efeito escondido de uma busca.
 
 ### Ferramentas prontas avaliadas (2026-10-30)
 

@@ -1,0 +1,115 @@
+{
+  "jobs": [
+    {
+      "id": 1001,
+      "internal_job_id": 5001,
+      "title": "Senior .NET Developer",
+      "updated_at": "2026-10-29T11:42:09-04:00",
+      "first_published": "2026-10-01T09:00:00-04:00",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1001",
+      "company_name": "Example Co",
+      "location": { "name": "Sydney, Australia" },
+      "offices": [ { "id": 1, "name": "Sydney", "location": "Sydney, New South Wales, Australia" } ],
+      "departments": [ { "id": 10, "name": "Engineering" } ]
+    },
+    {
+      "id": 1002,
+      "title": "Desenvolvedor .NET Pleno",
+      "updated_at": "2026-10-28T10:00:00-03:00",
+      "first_published": "2026-10-20T10:00:00-03:00",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1002",
+      "company_name": "Example Co",
+      "location": { "name": "São Paulo, Brazil" },
+      "offices": [],
+      "departments": [ { "id": 10, "name": "Engineering" } ]
+    },
+    {
+      "id": 1003,
+      "title": "Backend Engineer (C#)",
+      "updated_at": "2026-10-27T10:00:00-03:00",
+      "first_published": "2026-10-27T10:00:00-03:00",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1003",
+      "company_name": "Example Co",
+      "location": { "name": "Remote - Brazil" },
+      "offices": [],
+      "departments": [ { "id": 10, "name": "Engineering" } ]
+    },
+    {
+      "id": 1004,
+      "title": "Platform Engineer",
+      "updated_at": "2026-10-26T10:00:00Z",
+      "first_published": "2026-10-26T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1004",
+      "company_name": "Example Co",
+      "location": { "name": "Remote (LATAM)" },
+      "offices": [],
+      "departments": [ { "id": 11, "name": "Platform" } ]
+    },
+    {
+      "id": 1005,
+      "title": "Site Reliability Engineer",
+      "updated_at": "2026-10-25T10:00:00Z",
+      "first_published": "2026-10-25T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1005",
+      "company_name": "Example Co",
+      "location": { "name": "Remote - Anywhere" },
+      "offices": [],
+      "departments": [ { "id": 11, "name": "Platform" } ]
+    },
+    {
+      "id": 1006,
+      "title": "Account Executive",
+      "updated_at": "2026-10-24T10:00:00Z",
+      "first_published": "2026-10-24T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1006",
+      "company_name": "Example Co",
+      "location": { "name": "Remote" },
+      "offices": [],
+      "departments": [ { "id": 12, "name": "Sales" } ]
+    },
+    {
+      "id": 1007,
+      "title": "Support Engineer",
+      "updated_at": "2026-10-23T10:00:00Z",
+      "first_published": "2026-10-23T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1007",
+      "company_name": "Example Co",
+      "location": { "name": "Dublin" },
+      "offices": [ { "id": 2, "name": "Ireland Locations", "location": null } ],
+      "departments": [ { "id": 13, "name": "Support" } ]
+    },
+    {
+      "id": 1008,
+      "title": "Data Engineer",
+      "updated_at": "2026-10-22T10:00:00Z",
+      "first_published": "2026-10-22T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1008",
+      "company_name": "Example Co",
+      "location": { "name": "Melbourne, FL" },
+      "offices": [],
+      "departments": [ { "id": 10, "name": "Engineering" } ]
+    },
+    {
+      "id": 1009,
+      "title": "Office Manager",
+      "updated_at": "2026-10-21T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1009",
+      "company_name": "Example Co",
+      "location": null,
+      "offices": [],
+      "departments": []
+    },
+    {
+      "id": 1010,
+      "title": "Frontend Developer",
+      "updated_at": "2026-10-20T10:00:00Z",
+      "first_published": "2026-10-20T10:00:00Z",
+      "absolute_url": "https://example-co.com/careers?gh_jid=1010",
+      "company_name": "Example Co",
+      "location": { "name": "Perth, WA" },
+      "offices": [],
+      "departments": [ { "id": 10, "name": "Engineering" } ]
+    }
+  ],
+  "meta": { "total": 10 }
+}

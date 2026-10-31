@@ -23,6 +23,55 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Collection.AtsBoardEntity", b =>
+                {
+                    b.Property<string>("Platform")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasColumnName("platform");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasColumnName("slug");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("int")
+                        .HasColumnName("consecutive_failures");
+
+                    b.Property<string>("ETag")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("etag");
+
+                    b.Property<int>("JobsKept")
+                        .HasColumnType("int")
+                        .HasColumnName("jobs_kept");
+
+                    b.Property<int>("JobsTotal")
+                        .HasColumnType("int")
+                        .HasColumnName("jobs_total");
+
+                    b.Property<DateTimeOffset?>("LastHitAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("last_hit_at");
+
+                    b.Property<int?>("LastStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("last_status");
+
+                    b.Property<DateTimeOffset?>("LastSweptAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("last_swept_at");
+
+                    b.HasKey("Platform", "Slug");
+
+                    b.HasIndex("Platform", "LastSweptAt")
+                        .HasDatabaseName("ix_ats_boards_sweep");
+
+                    b.ToTable("ats_boards", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Collection.CollectionRunEntity", b =>
                 {
                     b.Property<long>("Id")

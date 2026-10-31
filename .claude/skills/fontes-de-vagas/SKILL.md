@@ -16,6 +16,14 @@ Jobicy pela composição completa. Fora do CI de propósito.
 
 ## Etapas do pipeline
 
+**Varredura de quadros** — `IBoardSweep.SweepAsync`, etapa "Board sweeps" do `DailyPipeline`, **antes** da coleta. Só
+para fonte lida por quadro inteiro, não por palavra-chave (hoje o Greenhouse, `AtsBoardSweepService`), e só se algum
+perfil a citar em `ExtraSources`. Lê da tabela `ats_boards` a fatia de quadros varridos há mais tempo
+(`Ats:MaxBoardsPerSweep`), manda o `ETag` de cada um (304 = sem corpo; `collect --full` ignora os tags), guarda em memória
+(`AtsSnapshot`) só as vagas que caem em AU, BR ou remoto LATAM/global, grava o resultado em `ats_boards` e uma linha em
+`collection_runs` com chave `ats: sweep greenhouse`. A `SearchAsync` da fonte só filtra o snapshot (mercado + todas as palavras
+no título ou departamento); sem varredura nesta passada devolve `Complete = false`, não "nada achado".
+
 **Coleta** — `ListingCollector.CollectAsync(ProfileCatalog.Searches)`:
 1. para cada fonte e cada busca **de um mercado que a fonte serve** (`IJobSource.Markets`, `Market` do perfil), calcula a janela
    incremental pelo último sucesso. Fonte opcional (`IJobSource.OptIn`, o LinkedIn) só roda as buscas dos perfis que a citam
@@ -51,6 +59,21 @@ uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatór
 
 ## Armadilhas
 
+- ATS (Greenhouse): **a varredura não pode ficar dentro da `SearchAsync`**. O coletor roda 6 buscas em paralelo e uma que espera
+  minutos prende uma vaga (e, com a fonte primeiro, as outras fontes não rodariam). Por isso é etapa própria, com escopo e
+  `DbContext` próprios: é a única escrita no banco fora do `SemaphoreSlim` do coletor, de propósito. Singleton com repositório
+  scoped quebra o container (`ValidateOnBuild`): quem varre é `AddScoped`, e o snapshot é um singleton sem banco.
+- ATS: o id da vaga é `slug/id` **sem hash**, porque a etapa de descrição monta `/v1/boards/{slug}/jobs/{id}` a partir dele;
+  slug que não cabe em `source_id` (64) é recusado e contado. `IDescriptionSource.Source` tem de ser igual a `ListingId.Source`
+  (minúsculas), ou a etapa devolve zero em silêncio.
+- ATS: **404 é o estado normal** de um quadro morto (metade da lista): conta falha em `ats_boards` e não torna a varredura
+  incompleta. Só timeout, erro 5xx ou conexão caída deixam `Complete = false`, e esses não aposentam o quadro.
+- ATS: o Greenhouse manda o anúncio com o HTML **escapado** (`&lt;p&gt;`). `HtmlText.ToPlain` tira as tags e só depois decodifica, então
+  o texto precisa de um `HtmlDecode` antes, ou as tags sobrevivem no texto guardado (`GreenhouseDescriptionSource`).
+- ATS: a janela incremental é ignorada (como no Jobicy) e `collection_runs.posted_within_days` não vale para ele. Para o
+  Greenhouse, `last_seen_at` é verdadeiro (a varredura vê o quadro todo); para as outras fontes a armadilha abaixo continua.
+- ATS: "Remote" sozinho é descartado (os quadros querem dizer um país, quase sempre os EUA); só entra remoto com Brasil/LATAM
+  ou "Anywhere/Worldwide". Perfil com palavra nova só vê os quadros que dizem "sem mudança" depois de um `collect --full`.
 - `ListingId` normaliza a fonte (`Trim` + minúsculas): `"SEEK"` e `"seek"` são a mesma fonte.
 - Seek repete anúncios promovidos em toda página: `SeekJobSource` deduplica por ID dentro da busca.
   Por isso `totalCount` não bate com o número de vagas devolvidas.

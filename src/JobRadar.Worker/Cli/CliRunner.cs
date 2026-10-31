@@ -1,4 +1,5 @@
 using System.Globalization;
+using JobRadar.Application.Abstractions;
 using JobRadar.Application.Collection;
 using JobRadar.Application.Import;
 using JobRadar.Application.Market;
@@ -6,6 +7,7 @@ using JobRadar.Application.Matching;
 using JobRadar.Application.Tracking;
 using JobRadar.Domain.Matching;
 using JobRadar.Infrastructure.Persistence;
+using JobRadar.Integrations.Ats;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Worker.Cli;
@@ -54,6 +56,11 @@ public static class CliRunner
                 case CliCommand.ShowEligibility c:
                     var rulesInUse = sp.GetRequiredService<ProfileCatalog>().RulesOf(c.Market);
                     await output.WriteLineAsync(EligibilityJson.Section(c.Market, rulesInUse.Eligibility));
+                    break;
+                case CliCommand.SeedAtsBoards:
+                    var list = AtsBoardList.Greenhouse();
+                    var added = await sp.GetRequiredService<IAtsBoardRepository>().AddMissingAsync(list, ct);
+                    await output.WriteLineAsync($"Greenhouse boards: {added:N0} added, {list.Count - added:N0} already known.");
                     break;
                 case CliCommand.ListRequirements:
                     WriteRequirements(await sp.GetRequiredService<CandidateRequirementService>().ListAsync(ct), output);

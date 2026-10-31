@@ -83,7 +83,7 @@ src/JobRadar.Integrations.Gupy  IJobSource da Gupy (Brasil): busca do portal, tr
 src/JobRadar.Integrations.LinkedIn  IJobSource (AU e BR) e IDescriptionSource pelos endpoints de convidado: HTML lido por regex
 src/JobRadar.Integrations.Himalayas  IJobSource remoto (LATAM e global): busca pública; elegibilidade, fuso, salário
 src/JobRadar.Integrations.Jobicy  IJobSource remoto (LATAM): feed de 7 dias filtrado pelas palavras-chave aqui
-(planejado, Fase 6) src/JobRadar.Integrations.Ats  quadros de vagas de ATS (Greenhouse): varredura em etapa própria
+src/JobRadar.Integrations.Ats  IJobSource e IDescriptionSource do Greenhouse: varredura de quadros em etapa própria do pipeline
 src/JobRadar.Integrations.Prototype  leitor do jobs.db do protótipo (importação; usa os rótulos do Seek)
 src/JobRadar.Worker          composição raiz (JobRadarComposition.AddJobRadar), job diário e comandos (Cli/)
 src/JobRadar.Web             triagem em Blazor + MudBlazor (JobRadarWebComposition.AddJobRadarWeb); textos em Text/Wording.cs
