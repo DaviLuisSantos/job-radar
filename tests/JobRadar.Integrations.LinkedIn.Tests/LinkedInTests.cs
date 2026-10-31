@@ -193,6 +193,29 @@ public class LinkedInTests
         Assert.Contains("Xyzzyland", error.Message);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n  \n")]
+    public async Task An_empty_page_is_a_search_with_no_results(string body)
+    {
+        var api = new FakeLinkedIn { Respond = _ => (HttpStatusCode.OK, body, null) };
+
+        var result = await api.Source().SearchAsync(Perth, Ct);
+
+        Assert.Empty(result.Listings);
+        Assert.True(result.Complete);
+    }
+
+    [Theory]
+    [InlineData("<li><div class=\"base-search-card\" data-urn=\"urn:li:jobPosting:1\"></div></li>")]
+    [InlineData("<li><div data-entity-urn=\"urn:li:jobPosting:1\"><h3 class=\"renamed\">Job</h3></div></li>")]
+    public async Task A_page_that_changed_layout_fails_the_search_instead_of_reading_as_no_results(string body)
+    {
+        var api = new FakeLinkedIn { Respond = _ => (HttpStatusCode.OK, body, null) };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => api.Source().SearchAsync(Perth, Ct));
+    }
+
     [Fact]
     public void Serves_the_countries_it_is_configured_for_and_never_a_remote_market()
     {

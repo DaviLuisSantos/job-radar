@@ -25,6 +25,14 @@ internal static partial class LinkedInCards
     public static IReadOnlyList<LinkedInJobCard> Parse(string html)
     {
         var urns = Urn().Matches(html);
+        // An empty page is a search with no more results. Markup that names job postings but yields no card is LinkedIn
+        // changing its page: said as an error, not read as "no results" (which would close the search as complete).
+        if (urns.Count == 0)
+        {
+            if (html.Contains("jobPosting", StringComparison.Ordinal) || html.Contains("base-search-card", StringComparison.Ordinal))
+                throw new InvalidOperationException("The LinkedIn search page mentions job postings but no card was read (data-entity-urn).");
+            return [];
+        }
         var cards = new List<LinkedInJobCard>(urns.Count);
         for (var i = 0; i < urns.Count; i++)
         {
@@ -33,7 +41,7 @@ internal static partial class LinkedInCards
             var card = html[urns[i].Index..end];
             cards.Add(new LinkedInJobCard(
                 Id: urns[i].Groups[1].Value,
-                Title: LinkedInHtml.First(card, Title()) ?? "(untitled)",
+                Title: LinkedInHtml.First(card, Title()) ?? Untitled,
                 Company: LinkedInHtml.First(card, Company()),
                 Location: LinkedInHtml.First(card, Location()),
                 Salary: LinkedInHtml.First(card, Salary()),
@@ -43,8 +51,13 @@ internal static partial class LinkedInCards
                     : null,
                 Link: Link().Match(card) is { Success: true } link ? WithoutQuery(WebUtility.HtmlDecode(link.Groups[1].Value)) : null));
         }
+        // Cards with no title at all are not the cards this reader knows: the title class changed.
+        if (cards.All(c => c.Title == Untitled))
+            throw new InvalidOperationException($"The LinkedIn search page has {cards.Count} cards and none with a title (base-search-card__title).");
         return cards;
     }
+
+    private const string Untitled = "(untitled)";
 
     private static string WithoutQuery(string url) => url.IndexOf('?') is var i and >= 0 ? url[..i] : url;
 
