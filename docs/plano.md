@@ -49,8 +49,10 @@ Pendências conhecidas, com a etapa onde entram:
 - **Acerto do score (decidido 2026-10-21, nesta ordem):** (1) rotular: meta de 50 julgadas por perfil, com
   a ordem "across scores" da triagem para não rotular só o topo; (2) ajustar regras e pesos com o
   `calibrate` antes e depois; (3) descrição completa (v1.x, abaixo); (4) ML (v2/v3). **Fontes novas
-  esperam:** não melhoram o ranking e mudariam os dados no meio da calibragem. A primeira será o Adzuna
-  (API oficial), mais pelo Raio-X do que pela busca pessoal.
+  esperam:** não melhoram o ranking e mudariam os dados no meio da calibragem. Revisto em 2026-10-30 (pesquisa em
+  [fontes.md](fontes.md#ats-públicos-pesquisa-de-2026-10-30)): a primeira será o ATS (Greenhouse), depois GitHub vagas
+  (Brasil) e o Adzuna; nascem `OptIn`, ligadas num perfil por vez, o que protege a calibragem. Plano na Fase 6 de
+  [evolucao.md](evolucao.md). O Adzuna segue sendo a que pode alimentar o Raio-X.
 - **Calibragem (depois de ter rótulos reais):** peculiaridade herdada do protótipo e mantida pela paridade: o "no" de
   "No experience required" anula a frase de entrada seguinte, se ela estiver a menos de 80
   caracteres (teste `Known_quirk_the_no_of_no_experience_negates_the_next_entry_phrase`).

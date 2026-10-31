@@ -10,6 +10,8 @@
 - **v1: só Seek.** **v2: Adzuna primeiro, Workforce Australia junto com o recorte por região.**
 - **Fora:** Indeed e LinkedIn (sem API de busca, anti-bot, risco jurídico). Jora não planejado. O LinkedIn entrou no
   Matching em 2026-10-30, só pelos endpoints de convidado ([abaixo](#linkedin-spike-de-2026-10-30)).
+- **Ordem das fontes novas (2026-10-30):** ATS (Greenhouse), depois GitHub vagas (Brasil) e o Adzuna. Ver
+  [ATS públicos](#ats-públicos-pesquisa-de-2026-10-30). O Indeed segue fora; a única porta prática é descrita lá.
 
 ## Candidatas
 
@@ -22,6 +24,8 @@
 | **Jora** | pertence ao Seek; agregador | pouco além do Seek | o mesmo do Seek | não planejado |
 | **Indeed** | sem API pública para busca; anti-bot forte | volume alto | alto | fora |
 | **LinkedIn** | endpoints de convidado (HTML), sem conta; anti-scraping agressivo, histórico de processos | nenhum: a busca não respeita frase e o total é arredondado | alto | Matching (AU e BR) desde 2026-10-30; fora do Raio-X |
+| **ATS: Greenhouse** (depois Lever e Ashby) | API pública de job board de cada empresa, JSON, sem chave nem conta ([abaixo](#ats-públicos-pesquisa-de-2026-10-30)) | nenhum por ora: sem categoria, só Matching | baixo: endpoint público da plataforma, nenhum termo aceito | Matching, opcional (`OptIn`); [Fase 6](evolucao.md) |
+| **GitHub vagas** (`frontendbr/vagas` e outros) | API de issues do GitHub, token opcional | nenhum: só Matching, só Brasil | baixo: API oficial | Fase 6, depois do ATS |
 
 ## Seek — como a integração funciona (etapa 2)
 
@@ -173,3 +177,94 @@ C#, porque a busca olha o anúncio inteiro e não respeita aspas. Quem separa é
 `"ExtraSources": ["linkedin"]` no `appsettings.Local.json`, porque a primeira passada sem janela pode passar de mil pedidos
 e o perfil de fazenda ou de obra ganha pouco com ele. `LiveLinkedInTests` (busca em "Perth WA" e um anúncio) passou no
 mesmo dia. Ligar em mais perfis um de cada vez, olhando na `/status` se alguma busca do LinkedIn falhou.
+
+## ATS públicos (pesquisa de 2026-10-30)
+
+Pesquisa na web e no GitHub por scrapers de vagas e por fontes que ainda faltam. Conclusão: **nenhuma ferramenta pronta
+vale integrar** (todas são Python e refazem o que o `IJobSource` já faz); o que vale é o que elas descobriram: as APIs
+públicas de job board dos sistemas de recrutamento (ATS) e as listas públicas de empresas que usam cada um.
+
+**O que os ATS dão.** Cada empresa que usa Greenhouse, Lever ou Ashby publica o quadro de vagas em JSON, sem chave,
+sem conta e sem anti-bot, no endereço que o próprio site de carreiras da empresa chama. É a primeira candidata sem
+dívida jurídica: não há termo de uso aceito nem `robots.txt` a contrariar. O custo é outro: não existe busca por
+palavra-chave, só o quadro inteiro de uma empresa por vez, então a coleta é uma **varredura** (baixar tudo, filtrar aqui).
+
+| Plataforma | Endereço | Observações |
+|---|---|---|
+| Greenhouse | `boards-api.greenhouse.io/v1/boards/{slug}/jobs` (`?content=true` traz o anúncio) | `/jobs/{id}` devolve uma vaga com o texto; `ETag` e 304 |
+| Lever | `api.lever.co/v0/postings/{slug}?mode=json` | `descriptionPlain` já em texto; `ETag` |
+| Ashby | `api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true` | `secondaryLocations` e compensação; `ETag`; o mais apertado em ritmo |
+| Workable | `apply.workable.com/api/v1/widget/accounts/{token}` | sem lista pública de tokens |
+| SmartRecruiters | `api.smartrecruiters.com/v1/companies/{id}/postings` | aceita `country=`; sem lista pública |
+
+**Medido em 2026-10-30, a partir do trabalhopc** (User-Agent identificado; amostras fora do repo):
+
+| Fato | Resultado |
+|---|---|
+| Greenhouse `…/jobs` | 200, quadro inteiro num JSON (um quadro de 746 vagas: 465 KB) |
+| Greenhouse `?content=true` | o mesmo quadro com o anúncio em HTML: 5,8 MB (12 vezes mais) |
+| `If-None-Match` com o `ETag` | **304 sem corpo**; Lever e Ashby também mandam `ETag` |
+| 20 pedidos, 8 simultâneos | 1,1 s, nenhum 429 (não prova que 8 mil aguentam: rajada é o que dispara anti-bot) |
+| slug que não existe | 404 limpo; **metade** dos slugs de uma lista pública está morta |
+| Quadros vivos (Greenhouse, 1.233 vagas) | 1,1% Austrália, 4,2% Brasil, 1,9% LATAM explícito |
+| Lever (265 vagas) e Ashby (484) | 0 Austrália, 3 Brasil cada: começar pelo Greenhouse |
+| Listas públicas de slugs (MIT, colhidas do Common Crawl) | 8.333 Greenhouse, 4.368 Lever, 3.161 Ashby |
+
+Campos de uma vaga do Greenhouse: `id`, `title`, `updated_at`, `first_published`, `absolute_url`, `location.name` (texto
+livre: "Dublin", "Sydney, Australia", "Remote - Brazil"), `offices`, `departments`, `company_name`; `content` só com o
+parâmetro ou na vaga individual.
+
+**Decidido (2026-10-30): Greenhouse primeiro, só Matching, opcional.** Lever e Ashby entram depois como fontes próprias no
+mesmo projeto. Nada do ATS vai ao Raio-X (não há categoria; mesma regra do LinkedIn e da Gupy). A fonte nasce `OptIn`:
+só roda nos perfis que a citarem em `ExtraSources`, para não mexer nos dados no meio da calibragem.
+
+**Desenho** (revisado contra o código em 2026-10-30; plano em [evolucao.md](evolucao.md), Fase 6):
+- `IJobSource.Name = "greenhouse"` (uma fonte por plataforma, regra 5 abaixo), `source_id = "{slug}/{id}"`. Sem hash no
+  id: a etapa de descrição precisa montar `/{slug}/jobs/{id}` a partir dele. Slug longo demais para a coluna (64) é
+  recusado e registrado.
+- **A varredura é uma etapa do pipeline, não está dentro da `SearchAsync`.** O coletor roda as buscas em 6 vagas
+  paralelas e uma busca que espera uma varredura de minutos seguraria a vaga; com a fonte primeiro na ordem, as outras
+  fontes não rodariam. A etapa baixa os quadros, guarda em memória só as vagas dos mercados que importam e a
+  `SearchAsync` apenas filtra esse resultado (como o Jobicy filtra o feed dele). A varredura é uma linha em
+  `collection_runs` (`ats: sweep greenhouse`), com `complete` falso só se algum quadro falhou de verdade; **404 é o estado
+  normal de um quadro morto e não torna a varredura incompleta**.
+- **Tabela `ats_boards`** (plataforma + slug): `ETag`, último status, última varredura, falhas seguidas e a última vez que
+  o quadro deu vaga em algum dos nossos mercados. Sem ela o `ETag` se perde a cada reinício.
+- **A passada não pode estourar os 30 minutos** que a Fase 4 usa como gatilho: 8.333 quadros a 10 pedidos/s são 14 min só
+  de varredura. Por isso a varredura é **fatiada** (a cada passada, os quadros varridos há mais tempo, até um teto) e
+  **poda** os quadros que não deram vaga nos nossos mercados em semanas.
+- Janela incremental ignorada, como no Jobicy: a localização é texto livre editável, e uma vaga antiga pode entrar num
+  dos nossos mercados hoje. Para o ATS, `last_seen_at` é verdadeiro (a varredura vê o quadro todo); para as outras fontes
+  continua valendo a armadilha da skill `fontes-de-vagas`.
+- Sem `Summary` na varredura (sem `content=true`): a primeira pontuação usa título, departamento e escritório; a etapa de
+  descrição busca o texto da vaga individual para as que passam do `Descriptions:MinScore`.
+- A lista de slugs é vendorizada no repositório (origem e licença citadas) e entra na tabela por um comando
+  (`ats seed`), não como efeito escondido de uma busca.
+
+### Ferramentas prontas avaliadas (2026-10-30)
+
+| Ferramenta | Veredito |
+|---|---|
+| [speedyapply/JobSpy](https://github.com/speedyapply/JobSpy) (MIT, 4,6 mil estrelas) | **Não integrar.** LinkedIn, Indeed, Glassdoor, ZipRecruiter e outros, em Python. A única porta prática para o **Indeed**: chama o GraphQL privado do aplicativo iOS (`apis.indeed.com/graphql`) com uma chave extraída do binário. O `robots.txt` do Indeed proíbe `/graphql` e os termos proíbem acesso automatizado: risco acima do que o projeto aceita no Seek. Decisão pendente do autor, não "fora" para sempre. |
+| [job-board-aggregator](https://github.com/Riley-Dorrington/job-board-aggregator) (MIT) | **Referência.** Origem das listas de slug (`data/<ats>_companies.json`) e dos limites de ritmo por plataforma: 30 trabalhadores em Greenhouse e Lever, 10 em BambooHR, 5 em Ashby. |
+| [open-jobs](https://github.com/elliottdehn/open-jobs) (CC0) | **Dataset de calibragem, não fonte viva.** O crawler foi desligado em 10/10/2026; o último retrato (3,1 milhões de vagas, 5/10/2026) continua baixável. |
+| [JobFunnel](https://github.com/PaulMcInnis/JobFunnel) | Arquivado em dezembro de 2025. |
+| Apify, fantastic.jobs, SerpApi | Pagos e fecham o dado atrás de um fornecedor. Fora. |
+| Arbeitnow | Grátis e sem chave, mas só Europa e Reino Unido. Não serve. |
+| Jooble, Careerjet | Existem para AU e BR, mas os termos são opacos (o Careerjet pede o IP do usuário final). Depois do Adzuna. |
+| Catho, InfoJobs, Vagas.com | Sem API pública, só scrapers de terceiros (a Catho atrás de Akamai). Fora, pela lógica que excluiu o Indeed. |
+
+### GitHub vagas (Brasil, comunidade)
+
+Vagas da comunidade brasileira de tecnologia publicadas como **issues do GitHub**: `frontendbr/vagas` (15,5 mil estrelas),
+`backend-br/vagas` (8 mil) e `soujava/vagas-java` (1 mil), com issues abertas em 2026-10-27. API oficial (60 pedidos/h
+sem token, 5.000 com); o corpo da issue é o anúncio inteiro e os rótulos dizem regime e modalidade (exemplo: `PJ`,
+`Sênior`, `Remoto`, `verificada`). O título começa com `[Remoto]`, `[Híbrido]` ou `[Presencial]`. Volume pequeno, qualidade
+alta, risco zero. Só Brasil, só Matching.
+
+### Adzuna: o que a pesquisa confirmou
+
+`au` **e** `br` existem na mesma API (`api.adzuna.com/v1/api/jobs/{país}/search/{página}`; a página vai no caminho).
+Limites informados por terceiros em outubro de 2026: 25/min, 250/dia, 2.500/mês, ampliáveis sob pedido para quem publica
+(*verificar* em `developer.adzuna.com` antes de integrar). Segue como a única candidata com base legal para número
+publicado no Raio-X; a chave tem de ser criada pelo autor.

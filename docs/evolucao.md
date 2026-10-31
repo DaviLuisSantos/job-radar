@@ -15,6 +15,7 @@
 | 3 | Observabilidade | 2 (PRs 13–14) | ✅ implantado 2026-10-29 (telemetria desligada até haver `Telemetry:OtlpEndpoint`) |
 | 4 | Mensageria | 0 | ✅ 2026-10-30: não precisou, pelos números (abaixo); reavaliar se o gatilho disparar |
 | 5 | Mercados remotos e interface | ~10 | ✅ 2026-10-30 (5.1 a 5.7, prints do README refeitos) |
+| 6 | Fontes sem dívida jurídica (ATS, GitHub vagas, Adzuna) | ~6 | 📋 2026-10-30: pesquisa e plano prontos; nenhuma etapa de código ainda |
 
 **O que falta, como issues:** pendências do Brasil [#27](https://github.com/DaviLuisSantos/job-radar/issues/27).
 
@@ -289,6 +290,8 @@ req/s: 1 a 2 minutos a mais numa passada de ~3, uma vez por dia, sem ninguém es
 RabbitMQ, consumidores) resolveria um atraso que não existe. **Gatilho para reabrir:** uma passada acima de 30 min, ou
 uma fonte bloqueada segurando as outras (aparece na `/status` e em `jobradar.stage.duration`).
 
+**Atenção (2026-10-30):** a [Fase 6](#fase-6--fontes-sem-dívida-jurídica-planejada-em-2026-10-30) acrescenta uma varredura de quadros de ATS que, sem fatiar e podar, passaria de 14 min sozinha. Estes números valem sem ela; meça a etapa "ATS boards" na primeira semana antes de reabrir esta fase.
+
 ## Fase 5 — Mercados remotos e interface (planejada em 2026-10-30)
 
 **Objetivo:** usar a mesma lógica de matching para vagas remotas que aceitem quem mora no Brasil (LATAM e mundo), sem
@@ -408,6 +411,107 @@ penalidade; inglês é esperado, não penaliza. LATAM e global diferem no que ac
 APIs reais: 192 vagas LATAM, 50 excluídas; 26 globais); ✅ celular. As faixas de salário dos perfis reais ficam para o
 autor preencher (`Compensation`, fora do Git): sem elas, regime e salário não pesam. Original: os quatro mercados aparecem separados, a Austrália segue igual (paridade), um perfil remoto recebe vagas de
 uma fonte remota e exclui as que não aceitam o Brasil, e a interface funciona no celular.
+
+## Fase 6 — Fontes sem dívida jurídica (planejada em 2026-10-30)
+
+**Objetivo:** mais vagas de .NET em AU, BR e remoto, com o anúncio inteiro, por fontes que não dependem de termos
+proibidos nem de contornar anti-bot. A pesquisa e as medições estão em [fontes.md](fontes.md#ats-públicos-pesquisa-de-2026-10-30).
+
+**Ordem (decidida em 2026-10-30):** ATS (Greenhouse) → GitHub vagas (Brasil) → Adzuna. Isso passa o ATS na frente do
+Adzuna, que o [plano.md](plano.md) tinha como a primeira fonte nova. A ressalva daquele plano (fonte nova muda os dados
+no meio da calibragem) é atendida por `OptIn`: a fonte só roda nos perfis que a citam em `ExtraSources`, um de cada vez.
+Nada destas fontes vai ao Raio-X.
+
+### 6.1 `JobRadar.Integrations.Ats` com Greenhouse
+
+Projeto no padrão do Himalayas (`Api/`, tradutor, fonte, opções, `AddAtsIntegration`), referenciando só a Application.
+
+- **Fontes:** `GreenhouseJobSource` (`Name = "greenhouse"`, `Markets = {AU, BR, LatamRemote, GlobalRemote}`, `OptIn`) e
+  `GreenhouseDescriptionSource`. `source_id = "{slug}/{id}"`; slug longo demais para a coluna é recusado, não vira hash.
+  `IDescriptionSource.Source` em minúsculas, igual ao `ListingId.Source`, ou a etapa de descrição devolve zero em silêncio.
+- **A varredura é uma etapa do `DailyPipeline`** ("ATS boards", antes de "Collection"), com escopo e `DbContext` próprios
+  (`IServiceScopeFactory`: um singleton com o repositório scoped quebra `ValidateOnBuild`). Ela baixa os quadros sem
+  `content=true`, manda o `ETag` guardado, guarda em memória (um `AtsSnapshot` simples, referência `volatile`) só as vagas
+  dos mercados que importam, e grava o resultado em `ats_boards`. A `SearchAsync` só filtra o snapshot por palavras no
+  título e no departamento e pelo mercado; se a etapa falhou, devolve `Complete = false`. Por que não dentro da
+  `SearchAsync`: o `Parallel.ForEachAsync` do coletor tem 6 vagas e uma busca esperando minutos prende uma, e com a fonte
+  primeiro na ordem as outras fontes não rodariam.
+- **`Complete`:** verdadeiro quando todo quadro que a varredura pretendia ler respondeu (200 ou 304). 404 é o estado normal
+  de um quadro morto (metade da lista): conta falha em `ats_boards` e não torna a varredura incompleta. A varredura é uma
+  linha em `collection_runs` com chave `ats: sweep greenhouse`.
+- **Duração.** 8.333 quadros a 10 pedidos/s são 14 min de piso, e Lever e Ashby somados passariam de 26 min: o gatilho de
+  30 min da Fase 4 dispararia por decisão de desenho. Por isso, no primeiro commit: **fatiar** (a cada passada, os quadros
+  com `last_swept_at` mais antigo, até `Ats:MaxBoardsPerSweep`) e **podar** (quadro sem vaga nos nossos mercados há
+  semanas sai da frente; `last_hit_at` em `ats_boards`). Com 1,1% de Austrália na amostra, sobram centenas de quadros.
+  Não subir o ritmo com base nos 20 pedidos medidos.
+- **Janela incremental ignorada**, escrito no comentário da classe como no Jobicy. `Summary` = departamentos + escritórios
+  + local, para a primeira pontuação não ficar cega e o círculo "score baixo, sem descrição, score baixo" não se fechar.
+- **Mercado e local:** `location.name` é texto livre; "Remote - Brazil" é `Country.Remote` com `Eligibility`, não `BR`.
+  Reusar `RemoteEligibility.Classify` em vez de um segundo classificador. Dividir no primeiro `", "`.
+- **Pacing:** `AtsPacing` próprio, no desenho do `HimalayasPacing`, com o handler dentro da resiliência; padrão 8
+  simultâneas e 10/s, configuráveis. A etapa de descrição usa `MaxParallelSearches`, não a opção da fonte.
+
+### 6.2 Tabela `ats_boards`
+
+`Domain/Collection/AtsBoard.cs`, `Application/Abstractions/IAtsBoardRepository.cs` (no namespace das portas, para o teste
+`Every_application_port_is_registered` pegar), e em `Infrastructure/Persistence/Collection/` a entidade com a
+configuration no mesmo arquivo e `EfAtsBoardRepository` (sem mapper: plataforma é `string`, sem enum). Chave
+`(platform, slug)`; `platform` 32, `slug` 120, `etag` 200; `last_status`, `last_swept_at`, `last_hit_at`,
+`consecutive_failures`, `jobs_total`, `jobs_kept` como colunas (nada de JSON: dispensa `jsonb` e `ISJSON`). Métodos em
+lote: `ListToSweepAsync(platform, maxFailures, limit)`, `AddMissingAsync`, `RecordSweepAsync`; limpar o `ChangeTracker`
+depois de gravar, como o `EfListingRepository`.
+
+Também: `DbSet` em `JobRadarDbContext`, a tabela em `DatabaseCopy` (cópia e checagem de banco vazio), a linha em
+`DatabaseFixture.ResetAsync`, a porta em `AddPersistence`, e a migration `AddAtsBoards` com o mesmo nome nos dois
+projetos de migrations (`--output-dir .`). Contrato em `Contracts/AtsBoardRepositoryContractTests.cs`, com as duas
+derivadas no fim, cobrindo: semear duas vezes não duplica; plataformas diferentes são quadros diferentes; slugs que só
+diferem na caixa são dois quadros; nunca varridos primeiro e depois os mais antigos; quadro morto sai depois do limite de
+falhas; falha zera quando responde de novo; o `ETag` sobrevive a um novo contexto.
+
+### 6.3 Comando `ats seed` e passada local
+
+`ats seed` (no `Cli/`) semeia a tabela com a lista vendorizada (`Data/greenhouse-boards.json`, origem Common Crawl via
+job-board-aggregator, MIT, citada no arquivo). É um comando, não um efeito escondido de uma busca, para o autor decidir
+quando 8.333 linhas entram na produção. Num worktree, `collect` com a fonte ligada num perfil só; conferir na `/status` e
+em `jobradar.stage.duration`. Depois de implantar, ligar um perfil por vez, como o LinkedIn.
+
+### 6.4 `JobRadar.Integrations.GitHubJobs` (comunidade BR)
+
+Issues de `frontendbr/vagas`, `backend-br/vagas` e `soujava/vagas-java`. `Markets = {BR}`, sem `OptIn`, issue fechada
+ignorada. `[Remoto]`/`[Híbrido]`/`[Presencial]` e rótulos viram modalidade e regime (`PJ` → contrato, `CLT` → tempo
+integral); corpo da issue vira `Description`; `number` vira `source_id`; `created_at` vira `PostedAt`. Repositórios e token
+em `appsettings.Local.json`. Sem tabela nova.
+
+### 6.5 Adzuna (AU e BR)
+
+Depois, com a chave do autor. `au` e `br` na mesma API; verificar os limites em `developer.adzuna.com`. É a única que
+pode alimentar número publicado no Raio-X.
+
+### Testes e documentação (cada etapa, no mesmo commit)
+
+- `tests/JobRadar.Integrations.Ats.Tests` (xunit.v3, MTP): fixtures em `Fixtures/*.json` copiadas para a saída; tradutor
+  com "Sydney, Australia" → AU, "São Paulo, Brazil" → BR, "Remote - Brazil" e "Remote (LATAM)" → remoto LATAM, "Remote" →
+  global, "Dublin" → descartado, sem `location` → descartada sem derrubar a varredura, slug longo recusado; varredura com um
+  `HttpMessageHandler` falso para 200, 304, 404 e 500 e o `Complete` de cada um. `InternalsVisibleTo` vai no `.csproj` do
+  `src`. Fixture do anúncio individual só de quadro público e curta (regra: texto de anúncio de uso pessoal não vai a fixture).
+- `LiveAtsTests` em `Worker.Tests` com `Ats:MaxBoardsPerSweep = 5` e um slug fixo; prova também o 304 no segundo pedido.
+  Atualizar a mensagem de skip em `LiveSeekTests`.
+- Atualizar no mesmo commit: `CLAUDE.md` (camadas), `docs/repo_map.md` (módulos, testes, pipeline), a skill
+  `fontes-de-vagas` (nova etapa e armadilhas) e, se aparecer armadilha, `banco-e-migrations`.
+
+### Estado
+
+| # | Etapa | Estado |
+|---|---|---|
+| 6.0 | Pesquisa e documentação | ✅ 2026-10-30 |
+| 6.1 | `Integrations.Ats` com Greenhouse | planejada |
+| 6.2 | Tabela `ats_boards` | planejada (antes ou junto da 6.1) |
+| 6.3 | `ats seed` e primeira passada | planejada |
+| 6.4 | GitHub vagas (Brasil) | planejada |
+| 6.5 | Adzuna | planejada (precisa da chave do autor) |
+
+**Pronto quando:** uma passada com `"ExtraSources": ["greenhouse"]` num perfil traz vagas de AU, BR ou remoto com o texto
+inteiro, termina dentro do tempo da Fase 4, e o `/status` mostra a varredura sem quadro incompleto por causa de 404.
 
 ## Fora de escopo
 
