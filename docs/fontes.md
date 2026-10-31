@@ -1,5 +1,7 @@
 # Fontes de vagas
 
+> Fontes ainda por implementar (com o que já se mediu): [fontes-futuras.md](fontes-futuras.md).
+>
 > Avaliação inicial (2026-10-21). Itens marcados *verificar* não foram confirmados:
 > confirme termos de uso e forma de acesso antes de integrar.
 

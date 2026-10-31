@@ -417,6 +417,8 @@ uma fonte remota e exclui as que não aceitam o Brasil, e a interface funciona n
 **Objetivo:** mais vagas de .NET em AU, BR e remoto, com o anúncio inteiro, por fontes que não dependem de termos
 proibidos nem de contornar anti-bot. A pesquisa e as medições estão em [fontes.md](fontes.md#ats-públicos-pesquisa-de-2026-10-30).
 
+**Backlog completo das fontes avaliadas: [fontes-futuras.md](fontes-futuras.md).**
+
 **Ordem (decidida em 2026-10-30):** ATS (Greenhouse) → GitHub vagas (Brasil) → Adzuna. Isso passa o ATS na frente do
 Adzuna, que o [plano.md](plano.md) tinha como a primeira fonte nova. A ressalva daquele plano (fonte nova muda os dados
 no meio da calibragem) é atendida por `OptIn`: a fonte só roda nos perfis que a citam em `ExtraSources`, um de cada vez.
