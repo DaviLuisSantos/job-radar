@@ -72,7 +72,9 @@ uma segunda chance. `SnapshotQuality` dá `ok | partial | suspect`; **o relatór
   mil pedidos). Ligar num perfil não muda a chave das buscas: o histórico continua. Orçamento próprio (`LinkedInPacing`, 1/s, 2 simultâneas), separado do Seek. A primeira recusa (403, 429, 999 ou
   redirecionamento para `/authwall`) bloqueia **todo** pedido ao LinkedIn por 6 horas: a coleta roda todas as buscas mesmo
   quando uma falha, e insistir é o que vira bloqueio do IP. Local do Brasil em inglês (", Brazil"): "Brasil" e local
-  desconhecido caem nos EUA, e a busca falha dizendo que não reconheceu o local. Nada do LinkedIn vai ao Raio-X.
+  desconhecido caem nos EUA, e a busca falha dizendo que não reconheceu o local. A busca para numa página curta, numa página cheia que só repete IDs já vistos (conta como completa) ou
+  no `MaxPages`. Página sem cartão que cita vagas, ou cartões sem título, falham a busca (layout mudou), não viram "sem
+  resultados". Nada do LinkedIn vai ao Raio-X.
 - Contagem do Raio-X só com `Seek:PageSize = 100`: o `totalCount` inclui os promovidos repetidos em cada página
   (`SeekMarketSource.CountAsync` recusa outro valor).
 - Janela incremental: `last_seen_at` só se atualiza para vagas da janela. Não use esse campo para dizer

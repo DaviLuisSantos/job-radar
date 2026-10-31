@@ -183,6 +183,38 @@ public class LinkedInTests
     }
 
     [Fact]
+    public async Task Stops_when_a_page_brings_nothing_new_and_calls_the_search_complete()
+    {
+        var api = new FakeLinkedIn { Respond = _ => (HttpStatusCode.OK, FakeLinkedIn.PageOf(Enumerable.Range(1, 10)), null) };
+
+        var result = await api.Source().SearchAsync(Perth, Ct);
+
+        Assert.Equal(["0", "10"], api.Queries.Select(q => q["start"]));
+        Assert.Equal(10, result.Listings.Count);
+        Assert.True(result.Complete);
+    }
+
+    [Fact]
+    public async Task A_page_of_listings_from_elsewhere_is_not_a_repeat()
+    {
+        var api = new FakeLinkedIn
+        {
+            Respond = r => (HttpStatusCode.OK, HttpUtility.ParseQueryString(r.RequestUri!.Query)["start"] switch
+            {
+                "0" => FakeLinkedIn.PageOf(Enumerable.Range(1, 10)),
+                "10" => FakeLinkedIn.PageOf(Enumerable.Range(11, 10), "Atlanta, GA"),
+                _ => FakeLinkedIn.PageOf([21, 22]),
+            }, null),
+        };
+
+        var result = await api.Source().SearchAsync(Perth, Ct);
+
+        Assert.Equal(["0", "10", "20"], api.Queries.Select(q => q["start"]));
+        Assert.Equal(12, result.Listings.Count);
+        Assert.True(result.Complete);
+    }
+
+    [Fact]
     public async Task A_location_LinkedIn_does_not_resolve_fails_the_search_instead_of_returning_another_country()
     {
         var api = new FakeLinkedIn { Respond = _ => (HttpStatusCode.OK, FakeLinkedIn.PageOf([1, 2], "Atlanta, GA"), null) };

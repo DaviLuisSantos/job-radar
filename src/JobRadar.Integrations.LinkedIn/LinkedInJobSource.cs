@@ -11,7 +11,7 @@ namespace JobRadar.Integrations.LinkedIn;
 /// <summary>
 /// Listings from LinkedIn's public job search, for the two countries: the Australian searches as the profiles write
 /// them, the Brazilian ones with the country appended (see <see cref="LinkedInGuestClient.Location"/>). Pages of 10
-/// inside the date window, in LinkedIn's order, until a short page or the page cap. The card does not carry the ad: the
+/// inside the date window, in LinkedIn's order, until a short page, a page with nothing new, or the page cap. The card does not carry the ad: the
 /// description source fetches it later for the listings that matter.
 /// </summary>
 internal sealed class LinkedInJobSource(
@@ -45,15 +45,19 @@ internal sealed class LinkedInJobSource(
         for (var page = 0; page < o.MaxPages; page++)
         {
             var cards = await client.SearchAsync(search, page * LinkedInGuestClient.PageSize, ct);
+            var fresh = 0;
             foreach (var card in cards)
             {
+                // Every card counts as seen, the ones from another country too: a page of those is not a repeat.
+                if (!seen.Add(card.Id))
+                    continue;
+                fresh++;
                 if (LinkedInListingTranslator.ToListing(card, search.Market) is not { } listing)
                 {
                     elsewhere++;
                     continue;
                 }
-                if (seen.Add(card.Id))
-                    listings.Add(new SourcedListing(listing, JsonSerializer.Serialize(card, Json)));
+                listings.Add(new SourcedListing(listing, JsonSerializer.Serialize(card, Json)));
             }
 
             // A location LinkedIn cannot resolve answers jobs from another country: a configuration problem, said as one.
@@ -62,7 +66,11 @@ internal sealed class LinkedInJobSource(
                     $"LinkedIn did not resolve the location '{search.Location}': {cards.Count} listings, none in "
                     + $"{LinkedInLocation.CountryName(LinkedInListingTranslator.Country(search.Market))}.");
 
-            if (cards.Count < LinkedInGuestClient.PageSize)
+            // A full page of cards already seen: LinkedIn has given what it will, and asking on only spends requests.
+            if (cards.Count >= LinkedInGuestClient.PageSize && fresh == 0)
+                log.LogInformation("LinkedIn search {SearchKey} repeated a page at start {Start}; stopping", search.Key, page * LinkedInGuestClient.PageSize);
+
+            if (cards.Count < LinkedInGuestClient.PageSize || fresh == 0)
             {
                 if (elsewhere > 0)
                     log.LogDebug("LinkedIn search {SearchKey}: {Elsewhere} listings outside the market's country left out", search.Key, elsewhere);
