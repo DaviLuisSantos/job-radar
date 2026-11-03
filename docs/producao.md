@@ -156,6 +156,17 @@ Desde 2026-10-30 o empacotamento já é o de uma VM: imagens + `docker compose`.
 PowerShell 7, git, o `.env` e o agendador do host (acima); leve o banco com `deploy/backup.ps1` → `pg_restore`.
 Num host Linux o sistema sobe sem login (o Docker é serviço do sistema), o que resolve o [#29] de vez.
 
+Em Debian 12/13 amd64, `deploy/setup-debian.sh` faz tudo de uma vez (Docker, PowerShell, .NET, Tailscale, checkout,
+`.env`, cron e o primeiro deploy; pode rodar de novo). Copie antes `appsettings.Local.json` (e, se usar, o
+`scoring-cases.Local.json` e o arquivo da paridade) e o dump do `backup.ps1`:
+
+```bash
+bash setup-debian.sh --profiles ~/appsettings.Local.json --scoring ~/scoring-cases.Local.json \
+    --parity ~/parity.json --restore ~/jobradar_YYYYMMDD_HHMM.dump
+```
+
+`--help` lista as opções (`--no-tailscale`, `--no-deploy`, `--timezone`, `--dir`).
+
 [#29]: https://github.com/DaviLuisSantos/job-radar/issues/29
 
 ## Importar o histórico do protótipo (etapa 9)
