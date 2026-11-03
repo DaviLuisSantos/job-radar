@@ -18,6 +18,7 @@ PARITY_SRC=""
 RESTORE_DUMP=""
 WITH_TAILSCALE=1
 RUN_DEPLOY=1
+FORCE_ENV=0
 
 usage() {
     cat <<EOF
@@ -31,6 +32,7 @@ Usage: setup-debian.sh [options]
   --repo URL          git remote (default $REPO_URL)
   --no-tailscale      skip Tailscale (site only on localhost)
   --no-deploy         set everything up but do not run deploy.ps1
+  --force-env         overwrite the machine settings already in .env (by default only missing ones are filled in)
 EOF
 }
 
@@ -45,6 +47,7 @@ while [ $# -gt 0 ]; do
         --repo) REPO_URL="$2"; shift 2 ;;
         --no-tailscale) WITH_TAILSCALE=0; shift ;;
         --no-deploy) RUN_DEPLOY=0; shift ;;
+        --force-env) FORCE_ENV=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -71,6 +74,12 @@ if ! command -v docker >/dev/null; then
     curl -fsSL https://get.docker.com | sudo sh
 fi
 sudo systemctl enable --now docker
+if ! docker compose version >/dev/null 2>&1; then
+    log "Docker Compose v2 plugin"
+    sudo apt-get install -y -qq docker-compose-plugin || sudo apt-get install -y -qq docker-compose-v2 \
+        || die "Docker is installed without Compose v2 (docker.io from Debian?). Remove it ('sudo apt remove docker.io') and run again."
+    docker compose version >/dev/null 2>&1 || die "'docker compose' still does not work after installing the plugin."
+fi
 if ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
     sudo usermod -aG docker "$USER"
 fi
@@ -80,8 +89,9 @@ if ! docker info >/dev/null 2>&1; then
     exec sg docker -c "bash $(printf '%q' "$0") $(printf '%q ' "$@")"
 fi
 
-if ! command -v pwsh >/dev/null || ! command -v dotnet >/dev/null; then
-    log "PowerShell 7 and the .NET SDK (Microsoft repository)"
+has_sdk10() { command -v dotnet >/dev/null && dotnet --list-sdks 2>/dev/null | grep -q '^10\.'; }
+if ! command -v pwsh >/dev/null || ! has_sdk10; then
+    log "PowerShell 7 and the .NET 10 SDK (Microsoft repository)"
     . /etc/os-release
     tmp="$(mktemp -d)"
     wget -q "https://packages.microsoft.com/config/debian/${VERSION_ID}/packages-microsoft-prod.deb" -O "$tmp/ms.deb"
@@ -89,13 +99,17 @@ if ! command -v pwsh >/dev/null || ! command -v dotnet >/dev/null; then
     rm -rf "$tmp"
     sudo apt-get update -qq
     command -v pwsh >/dev/null || sudo apt-get install -y -qq powershell
-    if ! command -v dotnet >/dev/null && ! sudo apt-get install -y -qq dotnet-sdk-10.0; then
+    if ! has_sdk10 && ! sudo apt-get install -y -qq dotnet-sdk-10.0; then
         log "dotnet-sdk-10.0 is not in the repository: using Microsoft's install script"
         curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
         sudo bash /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet
+        # /usr/local/bin comes before /usr/bin: wins over an older dotnet already installed
         sudo ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+        hash -r
     fi
 fi
+command -v pwsh >/dev/null || die "PowerShell 7 is not available after the install."
+has_sdk10 || die "No .NET 10 SDK found ('dotnet --list-sdks'): install it and run again."
 
 if [ "$WITH_TAILSCALE" -eq 1 ]; then
     if ! command -v tailscale >/dev/null; then
@@ -113,9 +127,12 @@ log "Checkout in $APP_DIR"
 sudo mkdir -p "$APP_DIR" "$DATA_DIR/state"
 sudo chown -R "$USER":"$USER" "$APP_DIR" "$DATA_DIR"
 if [ -d "$APP_DIR/.git" ]; then
-    git -C "$APP_DIR" pull --ff-only
-else
+    git -C "$APP_DIR" pull --ff-only \
+        || die "Could not fast-forward $APP_DIR (local changes or commits?). Fix it there ('git status') and run again."
+elif [ -z "$(ls -A "$APP_DIR")" ]; then
     git clone "$REPO_URL" "$APP_DIR"
+else
+    die "$APP_DIR exists, is not empty and is not a git checkout. Use --dir or empty it."
 fi
 
 install_file() { # src dest: the container user must be able to read it
@@ -125,14 +142,20 @@ install_file() { # src dest: the container user must be able to read it
 [ -z "$SCORING_SRC" ] || install_file "$SCORING_SRC" "$DATA_DIR/scoring-cases.Local.json"
 [ -z "$PARITY_SRC" ] || install_file "$PARITY_SRC" "$DATA_DIR/parity.json"
 
-set_env() { # key value: replace the line or append it, keeping the rest of .env
+# key value: set it when missing or empty; an existing value stays unless --force-env (the rest of .env is kept)
+set_env() {
+    if [ "$FORCE_ENV" -eq 0 ] && [ "$ENV_EXISTED" -eq 1 ] && grep -qE "^$1=.+" "$APP_DIR/.env"; then
+        return
+    fi
     if grep -qE "^$1=" "$APP_DIR/.env"; then
         sed -i "s|^$1=.*|$1=$2|" "$APP_DIR/.env"
     else
         echo "$1=$2" >> "$APP_DIR/.env"
     fi
 }
+ENV_EXISTED=1
 if [ ! -f "$APP_DIR/.env" ]; then
+    ENV_EXISTED=0 # the example's values are placeholders: this run fills them in
     cp "$APP_DIR/deploy/prod.env.example" "$APP_DIR/.env"
 fi
 set_env JOBRADAR_PROFILES "$DATA_DIR/appsettings.Local.json"
@@ -167,6 +190,8 @@ log "Cron jobs"
 PWSH="$(command -v pwsh)"
 {
     crontab -l 2>/dev/null | grep -v '# jobradar' || true
+    # cron's own PATH lacks /usr/local/bin (dotnet may live there)
+    echo "PATH=/usr/local/bin:/usr/bin:/bin # jobradar"
     echo "*/15 * * * * cd $APP_DIR && $PWSH -NoProfile -File deploy/auto-deploy.ps1 >/dev/null 2>&1 # jobradar"
     echo "*/15 * * * * cd $APP_DIR && $PWSH -NoProfile -File deploy/watchdog.ps1 >/dev/null 2>&1 # jobradar"
     echo "0 23 * * * cd $APP_DIR && $PWSH -NoProfile -File deploy/backup.ps1 >/dev/null 2>&1 # jobradar"
