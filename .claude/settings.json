@@ -5,7 +5,10 @@
       "Bash(dotnet build:*)", "Bash(dotnet test:*)", "Bash(dotnet restore:*)",
       "PowerShell(dotnet build:*)", "PowerShell(dotnet test:*)", "PowerShell(dotnet restore:*)",
       "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)",
-      "Bash(git branch:*)", "Bash(git ls-files:*)"
+      "Bash(git branch:*)", "Bash(git ls-files:*)",
+      "Bash(pwsh -NoProfile -File deploy/remote.ps1:*)", "Bash(pwsh deploy/remote.ps1:*)",
+      "PowerShell(pwsh -NoProfile -File deploy/remote.ps1:*)", "PowerShell(pwsh deploy/remote.ps1:*)",
+      "PowerShell(./deploy/remote.ps1:*)", "PowerShell(.\\deploy\\remote.ps1:*)"
     ]
   }
 }
