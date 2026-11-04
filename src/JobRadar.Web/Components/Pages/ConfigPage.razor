@@ -1,0 +1,147 @@
+@page "/config"
+@using System.Text.Json
+@using JobRadar.Application.Abstractions
+@using JobRadar.Application.Settings
+@inject Backend Backend
+
+<PageTitle>Configuração · JobRadar</PageTitle>
+
+<div class="page-head">
+    <h1>Configuração</h1>
+    <p class="muted">Perfis, regras de elegibilidade e termos do Raio-X, guardados no banco. Ao salvar, o site e o worker reiniciam sozinhos em cerca de um minuto (o worker espera a passada em andamento acabar).</p>
+</div>
+
+@if (_message is not null)
+{
+    <p class="notice" role="status">@_message</p>
+}
+@if (_error is not null)
+{
+    <p class="notice" role="alert" style="background: var(--mud-palette-error-lighten, #fde8e8); color: var(--mud-palette-error, #b3261e);">@_error</p>
+}
+
+@if (_keys is null)
+{
+    <p class="muted">Carregando…</p>
+}
+else
+{
+    <section class="about">
+        <h2>Seções</h2>
+        <div class="chips" role="group" aria-label="Seções guardadas">
+            @foreach (var key in _keys)
+            {
+                <button type="button" class="@(key == _current ? "on" : null)" disabled="@_busy" @onclick="() => OpenAsync(key)">@key</button>
+            }
+        </div>
+        <p class="muted small">Cada seção é um trecho do que ficava no appsettings.Local.json. Salvar troca a seção inteira (não mescla). Só aceita seções que começam com: @string.Join(", ", SettingsService.AllowedPrefixes).</p>
+        <div class="chips">
+            <input type="text" placeholder="nova seção, ex.: Matching:Compensation" aria-label="Nome da nova seção" @bind="_newKey" @bind:event="oninput" />
+            <button type="button" disabled="@(_busy || string.IsNullOrWhiteSpace(_newKey))" @onclick="NewAsync">Criar</button>
+        </div>
+    </section>
+
+    @if (_current is not null)
+    {
+        <section class="about">
+            <h2>@_current</h2>
+            <textarea rows="24" spellcheck="false" aria-label="@($"JSON de {_current}")" style="font-family: ui-monospace, Consolas, monospace;"
+                      @bind="_json" @bind:event="oninput"></textarea>
+            <div class="chips">
+                <button type="button" disabled="@_busy" @onclick="SaveAsync">Salvar</button>
+                <button type="button" class="ghost" disabled="@_busy" @onclick="() => OpenAsync(_current)">Desfazer edição</button>
+                <button type="button" class="ghost" disabled="@_busy" @onclick="RemoveAsync">Remover do banco</button>
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private List<string>? _keys;
+    private string? _current;
+    private string _json = "";
+    private string _newKey = "";
+    private string? _message;
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync() => await ReloadKeysAsync();
+
+    private async Task ReloadKeysAsync()
+    {
+        var rows = await Backend.RunAsync<ISettingsRepository, IReadOnlyList<JobRadar.Domain.Settings.Setting>>(r => r.ListAsync(CancellationToken.None));
+        _keys = rows.Select(r => r.Key).OrderBy(k => k, StringComparer.Ordinal).ToList();
+    }
+
+    private async Task OpenAsync(string key)
+    {
+        _message = _error = null;
+        var setting = await Backend.RunAsync<SettingsService, JobRadar.Domain.Settings.Setting?>(s => s.GetAsync(key, CancellationToken.None));
+        _current = key;
+        _json = setting is null ? "{}" : Pretty(setting.Json);
+    }
+
+    private Task NewAsync()
+    {
+        _message = _error = null;
+        _current = _newKey.Trim();
+        _json = "{}";
+        _newKey = "";
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_current is null) return;
+        await GuardAsync(async () =>
+        {
+            await Backend.RunAsync<SettingsService>(s => s.SaveAsync(_current, _json, CancellationToken.None));
+            _message = $"{_current} salva. O site reinicia sozinho em até um minuto; recarregue a página depois.";
+            await ReloadKeysAsync();
+            _json = Pretty(_json);
+        });
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (_current is null) return;
+        await GuardAsync(async () =>
+        {
+            var removed = await Backend.RunAsync<SettingsService, bool>(s => s.DeleteAsync(_current, CancellationToken.None));
+            _message = removed ? $"{_current} removida do banco." : $"{_current} não estava no banco.";
+            _current = null;
+            await ReloadKeysAsync();
+        });
+    }
+
+    private async Task GuardAsync(Func<Task> work)
+    {
+        _busy = true;
+        _message = _error = null;
+        try
+        {
+            await work();
+        }
+        catch (SettingsValidationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string Pretty(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        }
+        catch (JsonException)
+        {
+            return json;
+        }
+    }
+}

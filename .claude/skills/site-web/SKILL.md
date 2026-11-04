@@ -18,3 +18,5 @@ description: Site de triagem do JobRadar (Blazor + MudBlazor em src/JobRadar.Web
   todas as cópias (`TriageRow.AllIds`).
 - Para olhar o site com dados, rode-o contra uma cópia (`copy-database` para o SQL Server local), nunca contra o banco
   de produção (ver a skill `operar-worker`).
+- `/config` (`ConfigPage.razor`): edita as seções da tabela `settings` pelo `SettingsService` (mesma validação da API). Salvar
+  reinicia o site em ~1 min (observador de revisão); a página avisa.

@@ -22,6 +22,7 @@ public static class Wording
     public const string RequirementsPage = "Requisitos";
     public const string CalibrationPage = "Calibragem";
     public const string StatusPage = "Status";
+    public const string ConfigPage = "Configuração";
     public const string SomethingWentWrong = "Algo deu errado.";
     public const string Reload = "Recarregar";
     public const string Close = "Fechar";

@@ -20,6 +20,8 @@
 | Agendador | `crontab` do usuário `davi`: auto-deploy e vigia a cada 15 min, backup às 23:00, cópia dos backups (`rsync`) às 23:30 para `/mnt/dados/backups/jobradar/` |
 
 - **Código:** trabalhe no PC de desenvolvimento e dê push em main; em até 15 min o homelab implanta (CI verde).
+- **Configuração pelo navegador:** `http://100.97.218.37:5380/config` (menu Ajustes → Configuração): escolha a
+  seção, edite o JSON e salve; erro de validação aparece na própria página. É o caminho mais direto.
 - **Configuração:** fica no banco (tabela `settings`, uma linha por seção, ex. `Matching:Profiles`), não mais no
   `appsettings.Local.json`. Precedência: arquivo < banco < variável de ambiente/linha de comando. API do site:
   `GET /api/config` (efetiva), `GET/PUT/DELETE /api/config/{chave}` (chave com `:`; 204 no sucesso, 400 com `{"error"}`
