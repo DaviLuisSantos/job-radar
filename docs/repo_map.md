@@ -51,8 +51,8 @@ Padrão: `dotnet test` (sem banco, sem rede). Comandos completos no `CLAUDE.md`.
 
 ## Áreas sensíveis
 
-- **Esta máquina é a produção**: o Postgres do `docker compose` é o banco real e `deploy/` implanta deste checkout.
-  Trabalhe num worktree.
+- **A produção é o homelab** (`/srv/job-radar`, ver `docs/producao.md`): `deploy/` lá implanta main com CI verde.
+  Esta máquina é só desenvolvimento; nunca grave no banco de produção à mão.
 - `src/JobRadar.Domain/Matching/` (`FitScorer`, `ScoringPolicy`): mudança de regra quebra a paridade e pede
   `RulesVersion` nova. Skill `regras-do-score`.
 - Migrations e `Infrastructure/Persistence/ProviderModel.cs`: dois bancos, collation, renomeações erradas do EF.

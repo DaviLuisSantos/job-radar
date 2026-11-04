@@ -103,8 +103,10 @@ src/JobRadar.Web             triagem em Blazor + MudBlazor (JobRadarWebCompositi
 
 ## Regras que valem sempre
 
-- Esta máquina (TRABALHOPC) **é** a produção: o Postgres do `docker compose` é o banco de produção, e o auto-deploy
-  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Trabalhe num worktree e nunca
+- A produção roda no **homelab** (`ssh davi@192.168.1.44`, site em `http://100.97.218.37:5380` pela Tailscale), checkout
+  em `/srv/job-radar`, config em `/srv/jobradar` (ver `docs/producao.md`). O auto-deploy de lá implanta o que está
+  em main (recusa com mudança local em arquivo versionado): nunca edite arquivo versionado no homelab. Esta máquina
+  (TRABALHOPC) é só desenvolvimento: o Postgres do `docker compose` daqui não é o de produção. Nunca
   grave no banco de produção à mão (detalhes em `operar-worker`).
 - Seek: não abrir páginas individuais de vaga (Cloudflare) nem contornar anti-bot. Não reintroduza pausas fixas nem
   aumente o orçamento de pedidos sem motivo.

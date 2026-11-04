@@ -29,10 +29,11 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 
 ## Produção
 
-- Esta máquina (TRABALHOPC) **é** a produção: o Postgres do `docker compose` é o banco de produção, e o auto-deploy
-  implanta a partir deste checkout (recusa com mudança local em arquivo versionado). Trabalhe num worktree. Para olhar o
-  site com dados, rode-o contra uma cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à
-  mão. Argumento de um **comando** do worker não é configuração (`collect --ConnectionStrings:...` é ignorado): use
+- A produção roda no **homelab** (`ssh davi@192.168.1.44`; checkout `/srv/job-radar`, config `/srv/jobradar`, estado
+  `/srv/jobradar/state`). O auto-deploy de lá (cron, 15 min) implanta main com CI verde; nunca edite arquivo versionado
+  lá. Esta máquina (TRABALHOPC) é só desenvolvimento. Config real (`appsettings.Local.json`) se edita no homelab e vale
+  após `docker compose -p job-radar-au --profile prod restart worker web`. Para olhar o site com dados, rode-o contra uma
+  cópia (`copy-database` para o SQL Server local), nunca grave no banco de produção à mão. Argumento de um **comando** do worker não é configuração (`collect --ConnectionStrings:...` é ignorado): use
   variável de ambiente. Para testar a pilha de produção ao lado, use outro projeto e outras portas
   (`docker compose -p jobradar-test --env-file <arquivo>` com `JOBRADAR_DB_PORT` e `JOBRADAR_PORT`).
 - Produção é `docker compose --profile prod` (desde 2026-10-30), igual em qualquer SO; nada de serviço, registro ou

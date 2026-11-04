@@ -1,9 +1,31 @@
 # Produção — manual de operação
 
 > Documento vivo. Onde roda, como instalar, atualizar, acompanhar e recuperar.
-> Decidido em 2026-10-21: roda **no PC do autor**; o site é acessível **só localmente e pela Tailscale**, sem
+> Decidido em 2026-10-21: roda no PC do autor; o site é acessível **só localmente e pela Tailscale**, sem
 > login no app. Desde 2026-10-30 tudo roda em containers (`docker compose`, perfil `prod`): o mesmo em qualquer
 > SO com Docker, sem serviço nem registro do Windows.
+> **Desde 2026-11-03 a produção é o homelab Debian** (`davi@192.168.1.44`, Tailscale `100.97.218.37`), montado com
+> `deploy/setup-debian.sh`. O PC do autor (TRABALHOPC) é só desenvolvimento. Os trechos abaixo sobre o PC/Windows
+> valem para quem rodar num Windows; o resumo do homelab está logo abaixo.
+
+## Onde está hoje (homelab)
+
+| O quê | Onde |
+|---|---|
+| Acesso | `ssh davi@192.168.1.44` (rede local) · site `http://100.97.218.37:5380` (Tailscale) |
+| Checkout (o auto-deploy usa) | `/srv/job-radar`: nunca edite arquivo versionado aqui |
+| Perfis, `scoring-cases.Local.json`, paridade | `/srv/jobradar/` (fora do git) |
+| Estado (`deployed.txt`, logs, travas) | `/srv/jobradar/state` |
+| `.env` | `/srv/job-radar/.env` |
+| Agendador | `crontab` do usuário `davi`: auto-deploy e vigia a cada 15 min, backup às 23:00, cópia dos backups (`rsync`) às 23:30 para `/mnt/dados/backups/jobradar/` |
+
+- **Código:** trabalhe no PC de desenvolvimento e dê push em main; em até 15 min o homelab implanta (CI verde).
+- **Configuração:** edite `/srv/jobradar/appsettings.Local.json` por SSH e reinicie
+  `docker compose -p job-radar-au --profile prod restart worker web`. Para testar uma mudança de score, mantenha uma
+  cópia local e envie com `scp`.
+- **Parar a pilha antiga do PC** (se ainda estiver de pé, coleta em duplicado):
+  `docker compose -p job-radar-au --profile prod down` e remover as tarefas agendadas
+  (`Unregister-ScheduledTask` do auto-deploy, vigia e backup do Windows).
 
 ## Como está montado
 
