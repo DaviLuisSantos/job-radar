@@ -1,3 +1,4 @@
+using JobRadar.Infrastructure.Persistence.Settings;
 using JobRadar.Web;
 using JobRadar.Web.Components;
 
@@ -10,8 +11,11 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Configuration.AddJsonFile("profiles.json", optional: true, reloadOnChange: false);
 // Machine-specific settings (the Tailscale address to listen on) stay out of git.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+// Settings stored in the database override the files; environment and command line still win.
+builder.Configuration.AddJobRadarDatabaseSettings(args);
 builder.Configuration.AddEnvironmentVariables().AddCommandLine(args);
 builder.Services.AddJobRadarWeb(builder.Configuration);
+builder.Services.AddHostedService<SettingsRevisionHostedService>();
 builder.Services.AddWindowsService(o => o.ServiceName = "JobRadarWeb");
 
 var app = builder.Build();
@@ -29,6 +33,7 @@ app.MapGet("/health", async (JobRadar.Application.Operations.HealthService healt
     var report = await health.CheckAsync(ct);
     return Results.Json(report, statusCode: report.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
 });
+app.MapConfigApi();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.Run();

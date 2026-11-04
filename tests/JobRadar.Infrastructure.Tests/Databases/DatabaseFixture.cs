@@ -74,6 +74,7 @@ public abstract class DatabaseFixture(DatabaseProvider provider) : IAsyncLifetim
         await db.CandidateRequirements.ExecuteDeleteAsync();
         await db.CandidateExperience.ExecuteDeleteAsync();
         await db.MarketVisits.ExecuteDeleteAsync();
+        await db.Settings.ExecuteDeleteAsync();
     }
 
     public abstract ValueTask DisposeAsync();

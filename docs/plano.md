@@ -19,6 +19,7 @@
 | 8 | Raio-X: contagens por subclassificação e cidade, retrato diário com status de qualidade, relatório mensal | ✅ 2026-10-21 |
 | 9 | Importação do histórico do protótipo (vagas, rótulos, candidaturas, `market_counts`) | ✅ 2026-10-23 |
 | 10 | **Corte**: Worker rodando todo dia em produção, Python desligado | ✅ 2026-10-23 |
+| 11 | Configuração pela API (banco no lugar do arquivo local) | ✅ 2026-11-04 |
 
 Pendências conhecidas, com a etapa onde entram:
 - **Etapa 9:** as 9.593 vagas importadas ganham score na passada de 2026-10-24 (19:00 de Brasília). Conferir na

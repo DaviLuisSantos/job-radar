@@ -1,6 +1,7 @@
 using JobRadar.Infrastructure.Persistence.Collection;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Persistence.Settings;
 using JobRadar.Infrastructure.Persistence.Tracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -39,6 +40,8 @@ internal static class ProviderModel
                 .ToTable(t => t.HasCheckConstraint("ck_listing_payloads_payload_json", "ISJSON(payload) = 1"));
             modelBuilder.Entity<ListingScoreEntity>()
                 .ToTable(t => t.HasCheckConstraint("ck_listing_scores_explanation_json", "ISJSON(explanation) = 1"));
+            modelBuilder.Entity<SettingEntity>()
+                .ToTable(t => t.HasCheckConstraint("ck_settings_value_json", "ISJSON([value]) = 1"));
 
             // The SQL Server provider compares text keys ignoring case in the change tracker, as its default
             // collation would; with the collation above that would merge "Cafe" and "cafe" before the database

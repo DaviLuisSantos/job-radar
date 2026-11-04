@@ -1,3 +1,4 @@
+using JobRadar.Infrastructure.Persistence.Settings;
 using JobRadar.Worker;
 using JobRadar.Worker.Cli;
 
@@ -13,6 +14,8 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 });
 // Real profiles describe a person's plans and stay out of git (see appsettings.Local.example.json).
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+// Settings stored in the database override the files; environment and command line still win.
+builder.Configuration.AddJobRadarDatabaseSettings(hostArgs);
 // Environment and command line keep the last word, as in the default host.
 builder.Configuration.AddEnvironmentVariables().AddCommandLine(hostArgs);
 builder.Services.AddJobRadar(builder.Configuration);

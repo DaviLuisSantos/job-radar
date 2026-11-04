@@ -591,6 +591,27 @@ namespace JobRadar.Infrastructure.Migrations.Postgres
                     b.ToTable("listing_terms", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Settings.SettingEntity", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("value");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("settings", (string)null);
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Tracking.ApplicationEntity", b =>
                 {
                     b.Property<string>("Source")

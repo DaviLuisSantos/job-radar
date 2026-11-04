@@ -5,18 +5,19 @@
 .EXAMPLE
   pwsh deploy/remote.ps1 status
   pwsh deploy/remote.ps1 logs worker 200
-  pwsh deploy/remote.ps1 config-pull ./appsettings.Local.json
-  pwsh deploy/remote.ps1 config-push ./appsettings.Local.json
+  pwsh deploy/remote.ps1 config-get
+  pwsh deploy/remote.ps1 config-get Matching:Profiles
+  pwsh deploy/remote.ps1 config-set Matching:Profiles ./profiles.json
   pwsh deploy/remote.ps1 restart
   pwsh deploy/remote.ps1 auto-deploy-dry-run
   pwsh deploy/remote.ps1 run 'df -h /srv'
 
-  Host: $env:JOBRADAR_HOST (default davi@192.168.1.44). Paths on the host follow deploy/setup-debian.sh.
+  Host: $env:JOBRADAR_HOST (default davi@192.168.1.44). Config API: $env:JOBRADAR_URL (default http://100.97.218.37:5380). Paths on the host follow deploy/setup-debian.sh.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('status', 'logs', 'config-pull', 'config-push', 'restart', 'auto-deploy-dry-run', 'run')]
+    [ValidateSet('status', 'logs', 'config-get', 'config-set', 'restart', 'auto-deploy-dry-run', 'run')]
     [string] $Action,
     [Parameter(Position = 1, ValueFromRemainingArguments)]
     [string[]] $Rest
@@ -25,7 +26,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $hostName = if ($env:JOBRADAR_HOST) { $env:JOBRADAR_HOST } else { 'davi@192.168.1.44' }
 $app = '/srv/job-radar'
-$config = '/srv/jobradar/appsettings.Local.json'
+$baseUrl = if ($env:JOBRADAR_URL) { $env:JOBRADAR_URL.TrimEnd('/') } else { 'http://100.97.218.37:5380' }
 $compose = 'docker compose -p job-radar-au --profile prod'
 $sshOpts = @('-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8')
 
@@ -44,22 +45,18 @@ switch ($Action) {
         if ($service -notmatch '^(worker|web|postgres|migrate)$') { throw "Unknown service: $service" }
         Invoke-Remote "$compose logs --tail $lines $service"
     }
-    'config-pull' {
-        $dest = if ($Rest.Count -ge 1) { $Rest[0] } else { './appsettings.Local.json' }
-        & scp @sshOpts "${hostName}:$config" $dest
-        if ($LASTEXITCODE -ne 0) { throw 'scp failed' }
-        Write-Host "Saved to $dest"
+    'config-get' {
+        $uri = "$baseUrl/api/config"
+        if ($Rest.Count -ge 1) { $uri += '/' + [uri]::EscapeDataString($Rest[0]) }
+        (Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 15).Content
     }
-    'config-push' {
-        if ($Rest.Count -lt 1) { throw 'Usage: config-push <file>' }
-        $file = $Rest[0]
-        $null = Get-Content -Raw $file | ConvertFrom-Json -ErrorAction Stop # refuses invalid JSON
-        $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-        Invoke-Remote "cp $config $config.bak.$stamp"
-        & scp @sshOpts $file "${hostName}:$config"
-        if ($LASTEXITCODE -ne 0) { throw 'scp failed' }
-        Invoke-Remote "chmod 644 $config && cd $app && $compose restart worker web"
-        Write-Host "Config applied; previous one kept as $config.bak.$stamp"
+    'config-set' {
+        if ($Rest.Count -lt 2) { throw 'Usage: config-set <key> <file>' }
+        $body = Get-Content -Raw $Rest[1]
+        $null = $body | ConvertFrom-Json -ErrorAction Stop # refuses invalid JSON
+        $uri = "$baseUrl/api/config/" + [uri]::EscapeDataString($Rest[0])
+        $null = Invoke-WebRequest -Uri $uri -Method Put -Body $body -ContentType 'application/json' -UseBasicParsing -TimeoutSec 30
+        Write-Host "Saved $($Rest[0]); the site and worker restart on their own within about a minute."
     }
     'restart' { Invoke-Remote "cd $app && $compose restart worker web" }
     'auto-deploy-dry-run' { Invoke-Remote "cd $app && pwsh -NoProfile -File deploy/auto-deploy.ps1 -DryRun" }

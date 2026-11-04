@@ -2,6 +2,7 @@ using JobRadar.Application.Collection;
 using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
 using JobRadar.Application.Operations;
+using JobRadar.Application.Settings;
 using JobRadar.Application.Tracking;
 using JobRadar.Application.Triage;
 using JobRadar.Domain.Matching;
@@ -54,6 +55,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<TechnologyReportService>();
         services.AddScoped<StatusService>();
         services.AddScoped<HealthService>();
+        // The configuration comes from the caller, not the container: composition tests build one without IConfiguration.
+        services.AddScoped(sp => new SettingsService(
+            sp.GetRequiredService<JobRadar.Application.Abstractions.ISettingsRepository>(), configuration, sp.GetRequiredService<TimeProvider>()));
         return services;
     }
 }

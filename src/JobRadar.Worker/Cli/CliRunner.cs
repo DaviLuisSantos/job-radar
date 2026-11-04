@@ -4,6 +4,7 @@ using JobRadar.Application.Collection;
 using JobRadar.Application.Import;
 using JobRadar.Application.Market;
 using JobRadar.Application.Matching;
+using JobRadar.Application.Settings;
 using JobRadar.Application.Tracking;
 using JobRadar.Domain.Matching;
 using JobRadar.Infrastructure.Persistence;
@@ -56,6 +57,14 @@ public static class CliRunner
                 case CliCommand.ShowEligibility c:
                     var rulesInUse = sp.GetRequiredService<ProfileCatalog>().RulesOf(c.Market);
                     await output.WriteLineAsync(EligibilityJson.Section(c.Market, rulesInUse.Eligibility));
+                    break;
+                case CliCommand.ImportConfig c:
+                    return await ConfigTransfer.ImportAsync(c.Path, sp.GetRequiredService<ISettingsRepository>(),
+                        sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(), sp.GetRequiredService<TimeProvider>(), output, ct);
+                case CliCommand.ExportConfig c:
+                    var rows = await sp.GetRequiredService<ISettingsRepository>().ListAsync(ct);
+                    await File.WriteAllTextAsync(c.Path, ConfigTransfer.Export(rows), ct);
+                    await output.WriteLineAsync($"{rows.Count} sections written to {Path.GetFullPath(c.Path)}");
                     break;
                 case CliCommand.SeedAtsBoards:
                     var list = AtsBoardList.Greenhouse();
@@ -164,7 +173,7 @@ public static class CliRunner
             await output.WriteLineAsync(ex.Message);
             return 2;
         }
-        catch (Exception ex) when (ex is UnknownRequirementException or UnknownProfileException or FormatException)
+        catch (Exception ex) when (ex is UnknownRequirementException or UnknownProfileException or FormatException or SettingsValidationException or System.Text.Json.JsonException)
         {
             await output.WriteLineAsync(ex.Message);
             return 2;

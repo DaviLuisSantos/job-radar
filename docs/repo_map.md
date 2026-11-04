@@ -59,7 +59,9 @@ Padrão: `dotnet test` (sem banco, sem rede). Comandos completos no `CLAUDE.md`.
   Skill `banco-e-migrations`.
 - `Integrations.Seek/Api/SeekPacingHandler.cs`, `Integrations.LinkedIn/Api/LinkedInPacing.cs` e `Integrations.Ats/Api/AtsPacing.cs`: orçamento contra
   anti-bot; não afrouxar. Skill `fontes-de-vagas`.
-- Dados privados, fora do git: `src/JobRadar.Worker/appsettings.Local.json` (perfis, elegibilidade),
+- Dados privados, fora do git: perfis e elegibilidade, que em produção vivem na tabela `settings` (API `/api/config`,
+  `Web/ConfigEndpoints.cs`; fonte `Infrastructure/Persistence/Settings/DatabaseConfigurationSource.cs`) e, em
+  desenvolvimento, em `src/JobRadar.Worker/appsettings.Local.json`;
   `candidate/` (currículo e fatos), `docs/private/`. Nada disso vai para arquivo versionado.
 - `PublicVocabularyTests` (Worker.Tests) barra no CI o vocabulário de status legal em arquivo versionado.
 - Raio-X é público: só números agregados.

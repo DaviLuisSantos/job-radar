@@ -598,6 +598,30 @@ namespace JobRadar.Infrastructure.Migrations.SqlServer
                     b.ToTable("listing_terms", (string)null);
                 });
 
+            modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Settings.SettingEntity", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("settings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_settings_value_json", "ISJSON([value]) = 1");
+                        });
+                });
+
             modelBuilder.Entity("JobRadar.Infrastructure.Persistence.Tracking.ApplicationEntity", b =>
                 {
                     b.Property<string>("Source")

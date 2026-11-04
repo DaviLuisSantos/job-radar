@@ -20,13 +20,21 @@
 | Agendador | `crontab` do usuário `davi`: auto-deploy e vigia a cada 15 min, backup às 23:00, cópia dos backups (`rsync`) às 23:30 para `/mnt/dados/backups/jobradar/` |
 
 - **Código:** trabalhe no PC de desenvolvimento e dê push em main; em até 15 min o homelab implanta (CI verde).
-- **Configuração:** edite `/srv/jobradar/appsettings.Local.json` por SSH e reinicie
-  `docker compose -p job-radar-au --profile prod restart worker web`. Para testar uma mudança de score, mantenha uma
-  cópia local e envie com `scp`.
+- **Configuração:** fica no banco (tabela `settings`, uma linha por seção, ex. `Matching:Profiles`), não mais no
+  `appsettings.Local.json`. Precedência: arquivo < banco < variável de ambiente/linha de comando. API do site:
+  `GET /api/config` (efetiva), `GET/PUT/DELETE /api/config/{chave}` (chave com `:`; 204 no sucesso, 400 com `{"error"}`
+  se inválida ou proibida, 404 se não existir). Prefixos permitidos: `Matching`, `Market`, `Collection`, `Description`,
+  `Seek`, `Gupy`, `LinkedIn`, `Himalayas`, `Jobicy`, `Ats`. O `PUT`/`DELETE` valida tratando a seção como substituída
+  (não mesclada) e de forma estrita: o arquivo local não conta. Site e worker se reiniciam sozinhos em até ~1 min após
+  a mudança (o worker só entre passadas) e o Docker os religa.
+- **Migrar do arquivo para o banco:** `import-config <arquivo>` (caminho absoluto se via `dotnet run`; grava `Markets`
+  antes de `Profiles` e pula chaves não permitidas) e `export-config`. Ressalva: o binder mistura listas por índice
+  entre arquivo e banco, então, depois do `import-config`, esvazie o `appsettings.Local.json` do host para `{}`.
 - **Do PC de desenvolvimento, sem abrir SSH à mão:** `pwsh deploy/remote.ps1 <ação>` (host em `JOBRADAR_HOST`, padrão
-  `davi@192.168.1.44`, login por chave). Ações: `status`, `logs [serviço] [linhas]`, `config-pull [arquivo]`,
-  `config-push <arquivo>` (valida o JSON, guarda `.bak.<data>` no host, envia e reinicia worker e site),
-  `restart`, `auto-deploy-dry-run`, `run '<comando>'`. É o que o Claude Code usa para operar o homelab.
+  `davi@192.168.1.44`, login por chave; URL do site em `JOBRADAR_URL`). Ações: `status`, `logs [serviço] [linhas]`,
+  `config-get [chave]`, `config-set <chave> <arquivo>` (pela API), `restart`, `auto-deploy-dry-run`, `run '<comando>'`.
+  É o que o Claude Code usa para operar o homelab. A paridade do `deploy.ps1` usa `GET /api/config` do site no ar;
+  sem site (primeiro deploy), cai no arquivo do `.env`.
 - **Parar a pilha antiga do PC** (se ainda estiver de pé, coleta em duplicado):
   `docker compose -p job-radar-au --profile prod down` e remover as tarefas agendadas
   (`Unregister-ScheduledTask` do auto-deploy, vigia e backup do Windows).
@@ -111,8 +119,10 @@ não está no `origin/main`; CI falho fica registrado uma vez e o commit é igno
 `auto-deploy.log` (só ação e problema); a saída inteira do último deploy em `auto-deploy-last.txt`. Conferir sem
 mudar nada: `pwsh deploy/auto-deploy.ps1 -DryRun`.
 
-**Perfis:** o `appsettings.Local.json` não está no git e é montado direto nos containers: uma mudança vale quando o
-worker e o site reiniciam (o próximo deploy, ou `docker compose -p job-radar-au --profile prod restart worker web`).
+**Perfis:** a configuração real mora no banco (tabela `settings`) e se muda pela API, ver "Onde está hoje". O
+`appsettings.Local.json` (fora do git, montado nos containers) é só a base: o banco vence, e depois do `import-config` ele
+fica `{}`. Mudança vale quando worker e site reiniciam (sozinhos em até ~1 min, ou
+`docker compose -p job-radar-au --profile prod restart worker web`).
 Além dos perfis, ele guarda quem pode se candidatar em cada mercado (`Matching:Markets:<mercado>:Eligibility`) e os
 termos do Raio-X (`Market:Terms`): sem o bloco do AU, worker e site não sobem e a paridade do deploy falha. Para ver o
 bloco em uso: `dotnet run --project src/JobRadar.Worker -- eligibility AU`. Os casos com texto real que conferem o

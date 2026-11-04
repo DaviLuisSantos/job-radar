@@ -26,7 +26,10 @@ public abstract record CliCommand
           market-report [YYYY-MM] [file]  monthly Raio-X as Markdown (default: this month, to the screen)
           tech-count [AU|BR|Remote] [YYYY-MM]  technologies the month's full ads asked for (default: BR, this month)
           eligibility AU|BR|LatamRemote|GlobalRemote  the market's eligibility rules in use, as configuration JSON
-          ats-seed                        load the shipped list of Greenhouse boards into the database (safe to repeat)
+          import-config <file>            copy a configuration JSON (e.g. appsettings.Local.json) into the database, one row
+                                          per section; the running site and worker restart on their own to pick it up
+          export-config <file>            the configuration kept in the database, as one nested JSON file
+          ats-seed                    load the shipped list of Greenhouse boards into the database (safe to repeat)
           import-prototype <jobs.db> [--dry-run]  bring the Python prototype history in (safe to repeat)
           copy-database Postgres|SqlServer <connection-string>  every row of this database into another, empty and
                                           migrated (dotnet ef database update)
@@ -52,10 +55,12 @@ public abstract record CliCommand
     public sealed record CopyDatabase(DatabaseProvider Provider, string ConnectionString) : CliCommand;
     public sealed record ShowEligibility(JobMarket Market) : CliCommand;
     public sealed record SeedAtsBoards : CliCommand;
+    public sealed record ImportConfig(string Path) : CliCommand;
+    public sealed record ExportConfig(string Path) : CliCommand;
 
     /// <summary>The words that make the program a command instead of the worker.</summary>
     public static readonly string[] Names = ["status", "notes", "label", "calibrate", "collect", "market", "market-report", "import-prototype",
-        "requirements", "requirement", "import-candidate", "experience", "copy-database", "tech-count", "eligibility", "ats-seed"];
+        "requirements", "requirement", "import-candidate", "experience", "copy-database", "tech-count", "eligibility", "ats-seed", "import-config", "export-config"];
 
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && Names.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -72,6 +77,8 @@ public abstract record CliCommand
                 "status" when args.Length == 3 => new SetStatus(ParseId(args[1]), ParseStatus(args[2])),
                 "notes" when args.Length >= 2 => new SetNotes(ParseId(args[1]), Rest(args, 2)),
                 "label" when args.Length >= 3 => new SetLabel(ParseId(args[1]), ParseLabel(args[2]), Rest(args, 3)),
+                "import-config" when args.Length == 2 => new ImportConfig(args[1]),
+                "export-config" when args.Length == 2 => new ExportConfig(args[1]),
                 "calibrate" when args.Length == 1 => new Calibrate(),
                 "calibrate" when args.Length == 2 && args[1] == "--rescore" => new Calibrate(Rescore: true),
                 "calibrate" when args.Length == 4 && args[1] == "--rescore" && args[2] == "--assume" =>

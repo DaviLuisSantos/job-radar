@@ -58,6 +58,7 @@ public static class DatabaseCopy
                 .ThenBy(e => e.Category).ThenBy(e => e.City).ThenBy(e => e.Term)),
             await copier.CopyAsync("market_listings", db => db.MarketListings.OrderBy(e => e.Source).ThenBy(e => e.SourceId)
                 .ThenBy(e => e.Category).ThenBy(e => e.City)),
+            await copier.CopyAsync("settings", db => db.Settings.OrderBy(e => e.Key)),
         ];
     }
 
@@ -71,7 +72,7 @@ public static class DatabaseCopy
         ("collection_runs", db.CollectionRuns.AnyAsync), ("ats_boards", db.AtsBoards.AnyAsync),
         ("candidate_requirements", db.CandidateRequirements.AnyAsync), ("candidate_experience", db.CandidateExperience.AnyAsync),
         ("market_snapshots", db.MarketSnapshots.AnyAsync), ("market_counts", db.MarketCounts.AnyAsync),
-        ("market_listings", db.MarketListings.AnyAsync),
+        ("market_listings", db.MarketListings.AnyAsync), ("settings", db.Settings.AnyAsync),
     ];
 
     private sealed class Copier(JobRadarDbContext from, JobRadarDbContext to, CancellationToken ct)

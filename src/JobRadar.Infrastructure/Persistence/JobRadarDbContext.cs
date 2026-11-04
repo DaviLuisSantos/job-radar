@@ -2,6 +2,7 @@ using JobRadar.Infrastructure.Persistence.Collection;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Market;
 using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Persistence.Settings;
 using JobRadar.Infrastructure.Persistence.Tracking;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,7 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<MarketSnapshotEntity> MarketSnapshots => Set<MarketSnapshotEntity>();
     public DbSet<MarketCountEntity> MarketCounts => Set<MarketCountEntity>();
     public DbSet<MarketListingEntity> MarketListings => Set<MarketListingEntity>();
+    public DbSet<SettingEntity> Settings => Set<SettingEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

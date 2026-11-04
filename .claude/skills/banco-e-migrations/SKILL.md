@@ -23,6 +23,13 @@ dotnet ef migrations add <Nome> --project src/JobRadar.Infrastructure.Migrations
   de migrations do provider pelo nome. Quem aplica migrations (o bundle do `deploy.ps1`, a fixture dos testes) referencia
   esse assembly; o site e o worker não aplicam e não precisam dele.
 
+## Configuração no banco
+
+- Tabela `settings` (chave `Matching:Profiles` etc., valor JSON, `updated_at`): `Persistence/Settings/`. A
+  `DatabaseConfigurationSource` lê na subida, **antes do DI** (padrão do `CliRunner`), e tolera tabela ou banco
+  ausente. Precedência: arquivo < banco < ambiente/linha de comando. Mudou a tabela? Atualize a fonte e o
+  `DatabaseCopy`.
+
 ## Armadilhas
 
 - Npgsql só grava `timestamptz` com offset 0: o mapper converte com `ToUniversalTime()`

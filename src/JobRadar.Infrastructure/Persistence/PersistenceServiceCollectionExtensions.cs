@@ -3,6 +3,7 @@ using JobRadar.Infrastructure.Persistence.Collection;
 using JobRadar.Infrastructure.Persistence.Listings;
 using JobRadar.Infrastructure.Persistence.Market;
 using JobRadar.Infrastructure.Persistence.Matching;
+using JobRadar.Infrastructure.Persistence.Settings;
 using JobRadar.Infrastructure.Persistence.Tracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -36,6 +37,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<ITrackingRepository, EfTrackingRepository>();
         services.AddScoped<IMarketVisitRepository, EfMarketVisitRepository>();
         services.AddScoped<IMarketRepository, EfMarketRepository>();
+        services.AddScoped<ISettingsRepository, EfSettingsRepository>();
         services.AddScoped<IStorageHealth, PostgresStorageHealth>();
         return services;
     }

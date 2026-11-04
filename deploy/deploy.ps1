@@ -91,6 +91,25 @@ if ($ParityFile -and (Test-Path $ParityFile)) {
     $env:JOBRADAR_PARITY_FILE = $ParityFile
     # The profiles production mounts hold each market's eligibility rules, which the parity scores with.
     $profiles = (Read-DotEnv).JOBRADAR_PROFILES
+    # Settings now live in the database: prefer the running site's effective config (same nested shape); on any
+    # failure (first deploy, site down, non-200) keep the file from .env.
+    $apiDir = $null
+    try {
+        $resp = Invoke-WebRequest -Uri 'http://localhost:5380/api/config' -UseBasicParsing -TimeoutSec 10
+        if ($resp.StatusCode -eq 200) {
+            $apiDir = Join-Path ([IO.Path]::GetTempPath()) ("jobradar-parity-" + [guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path $apiDir | Out-Null
+            $apiFile = Join-Path $apiDir 'profiles.json'
+            [IO.File]::WriteAllText($apiFile, $resp.Content)
+            if ($profiles) {
+                $sibling = Join-Path (Split-Path $profiles -Parent) 'scoring-cases.Local.json'
+                if (Test-Path $sibling) { Copy-Item $sibling $apiDir }
+            }
+            $profiles = $apiFile
+            Write-Host 'Parity profiles taken from the running site (/api/config).'
+        }
+    }
+    catch { Write-Host "Site config unavailable ($($_.Exception.Message)); using the .env profiles file." }
     if ($profiles) { $env:JOBRADAR_LOCAL_SETTINGS = $profiles }
     try {
         # No --nologo: the testing platform hands it to the test app, which then runs zero tests and fails.
@@ -100,7 +119,10 @@ if ($ParityFile -and (Test-Path $ParityFile)) {
             throw 'Scoring parity failed: the real listings would score differently. Not deploying.'
         }
     }
-    finally { Remove-Item Env:JOBRADAR_PARITY_FILE, Env:JOBRADAR_LOCAL_SETTINGS -ErrorAction SilentlyContinue }
+    finally {
+        Remove-Item Env:JOBRADAR_PARITY_FILE, Env:JOBRADAR_LOCAL_SETTINGS -ErrorAction SilentlyContinue
+        if ($apiDir) { Remove-Item $apiDir -Recurse -Force -ErrorAction SilentlyContinue }
+    }
 }
 else { Write-Warning 'No parity file (JOBRADAR_PARITY_FILE): deploying without the parity check.' }
 
