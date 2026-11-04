@@ -67,7 +67,7 @@ public class SettingsServiceTests
     [Fact]
     public async Task A_profile_is_saved_when_the_current_configuration_has_the_eligibility()
     {
-        var current = new Dictionary<string, string?> { ["Matching:Markets:AU:Eligibility:RestrictedPattern"] = "citizens only" };
+        var current = new Dictionary<string, string?> { ["Matching:Markets:AU:Eligibility:RestrictedPattern"] = "guild members only" };
         await Service(current).SaveAsync("Matching:Profiles", AuProfile, Ct);
         Assert.Single(_repository.Rows);
     }
@@ -78,7 +78,7 @@ public class SettingsServiceTests
         // The section is replaced at the next start, not merged: {} would leave the AU profile without its block.
         var current = new Dictionary<string, string?>
         {
-            ["Matching:Markets:AU:Eligibility:RestrictedPattern"] = "citizens only",
+            ["Matching:Markets:AU:Eligibility:RestrictedPattern"] = "guild members only",
             ["Matching:Profiles:dev:Market"] = "AU",
             ["Matching:Profiles:dev:Keywords:0"] = "dotnet",
             ["Matching:Profiles:dev:Locations:0"] = "Perth",
@@ -92,7 +92,7 @@ public class SettingsServiceTests
     {
         var current = new Dictionary<string, string?>
         {
-            ["Matching:Markets:AU:Eligibility:RestrictedPattern"] = "citizens only",
+            ["Matching:Markets:AU:Eligibility:RestrictedPattern"] = "guild members only",
             ["Matching:Profiles:dev:Market"] = "AU",
             ["Matching:Profiles:dev:Keywords:0"] = "dotnet",
             ["Matching:Profiles:dev:Locations:0"] = "Perth",

@@ -13,7 +13,7 @@ public class ConfigTransferTests
 
     private const string File = """
         {
-          "Matching": { "Profiles": { "dev": { "Market": "AU", "Keywords": ["dotnet"], "Locations": ["Perth"] } }, "Markets": { "AU": { "Eligibility": { "RestrictedPattern": "citizens only" } } } },
+          "Matching": { "Profiles": { "dev": { "Market": "AU", "Keywords": ["dotnet"], "Locations": ["Perth"] } }, "Markets": { "AU": { "Eligibility": { "RestrictedPattern": "guild members only" } } } },
           "Market": { "Terms": { "x": 1 } },
           "ConnectionStrings": { "JobRadar": "secret" },
           "Logging": { "A": 1 }
