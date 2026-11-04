@@ -23,6 +23,10 @@
 - **Configuração:** edite `/srv/jobradar/appsettings.Local.json` por SSH e reinicie
   `docker compose -p job-radar-au --profile prod restart worker web`. Para testar uma mudança de score, mantenha uma
   cópia local e envie com `scp`.
+- **Do PC de desenvolvimento, sem abrir SSH à mão:** `pwsh deploy/remote.ps1 <ação>` (host em `JOBRADAR_HOST`, padrão
+  `davi@192.168.1.44`, login por chave). Ações: `status`, `logs [serviço] [linhas]`, `config-pull [arquivo]`,
+  `config-push <arquivo>` (valida o JSON, guarda `.bak.<data>` no host, envia e reinicia worker e site),
+  `restart`, `auto-deploy-dry-run`, `run '<comando>'`. É o que o Claude Code usa para operar o homelab.
 - **Parar a pilha antiga do PC** (se ainda estiver de pé, coleta em duplicado):
   `docker compose -p job-radar-au --profile prod down` e remover as tarefas agendadas
   (`Unregister-ScheduledTask` do auto-deploy, vigia e backup do Windows).
