@@ -4,7 +4,7 @@
 > Decidido em 2026-10-21: roda no PC do autor; o site é acessível **só localmente e pela Tailscale**, sem
 > login no app. Desde 2026-10-30 tudo roda em containers (`docker compose`, perfil `prod`): o mesmo em qualquer
 > SO com Docker, sem serviço nem registro do Windows.
-> **Desde 2026-11-03 a produção é o homelab Debian** (`davi@192.168.1.44`, Tailscale `100.97.218.37`), montado com
+> **Desde 2026-11-03 a produção é o homelab Debian** (`davi@192.168.0.44`, Tailscale `100.97.218.37`), montado com
 > `deploy/setup-debian.sh`. O PC do autor (TRABALHOPC) é só desenvolvimento. Os trechos abaixo sobre o PC/Windows
 > valem para quem rodar num Windows; o resumo do homelab está logo abaixo.
 
@@ -12,7 +12,7 @@
 
 | O quê | Onde |
 |---|---|
-| Acesso | `ssh davi@192.168.1.44` (rede local) · site `http://100.97.218.37:5380` (Tailscale) |
+| Acesso | `ssh davi@192.168.0.44` (rede local) · site `http://100.97.218.37:5380` (Tailscale) |
 | Checkout (o auto-deploy usa) | `/srv/job-radar`: nunca edite arquivo versionado aqui |
 | Perfis, `scoring-cases.Local.json`, paridade | `/srv/jobradar/` (fora do git) |
 | Estado (`deployed.txt`, logs, travas) | `/srv/jobradar/state` |
@@ -33,7 +33,7 @@
   antes de `Profiles` e pula chaves não permitidas) e `export-config`. Ressalva: o binder mistura listas por índice
   entre arquivo e banco, então, depois do `import-config`, esvazie o `appsettings.Local.json` do host para `{}`.
 - **Do PC de desenvolvimento, sem abrir SSH à mão:** `pwsh deploy/remote.ps1 <ação>` (host em `JOBRADAR_HOST`, padrão
-  `davi@192.168.1.44`, login por chave; URL do site em `JOBRADAR_URL`). Ações: `status`, `logs [serviço] [linhas]`,
+  `davi@192.168.0.44`, login por chave; URL do site em `JOBRADAR_URL`). Ações: `status`, `logs [serviço] [linhas]`,
   `config-get [chave]`, `config-set <chave> <arquivo>` (pela API), `restart`, `auto-deploy-dry-run`, `run '<comando>'`.
   É o que o Claude Code usa para operar o homelab. A paridade do `deploy.ps1` usa `GET /api/config` do site no ar;
   sem site (primeiro deploy), cai no arquivo do `.env`.

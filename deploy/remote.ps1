@@ -12,7 +12,7 @@
   pwsh deploy/remote.ps1 auto-deploy-dry-run
   pwsh deploy/remote.ps1 run 'df -h /srv'
 
-  Host: $env:JOBRADAR_HOST (default davi@192.168.1.44). Config API: $env:JOBRADAR_URL (default http://100.97.218.37:5380). Paths on the host follow deploy/setup-debian.sh.
+  Host: $env:JOBRADAR_HOST (default davi@192.168.0.44). Config API: $env:JOBRADAR_URL (default http://100.97.218.37:5380). Paths on the host follow deploy/setup-debian.sh.
 #>
 [CmdletBinding()]
 param(
@@ -24,7 +24,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$hostName = if ($env:JOBRADAR_HOST) { $env:JOBRADAR_HOST } else { 'davi@192.168.1.44' }
+$hostName = if ($env:JOBRADAR_HOST) { $env:JOBRADAR_HOST } else { 'davi@192.168.0.44' }
 $app = '/srv/job-radar'
 $baseUrl = if ($env:JOBRADAR_URL) { $env:JOBRADAR_URL.TrimEnd('/') } else { 'http://100.97.218.37:5380' }
 $compose = 'docker compose -p job-radar-au --profile prod'

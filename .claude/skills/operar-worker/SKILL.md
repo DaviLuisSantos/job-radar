@@ -29,7 +29,7 @@ e o Worker com `Collection__RunOnStartup=true` (e `Seek__MaxPages=1` para uma pr
 
 ## Produção
 
-- A produção roda no **homelab** (`ssh davi@192.168.1.44`; checkout `/srv/job-radar`, config `/srv/jobradar`, estado
+- A produção roda no **homelab** (`ssh davi@192.168.0.44`; checkout `/srv/job-radar`, config `/srv/jobradar`, estado
   `/srv/jobradar/state`). O auto-deploy de lá (cron, 15 min) implanta main com CI verde; nunca edite arquivo versionado
   lá. Esta máquina (TRABALHOPC) é só desenvolvimento. Config real mora no banco (tabela `settings`): mude pela API com
   `pwsh deploy/remote.ps1 config-get|config-set` (sem SSH nem arquivo); site e worker reiniciam sozinhos em ~1 min.

@@ -103,7 +103,7 @@ src/JobRadar.Web             triagem em Blazor + MudBlazor (JobRadarWebCompositi
 
 ## Regras que valem sempre
 
-- A produção roda no **homelab** (`ssh davi@192.168.1.44`, site em `http://100.97.218.37:5380` pela Tailscale), checkout
+- A produção roda no **homelab** (`ssh davi@192.168.0.44`, site em `http://100.97.218.37:5380` pela Tailscale), checkout
   em `/srv/job-radar`, config em `/srv/jobradar` (ver `docs/producao.md`). O auto-deploy de lá implanta o que está
   em main (recusa com mudança local em arquivo versionado): nunca edite arquivo versionado no homelab. Esta máquina
   (TRABALHOPC) é só desenvolvimento: o Postgres do `docker compose` daqui não é o de produção. Nunca
