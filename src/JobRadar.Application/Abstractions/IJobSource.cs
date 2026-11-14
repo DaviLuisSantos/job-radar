@@ -21,6 +21,12 @@ public interface IJobSource
     bool OptIn => false;
 
     /// <summary>
+    /// The widest date window worth asking for; null for no limit. A source whose search caps results and does not
+    /// sort by date (LinkedIn) answers "everything" with old ads in no order: past this window it only spends requests.
+    /// </summary>
+    int? MaxWindowDays => null;
+
+    /// <summary>
     /// Every listing matching the search, each once, with paging and source quirks handled
     /// inside. Sources cap results (Seek: 500), so the result says whether it is complete.
     /// </summary>

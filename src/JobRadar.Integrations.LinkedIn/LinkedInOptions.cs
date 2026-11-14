@@ -32,6 +32,15 @@ public sealed class LinkedInOptions
     [Range(1, 100)]
     public int MaxPages { get; set; } = 40;
 
+    /// <summary>
+    /// The widest date window asked for (<see cref="JobRadar.Application.Abstractions.IJobSource.MaxWindowDays"/>). The search
+    /// does not sort by date and stops near 1,000 results, so a search wider than that (".NET" in all of Brazil) never
+    /// completes and, without a cap, asked for everything every day: 40 pages, a quarter of them ads over a month old,
+    /// and the burst that ended in 429 (2026-11-12). A week keeps what is new and leaves the old to the age penalty.
+    /// </summary>
+    [Range(1, 30)]
+    public int MaxWindowDays { get; set; } = 7;
+
     /// <summary>Requests in flight at once. Its own budget, apart from the other sources', and low.</summary>
     [Range(1, 4)]
     public int MaxConcurrentRequests { get; set; } = 2;

@@ -35,6 +35,8 @@ internal sealed class LinkedInJobSource(
     /// </summary>
     public bool OptIn => true;
 
+    public int? MaxWindowDays => options.Value.MaxWindowDays;
+
     public async Task<SearchResult> SearchAsync(ListingSearch search, CancellationToken ct = default)
     {
         var o = options.Value;

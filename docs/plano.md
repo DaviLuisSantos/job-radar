@@ -167,6 +167,18 @@ sinal do fifo no exemplo). Cuidado: a descrição só é buscada para vagas rotu
 enviesada. Atributo tirado dela **não** entra no Raio-X; o salário do Raio-X continua vindo do campo do Seek.
 Entra depois do passo 4 dos requisitos.
 
+### Presencial e híbrido fora do Rio (`RulesVersion` 17, 2026-11-14) ✅
+
+Revisão das vagas do LinkedIn no perfil `dotnet-br`: das 64 com score ≥ 70, pelo menos 11 eram presenciais ou híbridas
+em SP, Curitiba, Goiânia ou Porto Alegre (BTG "presencial na Faria Lima" com 81). A regra do `OnSiteLocations` só lia
+título e resumo, e o card do LinkedIn não tem resumo; híbrido nem era lido, e ainda ganhava o bônus de híbrido.
+Agora: (1) "híbrido" no título/resumo exclui como "presencial", fora dos locais do perfil, a não ser que o mesmo texto
+diga "remoto"; (2) a descrição é lida por frases que afirmam o modelo ("modelo híbrido", "3 dias presenciais",
+"presencial no escritório"), com −40 (`OnSiteDescribedPenalty`, regra `OnSiteDescribed`) em vez de excluir, e nada
+quando o anúncio também oferece remoto ou cita um local do perfil. Medido nas 188 vagas BR com score ≥ 60: 4 excluídas
+pelo título, 37 com −40, todas conferidas à mão como presenciais/híbridas fora do Rio. Só o mercado BR tem as frases;
+AU e remotos seguem com `Never`, então a paridade com o protótipo não muda (não rodada: arquivo só no trabalhopc).
+
 ### v2/v3 — Modelo de ML para o fit
 
 Pré-requisito: **rótulos**. Hoje há zero; a meta é ~200–300 por perfil, com boas e ruins. A métrica e os

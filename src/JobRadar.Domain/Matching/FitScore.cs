@@ -100,6 +100,8 @@ public enum ScoreRule
     NoAssistance,
     Aging,
     Stale,
+    /// <summary>The full ad states on-site or hybrid work outside where the profile accepts it.</summary>
+    OnSiteDescribed,
     /// <summary>The time zones the employer accepts leave Brazil out.</summary>
     TimeZoneOutOfReach,
     /// <summary>The top of the pay range is below the profile's floor.</summary>

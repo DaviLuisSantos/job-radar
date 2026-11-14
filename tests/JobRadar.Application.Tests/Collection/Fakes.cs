@@ -14,13 +14,14 @@ internal static class Listings
 }
 
 /// <summary>Answers each search from a script; records what it was asked. Safe to call in parallel.</summary>
-internal sealed class FakeSource(string name, JobMarket market = JobMarket.AU, bool optIn = false) : IJobSource
+internal sealed class FakeSource(string name, JobMarket market = JobMarket.AU, bool optIn = false, int? maxWindowDays = null) : IJobSource
 {
     private readonly List<ListingSearch> _received = [];
 
     public string Name => name;
     public IReadOnlySet<JobMarket> Markets { get; } = new HashSet<JobMarket> { market };
     public bool OptIn => optIn;
+    public int? MaxWindowDays => maxWindowDays;
     public List<ListingSearch> Received { get { lock (_received) return [.. _received]; } }
     public Func<ListingSearch, SearchResult> Respond { get; set; } = _ => new SearchResult([], Complete: true);
     public Func<ListingSearch, Task<SearchResult>>? RespondAsync { get; set; }

@@ -84,7 +84,7 @@ public sealed class ListingCollector(
         var tags = new TagList { { "source", source.Name }, { "market", search.Market.ToString() } };
         var started = time.GetUtcNow();
         var last = fullHistory ? null : await StoredAsync(() => runs.GetLastCompleteStartAsync(source.Name, search.Key, ct), ct);
-        var window = IncrementalWindow(last, started);
+        var window = CappedWindow(IncrementalWindow(last, started), source.MaxWindowDays);
 
         try
         {
@@ -154,4 +154,11 @@ public sealed class ListingCollector(
     /// </summary>
     internal static int? IncrementalWindow(DateTimeOffset? lastSuccess, DateTimeOffset now) =>
         lastSuccess is { } last ? Math.Max(1, (now - last).Days + 1) : null;
+
+    /// <summary>
+    /// The window, no wider than the source's <see cref="IJobSource.MaxWindowDays"/>: there "everything" (no complete
+    /// run yet, a run always cut at the cap, or <c>fullHistory</c>) becomes the source's widest window.
+    /// </summary>
+    internal static int? CappedWindow(int? window, int? max) =>
+        max is { } cap ? Math.Min(window ?? cap, cap) : window;
 }

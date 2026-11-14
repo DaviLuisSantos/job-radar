@@ -306,4 +306,32 @@ public class ListingCollectorTests
 
         Assert.Null(seek.Received[1].PostedWithinDays);
     }
+
+    [Fact]
+    public async Task A_source_with_a_widest_window_never_asks_for_more()
+    {
+        var calls = 0;
+        var linkedin = new FakeSource("linkedin", maxWindowDays: 7) { Respond = _ => new SearchResult([], Complete: ++calls > 2) };
+        var collector = Collector(linkedin);
+
+        await collector.CollectAsync([Dev], Ct);   // day 0: no run yet, would be everything; cut at the cap
+        _time.Advance(TimeSpan.FromDays(1));
+        await collector.CollectAsync([Dev], Ct);   // day 1: still no complete run; cut again
+        _time.Advance(TimeSpan.FromDays(1));
+        await collector.CollectAsync([Dev], Ct);   // day 2: complete
+        _time.Advance(TimeSpan.FromDays(1));
+        await collector.CollectAsync([Dev], Ct);   // day 3: the incremental window, narrower than the cap
+
+        Assert.Equal([7, 7, 7, 2], linkedin.Received.Select(r => r.PostedWithinDays));
+        Assert.Equal([7, 7, 7, 2], _runs.Runs.Select(r => r.PostedWithinDays));
+    }
+
+    [Theory]
+    [InlineData(null, null, null)]
+    [InlineData(3, null, 3)]
+    [InlineData(null, 7, 7)]
+    [InlineData(3, 7, 3)]
+    [InlineData(12, 7, 7)]
+    public void The_window_is_capped_by_the_source(int? window, int? max, int? expected) =>
+        Assert.Equal(expected, ListingCollector.CappedWindow(window, max));
 }

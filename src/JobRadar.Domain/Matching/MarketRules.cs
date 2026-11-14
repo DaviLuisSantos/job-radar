@@ -55,6 +55,10 @@ public sealed record MarketRules
     public required Regex EnglishRequired { get; init; }
     /// <summary>Work at the employer's site, for <see cref="MatchingProfile.OnSiteLocations"/>.</summary>
     public required Regex OnSite { get; init; }
+    /// <summary>On-site or hybrid work as the full ad states it; stricter than <see cref="OnSite"/>, which reads title and summary.</summary>
+    public Regex OnSiteDescribed { get; init; } = BrazilPatterns.Never;
+    /// <summary>Remote work offered by the full ad, which makes its <see cref="OnSiteDescribed"/> an option, not a condition.</summary>
+    public Regex RemoteOffered { get; init; } = BrazilPatterns.Never;
 
     // Remote markets: who may apply, and how they are hired. Empty everywhere else.
     /// <summary>
@@ -145,6 +149,8 @@ public sealed record MarketRules
         YearsAsked = BrazilPatterns.YearsAsked,
         EnglishRequired = BrazilPatterns.EnglishRequired,
         OnSite = BrazilPatterns.OnSite,
+        OnSiteDescribed = BrazilPatterns.OnSiteDescribed,
+        RemoteOffered = BrazilPatterns.RemoteOffered,
     };
 
     /// <summary>

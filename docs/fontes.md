@@ -180,6 +180,14 @@ C#, porque a busca olha o anúncio inteiro e não respeita aspas. Quem separa é
 e o perfil de fazenda ou de obra ganha pouco com ele. `LiveLinkedInTests` (busca em "Perth WA" e um anúncio) passou no
 mesmo dia. Ligar em mais perfis um de cada vez, olhando na `/status` se alguma busca do LinkedIn falhou.
 
+**Janela máxima de 7 dias (2026-11-14, `LinkedIn:MaxWindowDays`):** a busca "Remoto" do Brasil passa de mil vagas, nunca
+termina (40 páginas) e por isso nunca ganhava janela: pedia tudo todo dia, 80 pedidos seguidos para as duas palavras-chave,
+um quarto dos cards com mais de 30 dias (alguns de 2024), na ordem do LinkedIn. Depois de 2026-11-12 ela levou 429 logo
+no primeiro pedido, e com o bloqueio de 6 h as descrições pararam. Agora a fonte declara `IJobSource.MaxWindowDays` e o
+coletor nunca pede mais do que isso, nem com `--full-history`; a janela gravada em `collection_runs` é a que foi pedida.
+A sobreposição entre "desenvolvedor .net" e "desenvolvedor c#" no remoto é de 93% (433 de 468): juntar as duas é
+decisão de perfil (mudar a palavra-chave solta as vagas antigas do perfil), não foi feito.
+
 ## ATS públicos (pesquisa de 2026-10-30)
 
 Pesquisa na web e no GitHub por scrapers de vagas e por fontes que ainda faltam. Conclusão: **nenhuma ferramenta pronta

@@ -83,6 +83,12 @@ public sealed record ScoringPolicy
     public int AgingPenalty { get; init; } = 5;
     public int StaleAfterDays { get; init; } = 30;
     public int StalePenalty { get; init; } = 30;
+    /// <summary>
+    /// The full ad states on-site or hybrid work outside the profile's <see cref="MatchingProfile.OnSiteLocations"/>.
+    /// A penalty, not the exclusion that title and summary get: the ad's wording is read by pattern, and a listing
+    /// misread stays visible further down.
+    /// </summary>
+    public int OnSiteDescribedPenalty { get; init; } = 40;
 
     /// <summary>"Senior" in the title of a profile that allows senior roles.</summary>
     public int SeniorPenalty { get; init; } = 15;

@@ -28,7 +28,7 @@ namespace JobRadar.Domain.Matching;
 public static class FitScorer
 {
     /// <summary>Bump when a rule changes, so stored scores are recomputed.</summary>
-    public const int RulesVersion = 16;
+    public const int RulesVersion = 17;
 
     /// <summary>Shown in the explanation of an excluded listing, whose score is 0 whatever the points.</summary>
     private const int ExclusionPoints = -50;
@@ -77,8 +77,11 @@ public static class FitScorer
             return Excluded(ScoreRule.LocationExcluded, excludedAt, ScoreWhere.Location);
         if (profile.ExcludedTitles.FirstOrDefault(t => ListingPatterns.Signal(t).IsMatch(title)) is { } excludedTitle)
             return Excluded(ScoreRule.TitleExcluded, excludedTitle, ScoreWhere.Title);
-        if (profile.OnSiteLocations.Count > 0 && rules.OnSite.IsMatch(full)
-            && !profile.OnSiteLocations.Any(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? "")))
+        // On-site or hybrid, unless the same text also offers remote work ("Remoto ou Híbrido").
+        var onSiteAccepted = profile.OnSiteLocations.Count == 0
+            || profile.OnSiteLocations.Any(l => ListingPatterns.Signal(l).IsMatch(job.LocationLabel ?? ""));
+        var remoteSaid = ListingPatterns.Signal(rules.Remote).IsMatch(full);
+        if (!onSiteAccepted && !remoteSaid && rules.OnSite.IsMatch(full))
             return Excluded(ScoreRule.OnSiteElsewhere, job.LocationLabel ?? "", ScoreWhere.Location);
 
         // Remote markets: who may apply decides first. The board's eligibility, then the ad's words ("US only").
@@ -348,6 +351,13 @@ public static class FitScorer
         if (policy.AssistanceRequired && assistanceConfirmed is null)
             Add(ScoreRule.NoAssistance, assistanceDenied.Value, ScoreWhere.None,
                 -(assistanceDenied.Success ? policy.AssistanceDeniedPenalty : policy.NoAssistancePenalty));
+
+        // The full ad's arrangement: a listing with no place in its card ("Brazil") is accepted when the ad names one of
+        // the profile's places.
+        if (!onSiteAccepted && !remoteSaid && described && !rules.RemoteOffered.IsMatch(desc)
+            && rules.OnSiteDescribed.Match(desc) is { Success: true } onSiteDescribed
+            && !profile.OnSiteLocations.Any(l => ListingPatterns.Signal(l).IsMatch(desc)))
+            Add(ScoreRule.OnSiteDescribed, onSiteDescribed.Value, ScoreWhere.Description, -policy.OnSiteDescribedPenalty);
 
         if (job.PostedAt is { } posted)
         {

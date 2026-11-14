@@ -141,6 +141,74 @@ public class MarketRulesTests
     }
 
     [Theory]
+    [InlineData("Híbrido · CLT")]
+    [InlineData("Hibrido · PJ")]
+    [InlineData("Presencial · CLT")]
+    public void Hybrid_work_elsewhere_is_ruled_out_like_on_site(string summary)
+    {
+        var elsewhere = Score(Br("Desenvolvedor .NET", summary, location: "São Paulo SP"));
+        var home = Score(Br("Desenvolvedor .NET", summary, location: "Centro, Rio de Janeiro RJ"));
+
+        Assert.Equal(0, elsewhere.Final);
+        Assert.True(Has(elsewhere, ScoreRule.OnSiteElsewhere));
+        Assert.False(Has(home, ScoreRule.OnSiteElsewhere));
+    }
+
+    [Fact]
+    public void The_hybrid_bonus_is_only_given_where_the_commute_is_possible()
+    {
+        Assert.True(Has(Score(Br("Desenvolvedor .NET", "Híbrido · CLT")), ScoreRule.Hybrid));
+        Assert.False(Has(Score(Br("Desenvolvedor .NET", "Híbrido · CLT", location: "Porto Alegre RS")), ScoreRule.Hybrid));
+    }
+
+    [Fact]
+    public void A_title_that_also_offers_remote_work_is_not_ruled_out()
+    {
+        var score = Score(Br("Desenvolvedor .NET (Remoto ou Híbrido)", location: "São Paulo SP"));
+
+        Assert.False(Has(score, ScoreRule.OnSiteElsewhere));
+        Assert.True(Has(score, ScoreRule.Remote));
+    }
+
+    [Theory]
+    [InlineData("Disponibilidade para atuar no modelo presencial no escritório da Faria Lima.")]
+    [InlineData("Formato de trabalho: HÍBRIDO, 3 dias presenciais na Zona Sul.")]
+    [InlineData("Modelo de Trabalho - Híbrido Sem Escala (8x presenciais por mês).")]
+    [InlineData("Posição de trabalho presencial; idealmente residir próximo.")]
+    [InlineData("Disponibilidade para atuação híbrida: 10 dias úteis presenciais por mês.")]
+    [InlineData("*Híbrido: 1 X por semana")]
+    [InlineData("Trabalho 100% presencial.")]
+    public void The_full_ad_that_states_on_site_work_elsewhere_costs_points(string description)
+    {
+        var plain = Score(Br("Desenvolvedor .NET Pleno", location: "São Paulo SP"));
+        var described = Score(Br("Desenvolvedor .NET Pleno", location: "São Paulo SP", description: description));
+
+        var item = Assert.Single(described.Items, i => i.Rule == ScoreRule.OnSiteDescribed);
+        Assert.Equal(ScoreWhere.Description, item.Where);
+        Assert.Equal(plain.Final - ScoringPolicy.Default.OnSiteDescribedPenalty, described.Final);
+    }
+
+    [Theory]
+    [InlineData("São Paulo SP", "Trabalho remoto com encontros presenciais trimestrais.")]
+    [InlineData("São Paulo SP", "Trabalhamos em anywhere office, híbrido ou presencial, conforme o projeto.")]
+    [InlineData("São Paulo SP", "Modelo híbrido ou remoto, você escolhe.")]
+    [InlineData("São Paulo SP", "Vaga 100% remota; modelo híbrido opcional para quem mora em SP.")]
+    [InlineData("Centro, Rio de Janeiro RJ", "Modelo híbrido, 2 dias presenciais.")]
+    [InlineData("Brazil", "Modelo híbrido no escritório do Rio de Janeiro.")]
+    public void The_full_ad_costs_nothing_when_remote_is_offered_or_the_place_is_accepted(string location, string description)
+    {
+        Assert.False(Has(Score(Br("Desenvolvedor .NET Pleno", location: location, description: description)), ScoreRule.OnSiteDescribed));
+    }
+
+    [Fact]
+    public void The_full_ad_is_not_read_for_a_profile_that_accepts_on_site_work_anywhere()
+    {
+        var score = Score(Br("Desenvolvedor .NET", location: "São Paulo SP", description: "Modelo presencial."), Dotnet with { OnSiteLocations = [] });
+
+        Assert.False(Has(score, ScoreRule.OnSiteDescribed));
+    }
+
+    [Theory]
     [InlineData("Necessário 5+ anos de experiência com C#", 5)]
     [InlineData("Experiência mínima de 3 anos em .NET", 3)]
     [InlineData("2 anos de atuação com APIs; 5 anos de experiência desejável", 2)]
